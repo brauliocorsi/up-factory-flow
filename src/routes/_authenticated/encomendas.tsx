@@ -8,7 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { STAGE_LABELS, ORDER_STATUS_LABELS, formatDatePT } from "@/lib/format";
-import { Search } from "lucide-react";
+import { Search, Plus, Upload } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Link } from "@tanstack/react-router";
 import { useRealtimeOrders } from "@/hooks/useRealtimeOrders";
 
 export const Route = createFileRoute("/_authenticated/encomendas")({
@@ -36,9 +38,19 @@ function EncomendasPage() {
 
   return (
     <div className="p-4 space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold">Encomendas</h1>
-        <p className="text-sm text-muted-foreground">Lista completa de encomendas em produção</p>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold">Encomendas</h1>
+          <p className="text-sm text-muted-foreground">Lista completa de encomendas em produção</p>
+        </div>
+        <div className="flex gap-2">
+          <Button asChild variant="outline" size="sm" className="gap-2">
+            <Link to="/importar"><Upload className="size-4" /> Importar</Link>
+          </Button>
+          <Button asChild size="sm" className="gap-2">
+            <Link to="/encomendas/nova"><Plus className="size-4" /> Nova encomenda</Link>
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
