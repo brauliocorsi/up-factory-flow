@@ -131,3 +131,153 @@ export const listModels = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     return data ?? [];
   });
+
+// ---------- Create / Import ----------
+
+const orderInputSchema = z.object({
+  order_number: z.string().trim().min(1).max(64),
+  product_description: z.string().trim().min(1).max(500),
+  model_id: z.string().uuid().nullable().optional(),
+  measure: z.string().trim().max(120).nullable().optional(),
+  fabric_type: z.string().trim().max(120).nullable().optional(),
+  fabric_ref: z.string().trim().max(120).nullable().optional(),
+  color: z.string().trim().max(60).nullable().optional(),
+  structure_type: z.string().trim().max(120).nullable().optional(),
+  entry_date: z.string().optional(),
+  due_date: z.string().nullable().optional(),
+  priority: z.coerce.number().int().min(0).max(10).optional(),
+  notes: z.string().trim().max(2000).nullable().optional(),
+});
+
+export type OrderInput = z.infer<typeof orderInputSchema>;
+
+function genBarcode(orderNumber: string) {
+  const clean = orderNumber.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+  const stamp = Date.now().toString(36).toUpperCase().slice(-4);
+  return `UP-${clean}-${stamp}`;
+}
+
+export const createOrder = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => orderInputSchema.parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const { data: exists } = await supabase
+      .from("production_orders")
+      .select("id")
+      .eq("order_number", data.order_number)
+      .maybeSingle();
+    if (exists) throw new Error(`Encomenda ${data.order_number} já existe`);
+
+    const row = {
+      order_number: data.order_number,
+      product_description: data.product_description,
+      model_id: data.model_id ?? null,
+      measure: data.measure ?? null,
+      fabric_type: data.fabric_type ?? null,
+      fabric_ref: data.fabric_ref ?? null,
+      color: data.color ?? null,
+      structure_type: data.structure_type ?? null,
+      entry_date: data.entry_date || new Date().toISOString().slice(0, 10),
+      due_date: data.due_date || null,
+      priority: data.priority ?? 0,
+      notes: data.notes ?? null,
+      barcode: genBarcode(data.order_number),
+      created_by: userId,
+    };
+    const { data: inserted, error } = await supabase
+      .from("production_orders")
+      .insert(row)
+      .select("id, order_number, barcode")
+      .single();
+    if (error) throw new Error(error.message);
+    return inserted;
+  });
+
+const bulkSchema = z.object({ rows: z.array(orderInputSchema).min(1).max(1000) });
+
+export const bulkCreateOrders = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => bulkSchema.parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const numbers = data.rows.map((r) => r.order_number);
+    const { data: existing } = await supabase
+      .from("production_orders")
+      .select("order_number")
+      .in("order_number", numbers);
+    const taken = new Set((existing ?? []).map((e: any) => e.order_number));
+
+    const ok: any[] = [];
+    const skipped: { order_number: string; reason: string }[] = [];
+    for (const r of data.rows) {
+      if (taken.has(r.order_number)) {
+        skipped.push({ order_number: r.order_number, reason: "já existe" });
+        continue;
+      }
+      ok.push({
+        order_number: r.order_number,
+        product_description: r.product_description,
+        model_id: r.model_id ?? null,
+        measure: r.measure ?? null,
+        fabric_type: r.fabric_type ?? null,
+        fabric_ref: r.fabric_ref ?? null,
+        color: r.color ?? null,
+        structure_type: r.structure_type ?? null,
+        entry_date: r.entry_date || new Date().toISOString().slice(0, 10),
+        due_date: r.due_date || null,
+        priority: r.priority ?? 0,
+        notes: r.notes ?? null,
+        barcode: genBarcode(r.order_number),
+        created_by: userId,
+      });
+    }
+    let inserted = 0;
+    if (ok.length) {
+      const { error, count } = await supabase
+        .from("production_orders")
+        .insert(ok, { count: "exact" });
+      if (error) throw new Error(error.message);
+      inserted = count ?? ok.length;
+    }
+    return { inserted, skipped };
+  });
+
+// ---------- Import mapping persistence ----------
+
+export const getImportMapping = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data } = await context.supabase
+      .from("import_mappings")
+      .select("mapping")
+      .eq("user_id", context.userId)
+      .maybeSingle();
+    return (data?.mapping as Record<string, string> | null) ?? null;
+  });
+
+export const saveImportMapping = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ mapping: z.record(z.string(), z.string()) }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await context.supabase
+      .from("import_mappings")
+      .upsert({ user_id: context.userId, mapping: data.mapping }, { onConflict: "user_id" });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+// ---------- Single-order fetch (for label) ----------
+
+export const getOrderForLabel = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await context.supabase
+      .from("production_orders")
+      .select("id, order_number, barcode, product_description, measure, fabric_type, fabric_ref, color, models(name)")
+      .eq("id", data.id)
+      .single();
+    if (error) throw new Error(error.message);
+    return row;
+  });
