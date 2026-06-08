@@ -14,16 +14,270 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      models: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      operators: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          id: string
+          name: string
+          role: string | null
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          id?: string
+          name: string
+          role?: string | null
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          id?: string
+          name?: string
+          role?: string | null
+        }
+        Relationships: []
+      }
+      order_stages: {
+        Row: {
+          check_valid: boolean
+          duration_minutes: number | null
+          finished_at: string | null
+          id: string
+          notes: string | null
+          operator_id: string | null
+          order_id: string
+          stage: Database["public"]["Enums"]["production_stage"]
+          started_at: string | null
+          status: Database["public"]["Enums"]["stage_status"]
+          updated_at: string
+        }
+        Insert: {
+          check_valid?: boolean
+          duration_minutes?: number | null
+          finished_at?: string | null
+          id?: string
+          notes?: string | null
+          operator_id?: string | null
+          order_id: string
+          stage: Database["public"]["Enums"]["production_stage"]
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["stage_status"]
+          updated_at?: string
+        }
+        Update: {
+          check_valid?: boolean
+          duration_minutes?: number | null
+          finished_at?: string | null
+          id?: string
+          notes?: string | null
+          operator_id?: string | null
+          order_id?: string
+          stage?: Database["public"]["Enums"]["production_stage"]
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["stage_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_stages_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_stages_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "production_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      production_orders: {
+        Row: {
+          barcode: string | null
+          color: string | null
+          created_at: string
+          created_by: string | null
+          due_date: string | null
+          entry_date: string
+          fabric_ref: string | null
+          fabric_type: string | null
+          id: string
+          measure: string | null
+          model_id: string | null
+          notes: string | null
+          order_number: string
+          priority: number
+          product_description: string
+          status: Database["public"]["Enums"]["order_status"]
+          structure_type: string | null
+        }
+        Insert: {
+          barcode?: string | null
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          due_date?: string | null
+          entry_date?: string
+          fabric_ref?: string | null
+          fabric_type?: string | null
+          id?: string
+          measure?: string | null
+          model_id?: string | null
+          notes?: string | null
+          order_number: string
+          priority?: number
+          product_description: string
+          status?: Database["public"]["Enums"]["order_status"]
+          structure_type?: string | null
+        }
+        Update: {
+          barcode?: string | null
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          due_date?: string | null
+          entry_date?: string
+          fabric_ref?: string | null
+          fabric_type?: string | null
+          id?: string
+          measure?: string | null
+          model_id?: string | null
+          notes?: string | null
+          order_number?: string
+          priority?: number
+          product_description?: string
+          status?: Database["public"]["Enums"]["order_status"]
+          structure_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_orders_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "models"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      semi_finished_stock: {
+        Row: {
+          description: string | null
+          id: string
+          location: string | null
+          min_quantity: number
+          model_id: string | null
+          quantity: number
+          stage: Database["public"]["Enums"]["production_stage"]
+          updated_at: string
+        }
+        Insert: {
+          description?: string | null
+          id?: string
+          location?: string | null
+          min_quantity?: number
+          model_id?: string | null
+          quantity?: number
+          stage: Database["public"]["Enums"]["production_stage"]
+          updated_at?: string
+        }
+        Update: {
+          description?: string | null
+          id?: string
+          location?: string | null
+          min_quantity?: number
+          model_id?: string | null
+          quantity?: number
+          stage?: Database["public"]["Enums"]["production_stage"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "semi_finished_stock_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "models"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "operador" | "escritorio"
+      order_status: "pendente" | "em_producao" | "concluida" | "cancelada"
+      production_stage:
+        | "estrutura"
+        | "corte"
+        | "costura"
+        | "branco"
+        | "estofagem"
+        | "qualidade"
+        | "embalagem"
+        | "picagem"
+      stage_status: "pendente" | "em_curso" | "concluida" | "bloqueada"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +404,20 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "operador", "escritorio"],
+      order_status: ["pendente", "em_producao", "concluida", "cancelada"],
+      production_stage: [
+        "estrutura",
+        "corte",
+        "costura",
+        "branco",
+        "estofagem",
+        "qualidade",
+        "embalagem",
+        "picagem",
+      ],
+      stage_status: ["pendente", "em_curso", "concluida", "bloqueada"],
+    },
   },
 } as const
