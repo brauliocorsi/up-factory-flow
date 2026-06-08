@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
 import { useRealtimeOrders } from "@/hooks/useRealtimeOrders";
 
-export const Route = createFileRoute("/_authenticated/encomendas")({
+export const Route = createFileRoute("/_authenticated/encomendas/")({
   component: EncomendasPage,
 });
 
