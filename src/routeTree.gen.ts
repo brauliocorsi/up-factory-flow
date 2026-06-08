@@ -13,6 +13,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedEncomendasRouteImport } from './routes/_authenticated/encomendas'
+import { Route as AuthenticatedEncomendasNovaRouteImport } from './routes/_authenticated/encomendas.nova'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -33,35 +34,45 @@ const AuthenticatedEncomendasRoute = AuthenticatedEncomendasRouteImport.update({
   path: '/encomendas',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedEncomendasNovaRoute =
+  AuthenticatedEncomendasNovaRouteImport.update({
+    id: '/nova',
+    path: '/nova',
+    getParentRoute: () => AuthenticatedEncomendasRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthRoute
-  '/encomendas': typeof AuthenticatedEncomendasRoute
+  '/encomendas': typeof AuthenticatedEncomendasRouteWithChildren
+  '/encomendas/nova': typeof AuthenticatedEncomendasNovaRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
-  '/encomendas': typeof AuthenticatedEncomendasRoute
+  '/encomendas': typeof AuthenticatedEncomendasRouteWithChildren
   '/': typeof AuthenticatedIndexRoute
+  '/encomendas/nova': typeof AuthenticatedEncomendasNovaRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
-  '/_authenticated/encomendas': typeof AuthenticatedEncomendasRoute
+  '/_authenticated/encomendas': typeof AuthenticatedEncomendasRouteWithChildren
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/encomendas/nova': typeof AuthenticatedEncomendasNovaRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/encomendas'
+  fullPaths: '/' | '/auth' | '/encomendas' | '/encomendas/nova'
   fileRoutesByTo: FileRoutesByTo
-  to: '/auth' | '/encomendas' | '/'
+  to: '/auth' | '/encomendas' | '/' | '/encomendas/nova'
   id:
     | '__root__'
     | '/_authenticated'
     | '/auth'
     | '/_authenticated/encomendas'
     | '/_authenticated/'
+    | '/_authenticated/encomendas/nova'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -99,16 +110,37 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEncomendasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/encomendas/nova': {
+      id: '/_authenticated/encomendas/nova'
+      path: '/nova'
+      fullPath: '/encomendas/nova'
+      preLoaderRoute: typeof AuthenticatedEncomendasNovaRouteImport
+      parentRoute: typeof AuthenticatedEncomendasRoute
+    }
   }
 }
 
+interface AuthenticatedEncomendasRouteChildren {
+  AuthenticatedEncomendasNovaRoute: typeof AuthenticatedEncomendasNovaRoute
+}
+
+const AuthenticatedEncomendasRouteChildren: AuthenticatedEncomendasRouteChildren =
+  {
+    AuthenticatedEncomendasNovaRoute: AuthenticatedEncomendasNovaRoute,
+  }
+
+const AuthenticatedEncomendasRouteWithChildren =
+  AuthenticatedEncomendasRoute._addFileChildren(
+    AuthenticatedEncomendasRouteChildren,
+  )
+
 interface AuthenticatedRouteRouteChildren {
-  AuthenticatedEncomendasRoute: typeof AuthenticatedEncomendasRoute
+  AuthenticatedEncomendasRoute: typeof AuthenticatedEncomendasRouteWithChildren
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
-  AuthenticatedEncomendasRoute: AuthenticatedEncomendasRoute,
+  AuthenticatedEncomendasRoute: AuthenticatedEncomendasRouteWithChildren,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
 }
 
@@ -122,3 +154,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
