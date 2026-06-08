@@ -12,8 +12,10 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedImportarRouteImport } from './routes/_authenticated/importar'
 import { Route as AuthenticatedEncomendasRouteImport } from './routes/_authenticated/encomendas'
 import { Route as AuthenticatedEncomendasNovaRouteImport } from './routes/_authenticated/encomendas.nova'
+import { Route as AuthenticatedEncomendasIdEtiquetaRouteImport } from './routes/_authenticated/encomendas.$id.etiqueta'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -29,6 +31,11 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedImportarRoute = AuthenticatedImportarRouteImport.update({
+  id: '/importar',
+  path: '/importar',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedEncomendasRoute = AuthenticatedEncomendasRouteImport.update({
   id: '/encomendas',
   path: '/encomendas',
@@ -40,39 +47,65 @@ const AuthenticatedEncomendasNovaRoute =
     path: '/nova',
     getParentRoute: () => AuthenticatedEncomendasRoute,
   } as any)
+const AuthenticatedEncomendasIdEtiquetaRoute =
+  AuthenticatedEncomendasIdEtiquetaRouteImport.update({
+    id: '/$id/etiqueta',
+    path: '/$id/etiqueta',
+    getParentRoute: () => AuthenticatedEncomendasRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthRoute
   '/encomendas': typeof AuthenticatedEncomendasRouteWithChildren
+  '/importar': typeof AuthenticatedImportarRoute
   '/encomendas/nova': typeof AuthenticatedEncomendasNovaRoute
+  '/encomendas/$id/etiqueta': typeof AuthenticatedEncomendasIdEtiquetaRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/encomendas': typeof AuthenticatedEncomendasRouteWithChildren
+  '/importar': typeof AuthenticatedImportarRoute
   '/': typeof AuthenticatedIndexRoute
   '/encomendas/nova': typeof AuthenticatedEncomendasNovaRoute
+  '/encomendas/$id/etiqueta': typeof AuthenticatedEncomendasIdEtiquetaRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/encomendas': typeof AuthenticatedEncomendasRouteWithChildren
+  '/_authenticated/importar': typeof AuthenticatedImportarRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/encomendas/nova': typeof AuthenticatedEncomendasNovaRoute
+  '/_authenticated/encomendas/$id/etiqueta': typeof AuthenticatedEncomendasIdEtiquetaRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/encomendas' | '/encomendas/nova'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/encomendas'
+    | '/importar'
+    | '/encomendas/nova'
+    | '/encomendas/$id/etiqueta'
   fileRoutesByTo: FileRoutesByTo
-  to: '/auth' | '/encomendas' | '/' | '/encomendas/nova'
+  to:
+    | '/auth'
+    | '/encomendas'
+    | '/importar'
+    | '/'
+    | '/encomendas/nova'
+    | '/encomendas/$id/etiqueta'
   id:
     | '__root__'
     | '/_authenticated'
     | '/auth'
     | '/_authenticated/encomendas'
+    | '/_authenticated/importar'
     | '/_authenticated/'
     | '/_authenticated/encomendas/nova'
+    | '/_authenticated/encomendas/$id/etiqueta'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -103,6 +136,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/importar': {
+      id: '/_authenticated/importar'
+      path: '/importar'
+      fullPath: '/importar'
+      preLoaderRoute: typeof AuthenticatedImportarRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/encomendas': {
       id: '/_authenticated/encomendas'
       path: '/encomendas'
@@ -117,16 +157,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEncomendasNovaRouteImport
       parentRoute: typeof AuthenticatedEncomendasRoute
     }
+    '/_authenticated/encomendas/$id/etiqueta': {
+      id: '/_authenticated/encomendas/$id/etiqueta'
+      path: '/$id/etiqueta'
+      fullPath: '/encomendas/$id/etiqueta'
+      preLoaderRoute: typeof AuthenticatedEncomendasIdEtiquetaRouteImport
+      parentRoute: typeof AuthenticatedEncomendasRoute
+    }
   }
 }
 
 interface AuthenticatedEncomendasRouteChildren {
   AuthenticatedEncomendasNovaRoute: typeof AuthenticatedEncomendasNovaRoute
+  AuthenticatedEncomendasIdEtiquetaRoute: typeof AuthenticatedEncomendasIdEtiquetaRoute
 }
 
 const AuthenticatedEncomendasRouteChildren: AuthenticatedEncomendasRouteChildren =
   {
     AuthenticatedEncomendasNovaRoute: AuthenticatedEncomendasNovaRoute,
+    AuthenticatedEncomendasIdEtiquetaRoute:
+      AuthenticatedEncomendasIdEtiquetaRoute,
   }
 
 const AuthenticatedEncomendasRouteWithChildren =
@@ -136,11 +186,13 @@ const AuthenticatedEncomendasRouteWithChildren =
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedEncomendasRoute: typeof AuthenticatedEncomendasRouteWithChildren
+  AuthenticatedImportarRoute: typeof AuthenticatedImportarRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedEncomendasRoute: AuthenticatedEncomendasRouteWithChildren,
+  AuthenticatedImportarRoute: AuthenticatedImportarRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
 }
 
