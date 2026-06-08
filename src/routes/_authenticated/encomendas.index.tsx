@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { STAGE_LABELS, ORDER_STATUS_LABELS, formatDatePT } from "@/lib/format";
-import { Search, Plus, Upload } from "lucide-react";
+import { Search, Plus, Upload, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
 import { useRealtimeOrders } from "@/hooks/useRealtimeOrders";
@@ -88,6 +88,7 @@ function EncomendasPage() {
                 <TableHead>Saída</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead>Etapa atual</TableHead>
+                <TableHead></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -102,10 +103,15 @@ function EncomendasPage() {
                   <TableCell>{formatDatePT(o.due_date)}</TableCell>
                   <TableCell><Badge variant="secondary">{ORDER_STATUS_LABELS[o.status]}</Badge></TableCell>
                   <TableCell><Badge>{STAGE_LABELS[o.current_stage]}</Badge></TableCell>
+                  <TableCell>
+                    <Button asChild size="sm" variant="ghost" className="gap-1 h-8">
+                      <Link to="/encomendas/$id/etiqueta" params={{ id: o.id }}><Tag className="size-3" /> Etiqueta</Link>
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
               {(orders ?? []).length === 0 && (
-                <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-8">Sem encomendas</TableCell></TableRow>
+                <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-8">Sem encomendas</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
@@ -114,7 +120,8 @@ function EncomendasPage() {
 
       <div className="md:hidden space-y-2">
         {(orders ?? []).map((o) => (
-          <Card key={o.id} className="p-3 space-y-2">
+          <Link key={o.id} to="/encomendas/$id/etiqueta" params={{ id: o.id }} className="block">
+          <Card className="p-3 space-y-2">
             <div className="flex items-center justify-between">
               <span className="font-mono text-xs font-bold text-muted-foreground">{o.order_number}</span>
               <Badge variant="secondary">{ORDER_STATUS_LABELS[o.status]}</Badge>
@@ -130,6 +137,7 @@ function EncomendasPage() {
               <Badge>{STAGE_LABELS[o.current_stage]}</Badge>
             </div>
           </Card>
+          </Link>
         ))}
         {(orders ?? []).length === 0 && <div className="text-center text-sm text-muted-foreground py-8">Sem encomendas</div>}
       </div>
