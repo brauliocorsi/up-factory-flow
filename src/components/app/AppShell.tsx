@@ -1,5 +1,5 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { LayoutGrid, ListOrdered, LogOut, Factory, Upload, Library } from "lucide-react";
+import { LayoutGrid, ListOrdered, LogOut, Factory, Upload, Library, Boxes } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -8,6 +8,7 @@ import type { ReactNode } from "react";
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutGrid },
   { to: "/encomendas", label: "Encomendas", icon: ListOrdered },
+  { to: "/stock", label: "Stock", icon: Boxes },
   { to: "/importar", label: "Importar", icon: Upload },
   { to: "/admin/catalogo", label: "Catálogo", icon: Library },
 ];
@@ -61,7 +62,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* Bottom nav (mobile) */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t bg-card">
-        <div className="grid grid-cols-4">
+        <div className="grid grid-cols-5">
           {nav.map((n) => {
             const active = n.to === "/" ? pathname === "/" : pathname.startsWith(n.to);
             const Icon = n.icon;
