@@ -40,7 +40,12 @@ export function ProductionLabel(props: LabelProps) {
   }, [props.barcodeValue]);
 
   const fabricLine = [props.fabricType, props.color].filter(Boolean).join(" · ");
-  const productLine = [props.productDescription, props.measure].filter(Boolean).join(" ");
+  // Avoid duplicating the measure when it is already part of the description
+  const desc = props.productDescription ?? "";
+  const productLine =
+    props.measure && !desc.includes(props.measure)
+      ? `${desc} ${props.measure}`.trim()
+      : desc;
   const coli =
     props.packageNumber && props.packageTotal
       ? `Coli ${props.packageNumber}/${props.packageTotal}${props.packageName ? " — " + props.packageName : ""}`
@@ -102,11 +107,12 @@ export function LabelPrintStyles() {
         justify-content: space-between;
       }
       .label-product {
-        font-size: 8pt;
+        font-size: 7.5pt;
         font-weight: 700;
-        line-height: 1.1;
-        max-height: 2.4em;
+        line-height: 1.15;
+        max-height: 3.5em;
         overflow: hidden;
+        word-break: break-word;
       }
       .label-fabric {
         font-size: 7pt;
@@ -139,12 +145,12 @@ export function LabelPrintStyles() {
         color: #333;
       }
       .label-right {
-        flex: 0 0 26mm;
+        flex: 0 0 24mm;
         display: flex;
         align-items: center;
         justify-content: center;
       }
-      .label-right svg { width: 26mm; height: auto; max-height: 26mm; }
+      .label-right svg { width: 24mm; height: auto; max-height: 24mm; }
 
       @media print {
         @page { size: 62mm 29mm; margin: 0; }
