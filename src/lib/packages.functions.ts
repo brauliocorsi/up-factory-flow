@@ -111,7 +111,7 @@ export const getLabelsForOrders = createServerFn({ method: "POST" })
       .in("id", data.ids);
     if (error) throw new Error(error.message);
 
-    const modelIds = Array.from(
+    const modelIds: string[] = Array.from(
       new Set((orders ?? []).map((o: any) => o.model_id).filter(Boolean)),
     );
 
