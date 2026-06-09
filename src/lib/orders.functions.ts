@@ -13,6 +13,7 @@ export type DashboardOrder = {
   due_date: string | null;
   priority: number;
   status: string;
+  observation: string | null;
 };
 
 export type DashboardData = {
@@ -26,9 +27,9 @@ export const getDashboardData = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<DashboardData> => {
     const { supabase } = context;
-    const { data: orders, error } = await supabase
+    const { data: orders, error } = await (supabase as any)
       .from("production_orders")
-      .select("id, order_number, product_description, priority, due_date, status, models(name), order_stages(stage, status, started_at)")
+      .select("id, order_number, product_description, priority, due_date, status, observation, models(name), order_stages(stage, status, started_at)")
       .neq("status", "cancelada")
       .order("priority", { ascending: false })
       .order("entry_date", { ascending: true });
@@ -61,6 +62,7 @@ export const getDashboardData = createServerFn({ method: "GET" })
         due_date: o.due_date as string | null,
         priority: o.priority as number,
         status: o.status as string,
+        observation: ((o as any).observation as string | null) ?? null,
       };
       byStage[current.stage].push(card);
     }
@@ -147,6 +149,9 @@ const orderInputSchema = z.object({
   due_date: z.string().nullable().optional(),
   priority: z.coerce.number().int().min(0).max(10).optional(),
   notes: z.string().trim().max(2000).nullable().optional(),
+  observation: z.string().trim().max(500).nullable().optional(),
+  finishing: z.enum(["F", "N"]).nullable().optional(),
+  barcode: z.string().trim().max(64).nullable().optional(),
 });
 
 export type OrderInput = z.infer<typeof orderInputSchema>;
@@ -182,9 +187,11 @@ export const createOrder = createServerFn({ method: "POST" })
       due_date: data.due_date || null,
       priority: data.priority ?? 0,
       notes: data.notes ?? null,
-      barcode: genBarcode(data.order_number),
+      observation: data.observation ?? null,
+      finishing: data.finishing ?? null,
+      barcode: (data.barcode && data.barcode.trim()) || genBarcode(data.order_number),
       created_by: userId,
-    };
+    } as any;
     const { data: inserted, error } = await supabase
       .from("production_orders")
       .insert(row)
@@ -228,9 +235,11 @@ export const bulkCreateOrders = createServerFn({ method: "POST" })
         due_date: r.due_date || null,
         priority: r.priority ?? 0,
         notes: r.notes ?? null,
-        barcode: genBarcode(r.order_number),
+        observation: r.observation ?? null,
+        finishing: r.finishing ?? null,
+        barcode: (r.barcode && r.barcode.trim()) || genBarcode(r.order_number),
         created_by: userId,
-      });
+      } as any);
     }
     let inserted = 0;
     if (ok.length) {

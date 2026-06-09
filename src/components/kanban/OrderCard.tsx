@@ -17,6 +17,12 @@ export function OrderCard({ order }: { order: DashboardOrder }) {
       </div>
       <div className="text-sm font-medium leading-tight">{order.product_description}</div>
       {order.model_name && <Badge variant="secondary" className="text-[10px]">{order.model_name}</Badge>}
+      {order.observation && (
+        <div className="text-[11px] font-semibold bg-warning/15 text-warning-foreground border border-warning/40 rounded px-1.5 py-0.5 flex items-start gap-1">
+          <AlertTriangle className="size-3 mt-0.5 shrink-0 text-warning" />
+          <span className="leading-tight">{order.observation}</span>
+        </div>
+      )}
       <div className="flex items-center gap-1 text-[11px] text-muted-foreground pt-1">
         <Clock className="size-3" />
         {order.stage_started_at ? `${timeAgo(order.stage_started_at)} nesta etapa` : "Por iniciar"}

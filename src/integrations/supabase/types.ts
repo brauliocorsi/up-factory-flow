@@ -82,26 +82,40 @@ export type Database = {
       models: {
         Row: {
           active: boolean
+          category_id: string | null
           code: string
           created_at: string
           id: string
           name: string
+          updated_at: string
         }
         Insert: {
           active?: boolean
+          category_id?: string | null
           code: string
           created_at?: string
           id?: string
           name: string
+          updated_at?: string
         }
         Update: {
           active?: boolean
+          category_id?: string | null
           code?: string
           created_at?: string
           id?: string
           name?: string
+          updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "models_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "ref_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       operators: {
         Row: {
@@ -197,10 +211,12 @@ export type Database = {
           entry_date: string
           fabric_ref: string | null
           fabric_type: string | null
+          finishing: string | null
           id: string
           measure: string | null
           model_id: string | null
           notes: string | null
+          observation: string | null
           order_number: string
           priority: number
           product_description: string
@@ -216,10 +232,12 @@ export type Database = {
           entry_date?: string
           fabric_ref?: string | null
           fabric_type?: string | null
+          finishing?: string | null
           id?: string
           measure?: string | null
           model_id?: string | null
           notes?: string | null
+          observation?: string | null
           order_number: string
           priority?: number
           product_description: string
@@ -235,10 +253,12 @@ export type Database = {
           entry_date?: string
           fabric_ref?: string | null
           fabric_type?: string | null
+          finishing?: string | null
           id?: string
           measure?: string | null
           model_id?: string | null
           notes?: string | null
+          observation?: string | null
           order_number?: string
           priority?: number
           product_description?: string
@@ -254,6 +274,168 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      ref_categories: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ref_colors: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ref_fabric_refs: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ref_fabric_types: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ref_measures: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ref_structures: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       semi_finished_stock: {
         Row: {

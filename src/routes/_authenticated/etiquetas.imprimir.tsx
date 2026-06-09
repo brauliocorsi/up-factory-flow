@@ -133,6 +133,7 @@ function renderLabelsForOrder(row: LabelRow, copies: number) {
           packageNumber={pkg?.package_number ?? null}
           packageTotal={pkg?.package_total ?? null}
           packageName={pkg?.package_name ?? null}
+          observation={order.observation}
         />,
       );
     }

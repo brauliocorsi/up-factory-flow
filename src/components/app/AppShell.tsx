@@ -1,5 +1,5 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { LayoutGrid, ListOrdered, LogOut, Factory, Upload, Package } from "lucide-react";
+import { LayoutGrid, ListOrdered, LogOut, Factory, Upload, Library } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -9,7 +9,7 @@ const nav = [
   { to: "/", label: "Dashboard", icon: LayoutGrid },
   { to: "/encomendas", label: "Encomendas", icon: ListOrdered },
   { to: "/importar", label: "Importar", icon: Upload },
-  { to: "/admin/colis", label: "Colis", icon: Package },
+  { to: "/admin/catalogo", label: "Catálogo", icon: Library },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
