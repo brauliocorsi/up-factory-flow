@@ -143,7 +143,7 @@ export const bulkImportRef = createServerFn({ method: "POST" })
 export const getCatalogs = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const s = context.supabase;
+    const s = context.supabase as any;
     const [cats, models, structures, measures, fts, frs, colors] = await Promise.all([
       s.from("ref_categories").select("id, code, name, active").eq("active", true).order("code"),
       s.from("models").select("id, code, name, active, category_id").eq("active", true).order("code"),
