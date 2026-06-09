@@ -45,6 +45,14 @@ function StockDashboard() {
         </div>
       </Card>
 
+      <Card className="p-4 flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <h2 className="font-semibold">Produção para stock</h2>
+          <p className="text-sm text-muted-foreground">Ordens de cascos/capas criadas sem cliente.</p>
+        </div>
+        <Link to="/stock/producao" className="text-sm text-primary underline">Abrir →</Link>
+      </Card>
+
       <Card className="p-4">
         <h2 className="font-semibold mb-2">Receitas de produtos</h2>
         <p className="text-sm text-muted-foreground mb-3">Cada produto consome um casco e (opcionalmente) uma capa.</p>
