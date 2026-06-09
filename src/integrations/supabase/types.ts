@@ -740,6 +740,34 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cancel_order_with_recovery: { Args: { _order_id: string }; Returns: Json }
+      find_matching_cover: {
+        Args: { _order_id: string }
+        Returns: {
+          active: boolean
+          code: string
+          color_code: string | null
+          created_at: string
+          fabric_ref_code: string | null
+          fabric_type_code: string | null
+          id: string
+          location: string | null
+          measure_code: string | null
+          min_quantity: number
+          model_code: string | null
+          name: string
+          quantity: number
+          reserved: number
+          structure_code: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "covers"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -747,6 +775,31 @@ export type Database = {
         }
         Returns: boolean
       }
+      preview_cancel_order: { Args: { _order_id: string }; Returns: Json }
+      resolve_order_recipe: {
+        Args: { _order_id: string }
+        Returns: {
+          category_code: string
+          cover_required: boolean
+          created_at: string
+          foam_description: string | null
+          id: string
+          measure_code: string
+          meters_per_unit: number | null
+          model_code: string
+          notes: string | null
+          shell_id: string | null
+          structure_code: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "product_recipe"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      try_reserve_for_order: { Args: { _order_id: string }; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "operador" | "escritorio"
