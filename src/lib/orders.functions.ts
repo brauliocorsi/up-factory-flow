@@ -292,3 +292,35 @@ export const getOrderForLabel = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     return row;
   });
+
+// ---------- Cancel with stock recovery ----------
+
+export type CancelPreview = {
+  order_number: string;
+  shell_code: string | null;
+  cover_code: string | null;
+  shell_reserved_to_release: boolean;
+  cover_reserved_to_release: boolean;
+  shell_to_return_to_stock: boolean;
+  cover_to_return_to_stock: boolean;
+};
+
+export const previewCancelOrder = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<CancelPreview> => {
+    const { data: res, error } = await (context.supabase as any)
+      .rpc("preview_cancel_order", { _order_id: data.id });
+    if (error) throw new Error(error.message);
+    return res as CancelPreview;
+  });
+
+export const cancelOrder = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: res, error } = await (context.supabase as any)
+      .rpc("cancel_order_with_recovery", { _order_id: data.id });
+    if (error) throw new Error(error.message);
+    return res;
+  });
