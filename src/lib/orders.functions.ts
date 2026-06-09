@@ -14,6 +14,7 @@ export type DashboardOrder = {
   priority: number;
   status: string;
   observation: string | null;
+  is_stock_production?: boolean;
 };
 
 export type DashboardData = {
@@ -29,7 +30,7 @@ export const getDashboardData = createServerFn({ method: "GET" })
     const { supabase } = context;
     const { data: orders, error } = await (supabase as any)
       .from("production_orders")
-      .select("id, order_number, product_description, priority, due_date, status, observation, models(name), order_stages(stage, status, started_at)")
+      .select("id, order_number, product_description, priority, due_date, status, observation, is_stock_production, models(name), order_stages(stage, status, started_at)")
       .neq("status", "cancelada")
       .order("priority", { ascending: false })
       .order("entry_date", { ascending: true });
@@ -63,6 +64,7 @@ export const getDashboardData = createServerFn({ method: "GET" })
         priority: o.priority as number,
         status: o.status as string,
         observation: ((o as any).observation as string | null) ?? null,
+        is_stock_production: Boolean((o as any).is_stock_production),
       };
       byStage[current.stage].push(card);
     }
