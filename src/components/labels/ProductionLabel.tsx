@@ -13,6 +13,7 @@ export type LabelProps = {
   packageNumber?: number | null;
   packageTotal?: number | null;
   packageName?: string | null;
+  observation?: string | null;
 };
 
 /**
@@ -51,6 +52,9 @@ export function ProductionLabel(props: LabelProps) {
         <div className="label-left">
           <div className="label-product" title={productLine}>{productLine}</div>
           {fabricLine && <div className="label-fabric">{fabricLine}</div>}
+          {props.observation && (
+            <div className="label-observation">⚠ {props.observation}</div>
+          )}
           {coli && <div className="label-coli">{coli}</div>}
           <div className="label-order">Nº {props.orderNumber}</div>
         </div>
@@ -108,6 +112,17 @@ export function LabelPrintStyles() {
         font-size: 7pt;
         line-height: 1.1;
         color: #111;
+      }
+      .label-observation {
+        font-size: 7.5pt;
+        font-weight: 800;
+        color: #000;
+        background: #fde047;
+        padding: 0.3mm 1mm;
+        border-radius: 1px;
+        line-height: 1.1;
+        max-height: 2.2em;
+        overflow: hidden;
       }
       .label-coli {
         font-size: 7.5pt;
