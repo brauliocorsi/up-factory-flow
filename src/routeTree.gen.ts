@@ -18,6 +18,7 @@ import { Route as AuthenticatedEncomendasIndexRouteImport } from './routes/_auth
 import { Route as AuthenticatedStockTecidosRouteImport } from './routes/_authenticated/stock.tecidos'
 import { Route as AuthenticatedStockCascosRouteImport } from './routes/_authenticated/stock.cascos'
 import { Route as AuthenticatedStockCapasRouteImport } from './routes/_authenticated/stock.capas'
+import { Route as AuthenticatedProdutosReceitasRouteImport } from './routes/_authenticated/produtos.receitas'
 import { Route as AuthenticatedEtiquetasImprimirRouteImport } from './routes/_authenticated/etiquetas.imprimir'
 import { Route as AuthenticatedEncomendasNovaRouteImport } from './routes/_authenticated/encomendas.nova'
 import { Route as AuthenticatedAdminColisRouteImport } from './routes/_authenticated/admin.colis'
@@ -71,6 +72,12 @@ const AuthenticatedStockCapasRoute = AuthenticatedStockCapasRouteImport.update({
   path: '/stock/capas',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedProdutosReceitasRoute =
+  AuthenticatedProdutosReceitasRouteImport.update({
+    id: '/produtos/receitas',
+    path: '/produtos/receitas',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedEtiquetasImprimirRoute =
   AuthenticatedEtiquetasImprimirRouteImport.update({
     id: '/etiquetas/imprimir',
@@ -109,6 +116,7 @@ export interface FileRoutesByFullPath {
   '/admin/colis': typeof AuthenticatedAdminColisRoute
   '/encomendas/nova': typeof AuthenticatedEncomendasNovaRoute
   '/etiquetas/imprimir': typeof AuthenticatedEtiquetasImprimirRoute
+  '/produtos/receitas': typeof AuthenticatedProdutosReceitasRoute
   '/stock/capas': typeof AuthenticatedStockCapasRoute
   '/stock/cascos': typeof AuthenticatedStockCascosRoute
   '/stock/tecidos': typeof AuthenticatedStockTecidosRoute
@@ -124,6 +132,7 @@ export interface FileRoutesByTo {
   '/admin/colis': typeof AuthenticatedAdminColisRoute
   '/encomendas/nova': typeof AuthenticatedEncomendasNovaRoute
   '/etiquetas/imprimir': typeof AuthenticatedEtiquetasImprimirRoute
+  '/produtos/receitas': typeof AuthenticatedProdutosReceitasRoute
   '/stock/capas': typeof AuthenticatedStockCapasRoute
   '/stock/cascos': typeof AuthenticatedStockCascosRoute
   '/stock/tecidos': typeof AuthenticatedStockTecidosRoute
@@ -141,6 +150,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/colis': typeof AuthenticatedAdminColisRoute
   '/_authenticated/encomendas/nova': typeof AuthenticatedEncomendasNovaRoute
   '/_authenticated/etiquetas/imprimir': typeof AuthenticatedEtiquetasImprimirRoute
+  '/_authenticated/produtos/receitas': typeof AuthenticatedProdutosReceitasRoute
   '/_authenticated/stock/capas': typeof AuthenticatedStockCapasRoute
   '/_authenticated/stock/cascos': typeof AuthenticatedStockCascosRoute
   '/_authenticated/stock/tecidos': typeof AuthenticatedStockTecidosRoute
@@ -158,6 +168,7 @@ export interface FileRouteTypes {
     | '/admin/colis'
     | '/encomendas/nova'
     | '/etiquetas/imprimir'
+    | '/produtos/receitas'
     | '/stock/capas'
     | '/stock/cascos'
     | '/stock/tecidos'
@@ -173,6 +184,7 @@ export interface FileRouteTypes {
     | '/admin/colis'
     | '/encomendas/nova'
     | '/etiquetas/imprimir'
+    | '/produtos/receitas'
     | '/stock/capas'
     | '/stock/cascos'
     | '/stock/tecidos'
@@ -189,6 +201,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/colis'
     | '/_authenticated/encomendas/nova'
     | '/_authenticated/etiquetas/imprimir'
+    | '/_authenticated/produtos/receitas'
     | '/_authenticated/stock/capas'
     | '/_authenticated/stock/cascos'
     | '/_authenticated/stock/tecidos'
@@ -267,6 +280,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStockCapasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/produtos/receitas': {
+      id: '/_authenticated/produtos/receitas'
+      path: '/produtos/receitas'
+      fullPath: '/produtos/receitas'
+      preLoaderRoute: typeof AuthenticatedProdutosReceitasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/etiquetas/imprimir': {
       id: '/_authenticated/etiquetas/imprimir'
       path: '/etiquetas/imprimir'
@@ -312,6 +332,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminColisRoute: typeof AuthenticatedAdminColisRoute
   AuthenticatedEncomendasNovaRoute: typeof AuthenticatedEncomendasNovaRoute
   AuthenticatedEtiquetasImprimirRoute: typeof AuthenticatedEtiquetasImprimirRoute
+  AuthenticatedProdutosReceitasRoute: typeof AuthenticatedProdutosReceitasRoute
   AuthenticatedStockCapasRoute: typeof AuthenticatedStockCapasRoute
   AuthenticatedStockCascosRoute: typeof AuthenticatedStockCascosRoute
   AuthenticatedStockTecidosRoute: typeof AuthenticatedStockTecidosRoute
@@ -327,6 +348,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminColisRoute: AuthenticatedAdminColisRoute,
   AuthenticatedEncomendasNovaRoute: AuthenticatedEncomendasNovaRoute,
   AuthenticatedEtiquetasImprimirRoute: AuthenticatedEtiquetasImprimirRoute,
+  AuthenticatedProdutosReceitasRoute: AuthenticatedProdutosReceitasRoute,
   AuthenticatedStockCapasRoute: AuthenticatedStockCapasRoute,
   AuthenticatedStockCascosRoute: AuthenticatedStockCascosRoute,
   AuthenticatedStockTecidosRoute: AuthenticatedStockTecidosRoute,
