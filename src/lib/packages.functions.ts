@@ -103,7 +103,7 @@ export const getLabelsForOrders = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }): Promise<LabelRow[]> => {
     const { supabase } = context;
-    const { data: orders, error } = await supabase
+    const { data: orders, error } = await (supabase as any)
       .from("production_orders")
       .select(
         "id, order_number, barcode, product_description, measure, fabric_type, fabric_ref, color, structure_type, model_id, observation, models(name)",
