@@ -27,7 +27,7 @@ export const getDashboardData = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<DashboardData> => {
     const { supabase } = context;
-    const { data: orders, error } = await supabase
+    const { data: orders, error } = await (supabase as any)
       .from("production_orders")
       .select("id, order_number, product_description, priority, due_date, status, observation, models(name), order_stages(stage, status, started_at)")
       .neq("status", "cancelada")
