@@ -1,15 +1,17 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { listOrders, listModels } from "@/lib/orders.functions";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { listOrders, listModels, previewCancelOrder, cancelOrder, type CancelPreview } from "@/lib/orders.functions";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { STAGE_LABELS, ORDER_STATUS_LABELS, formatDatePT } from "@/lib/format";
-import { Search, Plus, Upload, Printer } from "lucide-react";
+import { Search, Plus, Upload, Printer, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
 import { useRealtimeOrders } from "@/hooks/useRealtimeOrders";
@@ -20,10 +22,13 @@ export const Route = createFileRoute("/_authenticated/encomendas/")({
 
 function EncomendasPage() {
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<string>("all");
   const [modelId, setModelId] = useState<string>("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [cancelTarget, setCancelTarget] = useState<{ id: string; order_number: string } | null>(null);
+  const [cancelPreview, setCancelPreview] = useState<CancelPreview | null>(null);
 
   const filters = {
     search: search || undefined,
@@ -60,6 +65,31 @@ function EncomendasPage() {
   function printOne(id: string) {
     navigate({ to: "/etiquetas/imprimir", search: { ids: id } });
   }
+
+  async function openCancel(id: string, order_number: string) {
+    setCancelTarget({ id, order_number });
+    setCancelPreview(null);
+    try {
+      const p = await previewCancelOrder({ data: { id } });
+      setCancelPreview(p);
+    } catch (e: any) {
+      toast.error(e.message);
+      setCancelTarget(null);
+    }
+  }
+
+  const doCancel = useMutation({
+    mutationFn: (id: string) => cancelOrder({ data: { id } }),
+    onSuccess: () => {
+      toast.success("Encomenda cancelada");
+      setCancelTarget(null);
+      qc.invalidateQueries({ queryKey: ["orders"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+      qc.invalidateQueries({ queryKey: ["shells"] });
+      qc.invalidateQueries({ queryKey: ["covers"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
 
   return (
     <div className="p-4 space-y-4">
@@ -147,6 +177,11 @@ function EncomendasPage() {
                     <Button size="sm" variant="ghost" className="gap-1 h-8" onClick={() => printOne(o.id)}>
                       <Printer className="size-3" /> Etiqueta
                     </Button>
+                    {o.status !== "cancelada" && (
+                      <Button size="sm" variant="ghost" className="gap-1 h-8 text-destructive" onClick={() => openCancel(o.id, o.order_number)}>
+                        <XCircle className="size-3" /> Cancelar
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
@@ -191,6 +226,45 @@ function EncomendasPage() {
         ))}
         {orderList.length === 0 && <div className="text-center text-sm text-muted-foreground py-8">Sem encomendas</div>}
       </div>
+
+      <Dialog open={!!cancelTarget} onOpenChange={(o) => !o && setCancelTarget(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Cancelar encomenda {cancelTarget?.order_number}?</DialogTitle></DialogHeader>
+          {!cancelPreview ? (
+            <div className="text-sm text-muted-foreground py-4">A analisar impacto no stock…</div>
+          ) : (
+            <div className="space-y-2 text-sm">
+              {cancelPreview.shell_reserved_to_release && (
+                <div>🔓 Reserva do casco <b>{cancelPreview.shell_code}</b> será libertada.</div>
+              )}
+              {cancelPreview.cover_reserved_to_release && (
+                <div>🔓 Reserva da capa <b>{cancelPreview.cover_code}</b> será libertada.</div>
+              )}
+              {cancelPreview.shell_to_return_to_stock && (
+                <div>📦 Casco <b>{cancelPreview.shell_code ?? "(novo)"}</b> volta ao stock (+1).</div>
+              )}
+              {cancelPreview.cover_to_return_to_stock && (
+                <div>📦 Capa <b>{cancelPreview.cover_code ?? "(nova)"}</b> volta ao stock (+1).</div>
+              )}
+              {!cancelPreview.shell_reserved_to_release && !cancelPreview.cover_reserved_to_release &&
+               !cancelPreview.shell_to_return_to_stock && !cancelPreview.cover_to_return_to_stock && (
+                <div className="text-muted-foreground">Nenhum impacto no stock. As etapas em curso serão anuladas.</div>
+              )}
+              <div className="text-xs text-muted-foreground pt-2">Etapas ainda não concluídas serão marcadas como anuladas.</div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCancelTarget(null)}>Voltar</Button>
+            <Button
+              variant="destructive"
+              disabled={!cancelPreview || doCancel.isPending}
+              onClick={() => cancelTarget && doCancel.mutate(cancelTarget.id)}
+            >
+              {doCancel.isPending ? "A cancelar…" : "Confirmar cancelamento"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
