@@ -64,7 +64,7 @@ function CatalogoPage() {
 
 function RefTable({ kind, hint, hasCategory }: { kind: RefKind; hint: string; hasCategory: boolean }) {
   const qc = useQueryClient();
-  const { data: rows = [], isLoading } = useQuery({
+  const { data: rows = [], isLoading, error } = useQuery({
     queryKey: ["ref", kind],
     queryFn: () => listRef({ data: { kind } }),
   });
@@ -73,7 +73,7 @@ function RefTable({ kind, hint, hasCategory }: { kind: RefKind; hint: string; ha
     queryFn: () => listRef({ data: { kind: "categories" } }),
     enabled: hasCategory,
   });
-  const catById = useMemo(() => new Map(cats.map((c) => [c.id, c])), [cats]);
+  const catById = useMemo(() => new Map((cats ?? []).map((c) => [c.id, c])), [cats]);
 
   const refresh = () => qc.invalidateQueries({ queryKey: ["ref", kind] });
 
@@ -97,6 +97,11 @@ function RefTable({ kind, hint, hasCategory }: { kind: RefKind; hint: string; ha
         </div>
       </div>
       <div className="overflow-x-auto">
+        {error && (
+          <div className="mb-3 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+            Não foi possível carregar o catálogo: {(error as Error).message}
+          </div>
+        )}
         <Table>
           <TableHeader>
             <TableRow>
@@ -112,7 +117,7 @@ function RefTable({ kind, hint, hasCategory }: { kind: RefKind; hint: string; ha
             {!isLoading && rows.length === 0 && (
               <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-6">Sem registos</TableCell></TableRow>
             )}
-            {rows.map((r) => (
+            {(rows ?? []).map((r) => (
               <TableRow key={r.id}>
                 <TableCell className="font-mono">{r.code}</TableCell>
                 <TableCell>{r.name}</TableCell>
