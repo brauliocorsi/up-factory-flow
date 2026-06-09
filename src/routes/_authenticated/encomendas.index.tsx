@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { listOrders, listModels } from "@/lib/orders.functions";
 import { Input } from "@/components/ui/input";
@@ -7,8 +7,9 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
 import { STAGE_LABELS, ORDER_STATUS_LABELS, formatDatePT } from "@/lib/format";
-import { Search, Plus, Upload, Tag } from "lucide-react";
+import { Search, Plus, Upload, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
 import { useRealtimeOrders } from "@/hooks/useRealtimeOrders";
@@ -18,9 +19,11 @@ export const Route = createFileRoute("/_authenticated/encomendas/")({
 });
 
 function EncomendasPage() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<string>("all");
   const [modelId, setModelId] = useState<string>("all");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const filters = {
     search: search || undefined,
@@ -36,6 +39,28 @@ function EncomendasPage() {
 
   useRealtimeOrders([["orders"], ["dashboard"]]);
 
+  const orderList = orders ?? [];
+  const allIds = useMemo(() => orderList.map((o) => o.id), [orderList]);
+  const allSelected = allIds.length > 0 && allIds.every((id) => selected.has(id));
+
+  function toggle(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+  function toggleAll() {
+    setSelected(allSelected ? new Set() : new Set(allIds));
+  }
+  function printSelected() {
+    if (!selected.size) return;
+    navigate({ to: "/etiquetas/imprimir", search: { ids: Array.from(selected).join(",") } });
+  }
+  function printOne(id: string) {
+    navigate({ to: "/etiquetas/imprimir", search: { ids: id } });
+  }
+
   return (
     <div className="p-4 space-y-4">
       <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -44,6 +69,11 @@ function EncomendasPage() {
           <p className="text-sm text-muted-foreground">Lista completa de encomendas em produção</p>
         </div>
         <div className="flex gap-2">
+          {selected.size > 0 && (
+            <Button size="sm" onClick={printSelected} variant="default" className="gap-2">
+              <Printer className="size-4" /> Imprimir etiquetas ({selected.size})
+            </Button>
+          )}
           <Button asChild variant="outline" size="sm" className="gap-2">
             <Link to="/importar"><Upload className="size-4" /> Importar</Link>
           </Button>
@@ -79,6 +109,9 @@ function EncomendasPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">
+                  <Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="Selecionar tudo" />
+                </TableHead>
                 <TableHead>Nº</TableHead>
                 <TableHead>Produto</TableHead>
                 <TableHead>Modelo</TableHead>
@@ -92,8 +125,15 @@ function EncomendasPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {(orders ?? []).map((o) => (
-                <TableRow key={o.id}>
+              {orderList.map((o) => (
+                <TableRow key={o.id} data-state={selected.has(o.id) ? "selected" : undefined}>
+                  <TableCell>
+                    <Checkbox
+                      checked={selected.has(o.id)}
+                      onCheckedChange={() => toggle(o.id)}
+                      aria-label={`Selecionar ${o.order_number}`}
+                    />
+                  </TableCell>
                   <TableCell className="font-mono text-xs">{o.order_number}</TableCell>
                   <TableCell>{o.product_description}</TableCell>
                   <TableCell>{o.model_name ?? "—"}</TableCell>
@@ -104,14 +144,14 @@ function EncomendasPage() {
                   <TableCell><Badge variant="secondary">{ORDER_STATUS_LABELS[o.status]}</Badge></TableCell>
                   <TableCell><Badge>{STAGE_LABELS[o.current_stage]}</Badge></TableCell>
                   <TableCell>
-                    <Button asChild size="sm" variant="ghost" className="gap-1 h-8">
-                      <Link to="/encomendas/$id/etiqueta" params={{ id: o.id }}><Tag className="size-3" /> Etiqueta</Link>
+                    <Button size="sm" variant="ghost" className="gap-1 h-8" onClick={() => printOne(o.id)}>
+                      <Printer className="size-3" /> Etiqueta
                     </Button>
                   </TableCell>
                 </TableRow>
               ))}
-              {(orders ?? []).length === 0 && (
-                <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-8">Sem encomendas</TableCell></TableRow>
+              {orderList.length === 0 && (
+                <TableRow><TableCell colSpan={11} className="text-center text-muted-foreground py-8">Sem encomendas</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
@@ -119,27 +159,37 @@ function EncomendasPage() {
       </div>
 
       <div className="md:hidden space-y-2">
-        {(orders ?? []).map((o) => (
-          <Link key={o.id} to="/encomendas/$id/etiqueta" params={{ id: o.id }} className="block">
-          <Card className="p-3 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="font-mono text-xs font-bold text-muted-foreground">{o.order_number}</span>
-              <Badge variant="secondary">{ORDER_STATUS_LABELS[o.status]}</Badge>
-            </div>
-            <div className="text-sm font-medium">{o.product_description}</div>
-            <div className="flex flex-wrap gap-1 text-xs text-muted-foreground">
-              {o.model_name && <span>{o.model_name}</span>}
-              {o.measure && <span>· {o.measure}</span>}
-              {o.fabric_type && <span>· {o.fabric_type}</span>}
-            </div>
-            <div className="flex items-center justify-between pt-1">
-              <span className="text-xs text-muted-foreground">Entrada {formatDatePT(o.entry_date)}</span>
-              <Badge>{STAGE_LABELS[o.current_stage]}</Badge>
+        {orderList.map((o) => (
+          <Card key={o.id} className={`p-3 space-y-2 ${selected.has(o.id) ? "ring-2 ring-primary" : ""}`}>
+            <div className="flex items-start gap-2">
+              <Checkbox
+                checked={selected.has(o.id)}
+                onCheckedChange={() => toggle(o.id)}
+                className="mt-1"
+                aria-label={`Selecionar ${o.order_number}`}
+              />
+              <div className="flex-1 min-w-0 space-y-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-mono text-xs font-bold text-muted-foreground">{o.order_number}</span>
+                  <Badge variant="secondary">{ORDER_STATUS_LABELS[o.status]}</Badge>
+                </div>
+                <div className="text-sm font-medium">{o.product_description}</div>
+                <div className="flex flex-wrap gap-1 text-xs text-muted-foreground">
+                  {o.model_name && <span>{o.model_name}</span>}
+                  {o.measure && <span>· {o.measure}</span>}
+                  {o.fabric_type && <span>· {o.fabric_type}</span>}
+                </div>
+                <div className="flex items-center justify-between pt-1">
+                  <Badge>{STAGE_LABELS[o.current_stage]}</Badge>
+                  <Button size="sm" variant="ghost" className="gap-1 h-8" onClick={() => printOne(o.id)}>
+                    <Printer className="size-3" /> Etiqueta
+                  </Button>
+                </div>
+              </div>
             </div>
           </Card>
-          </Link>
         ))}
-        {(orders ?? []).length === 0 && <div className="text-center text-sm text-muted-foreground py-8">Sem encomendas</div>}
+        {orderList.length === 0 && <div className="text-center text-sm text-muted-foreground py-8">Sem encomendas</div>}
       </div>
     </div>
   );
