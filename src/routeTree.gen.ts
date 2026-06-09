@@ -14,7 +14,9 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedImportarRouteImport } from './routes/_authenticated/importar'
 import { Route as AuthenticatedEncomendasIndexRouteImport } from './routes/_authenticated/encomendas.index'
+import { Route as AuthenticatedEtiquetasImprimirRouteImport } from './routes/_authenticated/etiquetas.imprimir'
 import { Route as AuthenticatedEncomendasNovaRouteImport } from './routes/_authenticated/encomendas.nova'
+import { Route as AuthenticatedAdminColisRouteImport } from './routes/_authenticated/admin.colis'
 import { Route as AuthenticatedEncomendasIdEtiquetaRouteImport } from './routes/_authenticated/encomendas.$id.etiqueta'
 
 const AuthRoute = AuthRouteImport.update({
@@ -42,12 +44,23 @@ const AuthenticatedEncomendasIndexRoute =
     path: '/encomendas/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedEtiquetasImprimirRoute =
+  AuthenticatedEtiquetasImprimirRouteImport.update({
+    id: '/etiquetas/imprimir',
+    path: '/etiquetas/imprimir',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedEncomendasNovaRoute =
   AuthenticatedEncomendasNovaRouteImport.update({
     id: '/encomendas/nova',
     path: '/encomendas/nova',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAdminColisRoute = AuthenticatedAdminColisRouteImport.update({
+  id: '/admin/colis',
+  path: '/admin/colis',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedEncomendasIdEtiquetaRoute =
   AuthenticatedEncomendasIdEtiquetaRouteImport.update({
     id: '/encomendas/$id/etiqueta',
@@ -59,7 +72,9 @@ export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthRoute
   '/importar': typeof AuthenticatedImportarRoute
+  '/admin/colis': typeof AuthenticatedAdminColisRoute
   '/encomendas/nova': typeof AuthenticatedEncomendasNovaRoute
+  '/etiquetas/imprimir': typeof AuthenticatedEtiquetasImprimirRoute
   '/encomendas/': typeof AuthenticatedEncomendasIndexRoute
   '/encomendas/$id/etiqueta': typeof AuthenticatedEncomendasIdEtiquetaRoute
 }
@@ -67,7 +82,9 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/importar': typeof AuthenticatedImportarRoute
   '/': typeof AuthenticatedIndexRoute
+  '/admin/colis': typeof AuthenticatedAdminColisRoute
   '/encomendas/nova': typeof AuthenticatedEncomendasNovaRoute
+  '/etiquetas/imprimir': typeof AuthenticatedEtiquetasImprimirRoute
   '/encomendas': typeof AuthenticatedEncomendasIndexRoute
   '/encomendas/$id/etiqueta': typeof AuthenticatedEncomendasIdEtiquetaRoute
 }
@@ -77,7 +94,9 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/importar': typeof AuthenticatedImportarRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/admin/colis': typeof AuthenticatedAdminColisRoute
   '/_authenticated/encomendas/nova': typeof AuthenticatedEncomendasNovaRoute
+  '/_authenticated/etiquetas/imprimir': typeof AuthenticatedEtiquetasImprimirRoute
   '/_authenticated/encomendas/': typeof AuthenticatedEncomendasIndexRoute
   '/_authenticated/encomendas/$id/etiqueta': typeof AuthenticatedEncomendasIdEtiquetaRoute
 }
@@ -87,7 +106,9 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/importar'
+    | '/admin/colis'
     | '/encomendas/nova'
+    | '/etiquetas/imprimir'
     | '/encomendas/'
     | '/encomendas/$id/etiqueta'
   fileRoutesByTo: FileRoutesByTo
@@ -95,7 +116,9 @@ export interface FileRouteTypes {
     | '/auth'
     | '/importar'
     | '/'
+    | '/admin/colis'
     | '/encomendas/nova'
+    | '/etiquetas/imprimir'
     | '/encomendas'
     | '/encomendas/$id/etiqueta'
   id:
@@ -104,7 +127,9 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/importar'
     | '/_authenticated/'
+    | '/_authenticated/admin/colis'
     | '/_authenticated/encomendas/nova'
+    | '/_authenticated/etiquetas/imprimir'
     | '/_authenticated/encomendas/'
     | '/_authenticated/encomendas/$id/etiqueta'
   fileRoutesById: FileRoutesById
@@ -151,11 +176,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEncomendasIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/etiquetas/imprimir': {
+      id: '/_authenticated/etiquetas/imprimir'
+      path: '/etiquetas/imprimir'
+      fullPath: '/etiquetas/imprimir'
+      preLoaderRoute: typeof AuthenticatedEtiquetasImprimirRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/encomendas/nova': {
       id: '/_authenticated/encomendas/nova'
       path: '/encomendas/nova'
       fullPath: '/encomendas/nova'
       preLoaderRoute: typeof AuthenticatedEncomendasNovaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/colis': {
+      id: '/_authenticated/admin/colis'
+      path: '/admin/colis'
+      fullPath: '/admin/colis'
+      preLoaderRoute: typeof AuthenticatedAdminColisRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/encomendas/$id/etiqueta': {
@@ -171,7 +210,9 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedImportarRoute: typeof AuthenticatedImportarRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedAdminColisRoute: typeof AuthenticatedAdminColisRoute
   AuthenticatedEncomendasNovaRoute: typeof AuthenticatedEncomendasNovaRoute
+  AuthenticatedEtiquetasImprimirRoute: typeof AuthenticatedEtiquetasImprimirRoute
   AuthenticatedEncomendasIndexRoute: typeof AuthenticatedEncomendasIndexRoute
   AuthenticatedEncomendasIdEtiquetaRoute: typeof AuthenticatedEncomendasIdEtiquetaRoute
 }
@@ -179,7 +220,9 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedImportarRoute: AuthenticatedImportarRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedAdminColisRoute: AuthenticatedAdminColisRoute,
   AuthenticatedEncomendasNovaRoute: AuthenticatedEncomendasNovaRoute,
+  AuthenticatedEtiquetasImprimirRoute: AuthenticatedEtiquetasImprimirRoute,
   AuthenticatedEncomendasIndexRoute: AuthenticatedEncomendasIndexRoute,
   AuthenticatedEncomendasIdEtiquetaRoute:
     AuthenticatedEncomendasIdEtiquetaRoute,
@@ -195,3 +238,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
