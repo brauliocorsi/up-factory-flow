@@ -16,6 +16,7 @@ import { Route as AuthenticatedImportarRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedStockIndexRouteImport } from './routes/_authenticated/stock.index'
 import { Route as AuthenticatedEncomendasIndexRouteImport } from './routes/_authenticated/encomendas.index'
 import { Route as AuthenticatedStockTecidosRouteImport } from './routes/_authenticated/stock.tecidos'
+import { Route as AuthenticatedStockProducaoRouteImport } from './routes/_authenticated/stock.producao'
 import { Route as AuthenticatedStockCascosRouteImport } from './routes/_authenticated/stock.cascos'
 import { Route as AuthenticatedStockCapasRouteImport } from './routes/_authenticated/stock.capas'
 import { Route as AuthenticatedProdutosReceitasRouteImport } from './routes/_authenticated/produtos.receitas'
@@ -59,6 +60,12 @@ const AuthenticatedStockTecidosRoute =
   AuthenticatedStockTecidosRouteImport.update({
     id: '/stock/tecidos',
     path: '/stock/tecidos',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedStockProducaoRoute =
+  AuthenticatedStockProducaoRouteImport.update({
+    id: '/stock/producao',
+    path: '/stock/producao',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedStockCascosRoute =
@@ -119,6 +126,7 @@ export interface FileRoutesByFullPath {
   '/produtos/receitas': typeof AuthenticatedProdutosReceitasRoute
   '/stock/capas': typeof AuthenticatedStockCapasRoute
   '/stock/cascos': typeof AuthenticatedStockCascosRoute
+  '/stock/producao': typeof AuthenticatedStockProducaoRoute
   '/stock/tecidos': typeof AuthenticatedStockTecidosRoute
   '/encomendas/': typeof AuthenticatedEncomendasIndexRoute
   '/stock/': typeof AuthenticatedStockIndexRoute
@@ -135,6 +143,7 @@ export interface FileRoutesByTo {
   '/produtos/receitas': typeof AuthenticatedProdutosReceitasRoute
   '/stock/capas': typeof AuthenticatedStockCapasRoute
   '/stock/cascos': typeof AuthenticatedStockCascosRoute
+  '/stock/producao': typeof AuthenticatedStockProducaoRoute
   '/stock/tecidos': typeof AuthenticatedStockTecidosRoute
   '/encomendas': typeof AuthenticatedEncomendasIndexRoute
   '/stock': typeof AuthenticatedStockIndexRoute
@@ -153,6 +162,7 @@ export interface FileRoutesById {
   '/_authenticated/produtos/receitas': typeof AuthenticatedProdutosReceitasRoute
   '/_authenticated/stock/capas': typeof AuthenticatedStockCapasRoute
   '/_authenticated/stock/cascos': typeof AuthenticatedStockCascosRoute
+  '/_authenticated/stock/producao': typeof AuthenticatedStockProducaoRoute
   '/_authenticated/stock/tecidos': typeof AuthenticatedStockTecidosRoute
   '/_authenticated/encomendas/': typeof AuthenticatedEncomendasIndexRoute
   '/_authenticated/stock/': typeof AuthenticatedStockIndexRoute
@@ -171,6 +181,7 @@ export interface FileRouteTypes {
     | '/produtos/receitas'
     | '/stock/capas'
     | '/stock/cascos'
+    | '/stock/producao'
     | '/stock/tecidos'
     | '/encomendas/'
     | '/stock/'
@@ -187,6 +198,7 @@ export interface FileRouteTypes {
     | '/produtos/receitas'
     | '/stock/capas'
     | '/stock/cascos'
+    | '/stock/producao'
     | '/stock/tecidos'
     | '/encomendas'
     | '/stock'
@@ -204,6 +216,7 @@ export interface FileRouteTypes {
     | '/_authenticated/produtos/receitas'
     | '/_authenticated/stock/capas'
     | '/_authenticated/stock/cascos'
+    | '/_authenticated/stock/producao'
     | '/_authenticated/stock/tecidos'
     | '/_authenticated/encomendas/'
     | '/_authenticated/stock/'
@@ -264,6 +277,13 @@ declare module '@tanstack/react-router' {
       path: '/stock/tecidos'
       fullPath: '/stock/tecidos'
       preLoaderRoute: typeof AuthenticatedStockTecidosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/stock/producao': {
+      id: '/_authenticated/stock/producao'
+      path: '/stock/producao'
+      fullPath: '/stock/producao'
+      preLoaderRoute: typeof AuthenticatedStockProducaoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/stock/cascos': {
@@ -335,6 +355,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedProdutosReceitasRoute: typeof AuthenticatedProdutosReceitasRoute
   AuthenticatedStockCapasRoute: typeof AuthenticatedStockCapasRoute
   AuthenticatedStockCascosRoute: typeof AuthenticatedStockCascosRoute
+  AuthenticatedStockProducaoRoute: typeof AuthenticatedStockProducaoRoute
   AuthenticatedStockTecidosRoute: typeof AuthenticatedStockTecidosRoute
   AuthenticatedEncomendasIndexRoute: typeof AuthenticatedEncomendasIndexRoute
   AuthenticatedStockIndexRoute: typeof AuthenticatedStockIndexRoute
@@ -351,6 +372,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedProdutosReceitasRoute: AuthenticatedProdutosReceitasRoute,
   AuthenticatedStockCapasRoute: AuthenticatedStockCapasRoute,
   AuthenticatedStockCascosRoute: AuthenticatedStockCascosRoute,
+  AuthenticatedStockProducaoRoute: AuthenticatedStockProducaoRoute,
   AuthenticatedStockTecidosRoute: AuthenticatedStockTecidosRoute,
   AuthenticatedEncomendasIndexRoute: AuthenticatedEncomendasIndexRoute,
   AuthenticatedStockIndexRoute: AuthenticatedStockIndexRoute,
@@ -368,3 +390,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
