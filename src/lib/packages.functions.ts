@@ -91,6 +91,7 @@ export type LabelRow = {
     color: string | null;
     structure_type: string | null;
     model_name: string | null;
+    observation: string | null;
   };
   packages: ModelPackage[]; // [] when none defined for the model
 };
@@ -105,7 +106,7 @@ export const getLabelsForOrders = createServerFn({ method: "POST" })
     const { data: orders, error } = await supabase
       .from("production_orders")
       .select(
-        "id, order_number, barcode, product_description, measure, fabric_type, fabric_ref, color, structure_type, model_id, models(name)",
+        "id, order_number, barcode, product_description, measure, fabric_type, fabric_ref, color, structure_type, model_id, observation, models(name)",
       )
       .in("id", data.ids);
     if (error) throw new Error(error.message);
@@ -149,6 +150,7 @@ export const getLabelsForOrders = createServerFn({ method: "POST" })
             color: o.color,
             structure_type: o.structure_type,
             model_name: o.models?.name ?? null,
+            observation: o.observation ?? null,
           },
           packages: chosen.sort((a, b) => a.package_number - b.package_number),
         };
