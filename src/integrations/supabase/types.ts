@@ -38,6 +38,47 @@ export type Database = {
         }
         Relationships: []
       }
+      model_packages: {
+        Row: {
+          created_at: string
+          id: string
+          model_id: string
+          package_name: string
+          package_number: number
+          package_total: number
+          structure_type: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          model_id: string
+          package_name: string
+          package_number: number
+          package_total: number
+          structure_type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          model_id?: string
+          package_name?: string
+          package_number?: number
+          package_total?: number
+          structure_type?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "model_packages_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "models"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       models: {
         Row: {
           active: boolean
