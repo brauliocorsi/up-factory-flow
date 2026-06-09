@@ -15,6 +15,7 @@ export type DashboardOrder = {
   status: string;
   observation: string | null;
   is_stock_production?: boolean;
+  has_stock_completed?: boolean;
 };
 
 export type DashboardData = {
@@ -30,7 +31,7 @@ export const getDashboardData = createServerFn({ method: "GET" })
     const { supabase } = context;
     const { data: orders, error } = await (supabase as any)
       .from("production_orders")
-      .select("id, order_number, product_description, priority, due_date, status, observation, is_stock_production, models(name), order_stages(stage, status, started_at)")
+      .select("id, order_number, product_description, priority, due_date, status, observation, is_stock_production, models(name), order_stages(stage, status, started_at, notes)")
       .neq("status", "cancelada")
       .order("priority", { ascending: false })
       .order("entry_date", { ascending: true });
@@ -65,6 +66,7 @@ export const getDashboardData = createServerFn({ method: "GET" })
         status: o.status as string,
         observation: ((o as any).observation as string | null) ?? null,
         is_stock_production: Boolean((o as any).is_stock_production),
+        has_stock_completed: stages.some((s: any) => typeof s.notes === "string" && s.notes.startsWith("Concluída de stock")),
       };
       byStage[current.stage].push(card);
     }
