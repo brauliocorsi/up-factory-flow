@@ -147,6 +147,9 @@ const orderInputSchema = z.object({
   due_date: z.string().nullable().optional(),
   priority: z.coerce.number().int().min(0).max(10).optional(),
   notes: z.string().trim().max(2000).nullable().optional(),
+  observation: z.string().trim().max(500).nullable().optional(),
+  finishing: z.enum(["F", "N"]).nullable().optional(),
+  barcode: z.string().trim().max(64).nullable().optional(),
 });
 
 export type OrderInput = z.infer<typeof orderInputSchema>;
@@ -182,9 +185,11 @@ export const createOrder = createServerFn({ method: "POST" })
       due_date: data.due_date || null,
       priority: data.priority ?? 0,
       notes: data.notes ?? null,
-      barcode: genBarcode(data.order_number),
+      observation: data.observation ?? null,
+      finishing: data.finishing ?? null,
+      barcode: (data.barcode && data.barcode.trim()) || genBarcode(data.order_number),
       created_by: userId,
-    };
+    } as any;
     const { data: inserted, error } = await supabase
       .from("production_orders")
       .insert(row)
