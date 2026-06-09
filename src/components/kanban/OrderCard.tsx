@@ -7,6 +7,7 @@ import { Clock, AlertTriangle, Flame } from "lucide-react";
 export function OrderCard({ order }: { order: DashboardOrder }) {
   const overdue = order.due_date && new Date(order.due_date) < new Date();
   const blocked = order.current_stage_status === "bloqueada";
+  const fromStock = Boolean(order.has_stock_completed);
 
   return (
     <Card className={`p-3 space-y-2 border-l-4 ${blocked ? "border-l-destructive bg-destructive/5" : overdue ? "border-l-destructive" : order.priority > 0 ? "border-l-warning" : "border-l-primary"}`}>
@@ -14,6 +15,7 @@ export function OrderCard({ order }: { order: DashboardOrder }) {
         <div className="font-mono text-xs font-bold text-muted-foreground">{order.order_number}</div>
         <div className="flex items-center gap-1">
           {order.is_stock_production && <Badge className="text-[9px] px-1.5 py-0 h-4 bg-accent text-accent-foreground">STOCK</Badge>}
+          {fromStock && <Badge className="text-[9px] px-1.5 py-0 h-4 bg-emerald-600 text-white">✓ DE STOCK</Badge>}
           {order.priority > 0 && <Flame className="size-3.5 text-warning" />}
           {blocked && <AlertTriangle className="size-3.5 text-destructive" />}
         </div>

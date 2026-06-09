@@ -15,6 +15,7 @@ export type DashboardOrder = {
   status: string;
   observation: string | null;
   is_stock_production?: boolean;
+  has_stock_completed?: boolean;
 };
 
 export type DashboardData = {
@@ -30,7 +31,7 @@ export const getDashboardData = createServerFn({ method: "GET" })
     const { supabase } = context;
     const { data: orders, error } = await (supabase as any)
       .from("production_orders")
-      .select("id, order_number, product_description, priority, due_date, status, observation, is_stock_production, models(name), order_stages(stage, status, started_at)")
+      .select("id, order_number, product_description, priority, due_date, status, observation, is_stock_production, models(name), order_stages(stage, status, started_at, notes)")
       .neq("status", "cancelada")
       .order("priority", { ascending: false })
       .order("entry_date", { ascending: true });
@@ -65,6 +66,7 @@ export const getDashboardData = createServerFn({ method: "GET" })
         status: o.status as string,
         observation: ((o as any).observation as string | null) ?? null,
         is_stock_production: Boolean((o as any).is_stock_production),
+        has_stock_completed: stages.some((s: any) => typeof s.notes === "string" && s.notes.startsWith("Concluída de stock")),
       };
       byStage[current.stage].push(card);
     }
@@ -291,4 +293,36 @@ export const getOrderForLabel = createServerFn({ method: "GET" })
       .single();
     if (error) throw new Error(error.message);
     return row;
+  });
+
+// ---------- Cancel with stock recovery ----------
+
+export type CancelPreview = {
+  order_number: string;
+  shell_code: string | null;
+  cover_code: string | null;
+  shell_reserved_to_release: boolean;
+  cover_reserved_to_release: boolean;
+  shell_to_return_to_stock: boolean;
+  cover_to_return_to_stock: boolean;
+};
+
+export const previewCancelOrder = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<CancelPreview> => {
+    const { data: res, error } = await (context.supabase as any)
+      .rpc("preview_cancel_order", { _order_id: data.id });
+    if (error) throw new Error(error.message);
+    return res as CancelPreview;
+  });
+
+export const cancelOrder = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: res, error } = await (context.supabase as any)
+      .rpc("cancel_order_with_recovery", { _order_id: data.id });
+    if (error) throw new Error(error.message);
+    return res;
   });
