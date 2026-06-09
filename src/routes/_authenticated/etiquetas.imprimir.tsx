@@ -23,7 +23,7 @@ export const Route = createFileRoute("/_authenticated/etiquetas/imprimir")({
 
 function ImprimirPage() {
   const { ids } = useSearch({ from: "/_authenticated/etiquetas/imprimir" });
-  const idList = (ids ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  const idList = (ids ?? "").split(",").map((s: string) => s.trim()).filter(Boolean);
   const [copies, setCopies] = useState(1);
 
   const { data, isLoading, error } = useQuery({
