@@ -233,9 +233,11 @@ export const bulkCreateOrders = createServerFn({ method: "POST" })
         due_date: r.due_date || null,
         priority: r.priority ?? 0,
         notes: r.notes ?? null,
-        barcode: genBarcode(r.order_number),
+        observation: r.observation ?? null,
+        finishing: r.finishing ?? null,
+        barcode: (r.barcode && r.barcode.trim()) || genBarcode(r.order_number),
         created_by: userId,
-      });
+      } as any);
     }
     let inserted = 0;
     if (ok.length) {
