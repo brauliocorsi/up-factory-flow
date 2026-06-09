@@ -17,6 +17,7 @@ import { Route as AuthenticatedEncomendasIndexRouteImport } from './routes/_auth
 import { Route as AuthenticatedEtiquetasImprimirRouteImport } from './routes/_authenticated/etiquetas.imprimir'
 import { Route as AuthenticatedEncomendasNovaRouteImport } from './routes/_authenticated/encomendas.nova'
 import { Route as AuthenticatedAdminColisRouteImport } from './routes/_authenticated/admin.colis'
+import { Route as AuthenticatedAdminCatalogoRouteImport } from './routes/_authenticated/admin.catalogo'
 import { Route as AuthenticatedEncomendasIdEtiquetaRouteImport } from './routes/_authenticated/encomendas.$id.etiqueta'
 
 const AuthRoute = AuthRouteImport.update({
@@ -61,6 +62,12 @@ const AuthenticatedAdminColisRoute = AuthenticatedAdminColisRouteImport.update({
   path: '/admin/colis',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAdminCatalogoRoute =
+  AuthenticatedAdminCatalogoRouteImport.update({
+    id: '/admin/catalogo',
+    path: '/admin/catalogo',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedEncomendasIdEtiquetaRoute =
   AuthenticatedEncomendasIdEtiquetaRouteImport.update({
     id: '/encomendas/$id/etiqueta',
@@ -72,6 +79,7 @@ export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthRoute
   '/importar': typeof AuthenticatedImportarRoute
+  '/admin/catalogo': typeof AuthenticatedAdminCatalogoRoute
   '/admin/colis': typeof AuthenticatedAdminColisRoute
   '/encomendas/nova': typeof AuthenticatedEncomendasNovaRoute
   '/etiquetas/imprimir': typeof AuthenticatedEtiquetasImprimirRoute
@@ -82,6 +90,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/importar': typeof AuthenticatedImportarRoute
   '/': typeof AuthenticatedIndexRoute
+  '/admin/catalogo': typeof AuthenticatedAdminCatalogoRoute
   '/admin/colis': typeof AuthenticatedAdminColisRoute
   '/encomendas/nova': typeof AuthenticatedEncomendasNovaRoute
   '/etiquetas/imprimir': typeof AuthenticatedEtiquetasImprimirRoute
@@ -94,6 +103,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/importar': typeof AuthenticatedImportarRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/admin/catalogo': typeof AuthenticatedAdminCatalogoRoute
   '/_authenticated/admin/colis': typeof AuthenticatedAdminColisRoute
   '/_authenticated/encomendas/nova': typeof AuthenticatedEncomendasNovaRoute
   '/_authenticated/etiquetas/imprimir': typeof AuthenticatedEtiquetasImprimirRoute
@@ -106,6 +116,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/importar'
+    | '/admin/catalogo'
     | '/admin/colis'
     | '/encomendas/nova'
     | '/etiquetas/imprimir'
@@ -116,6 +127,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/importar'
     | '/'
+    | '/admin/catalogo'
     | '/admin/colis'
     | '/encomendas/nova'
     | '/etiquetas/imprimir'
@@ -127,6 +139,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/importar'
     | '/_authenticated/'
+    | '/_authenticated/admin/catalogo'
     | '/_authenticated/admin/colis'
     | '/_authenticated/encomendas/nova'
     | '/_authenticated/etiquetas/imprimir'
@@ -197,6 +210,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminColisRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin/catalogo': {
+      id: '/_authenticated/admin/catalogo'
+      path: '/admin/catalogo'
+      fullPath: '/admin/catalogo'
+      preLoaderRoute: typeof AuthenticatedAdminCatalogoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/encomendas/$id/etiqueta': {
       id: '/_authenticated/encomendas/$id/etiqueta'
       path: '/encomendas/$id/etiqueta'
@@ -210,6 +230,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedImportarRoute: typeof AuthenticatedImportarRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedAdminCatalogoRoute: typeof AuthenticatedAdminCatalogoRoute
   AuthenticatedAdminColisRoute: typeof AuthenticatedAdminColisRoute
   AuthenticatedEncomendasNovaRoute: typeof AuthenticatedEncomendasNovaRoute
   AuthenticatedEtiquetasImprimirRoute: typeof AuthenticatedEtiquetasImprimirRoute
@@ -220,6 +241,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedImportarRoute: AuthenticatedImportarRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedAdminCatalogoRoute: AuthenticatedAdminCatalogoRoute,
   AuthenticatedAdminColisRoute: AuthenticatedAdminColisRoute,
   AuthenticatedEncomendasNovaRoute: AuthenticatedEncomendasNovaRoute,
   AuthenticatedEtiquetasImprimirRoute: AuthenticatedEtiquetasImprimirRoute,
@@ -238,3 +260,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
