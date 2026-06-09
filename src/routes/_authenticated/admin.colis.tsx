@@ -47,7 +47,13 @@ function ColisAdminPage() {
   const [draft, setDraft] = useState<Draft>({ package_number: 1, package_name: "", structure_type: "" });
 
   const save = useMutation({
-    mutationFn: (p: Parameters<typeof upsertPackage>[0]["data"]) => upsertPackage({ data: p }),
+    mutationFn: (p: {
+      model_id: string;
+      structure_type: string | null;
+      package_number: number;
+      package_total: number;
+      package_name: string;
+    }) => upsertPackage({ data: p }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["packages", modelId] });
       setDraft({ package_number: (packages?.length ?? 0) + 2, package_name: "", structure_type: "" });

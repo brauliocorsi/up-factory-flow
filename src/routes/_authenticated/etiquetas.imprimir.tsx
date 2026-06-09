@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useSearch } from "@tanstack/react-router";
+import type { ReactElement } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { z } from "zod";
@@ -16,7 +17,7 @@ const searchSchema = z.object({
 });
 
 export const Route = createFileRoute("/_authenticated/etiquetas/imprimir")({
-  validateSearch: (s) => searchSchema.parse(s),
+  validateSearch: (s: Record<string, unknown>) => searchSchema.parse(s),
   component: ImprimirPage,
 });
 
@@ -114,7 +115,7 @@ function ImprimirPage() {
 function renderLabelsForOrder(row: LabelRow, copies: number) {
   const { order, packages } = row;
   const list = packages.length ? packages : [null];
-  const out: JSX.Element[] = [];
+  const out: ReactElement[] = [];
   for (const pkg of list) {
     for (let c = 0; c < copies; c++) {
       const key = `${order.id}-${pkg?.id ?? "x"}-${c}`;
