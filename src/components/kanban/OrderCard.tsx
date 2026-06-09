@@ -12,8 +12,11 @@ export function OrderCard({ order }: { order: DashboardOrder }) {
     <Card className={`p-3 space-y-2 border-l-4 ${blocked ? "border-l-destructive bg-destructive/5" : overdue ? "border-l-destructive" : order.priority > 0 ? "border-l-warning" : "border-l-primary"}`}>
       <div className="flex items-start justify-between gap-2">
         <div className="font-mono text-xs font-bold text-muted-foreground">{order.order_number}</div>
-        {order.priority > 0 && <Flame className="size-3.5 text-warning" />}
-        {blocked && <AlertTriangle className="size-3.5 text-destructive" />}
+        <div className="flex items-center gap-1">
+          {order.is_stock_production && <Badge className="text-[9px] px-1.5 py-0 h-4 bg-accent text-accent-foreground">STOCK</Badge>}
+          {order.priority > 0 && <Flame className="size-3.5 text-warning" />}
+          {blocked && <AlertTriangle className="size-3.5 text-destructive" />}
+        </div>
       </div>
       <div className="text-sm font-medium leading-tight">{order.product_description}</div>
       {order.model_name && <Badge variant="secondary" className="text-[10px]">{order.model_name}</Badge>}

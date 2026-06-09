@@ -14,6 +14,102 @@ export type Database = {
   }
   public: {
     Tables: {
+      covers: {
+        Row: {
+          active: boolean
+          code: string
+          color_code: string | null
+          created_at: string
+          fabric_ref_code: string | null
+          fabric_type_code: string | null
+          id: string
+          location: string | null
+          measure_code: string | null
+          min_quantity: number
+          model_code: string | null
+          name: string
+          quantity: number
+          reserved: number
+          structure_code: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          color_code?: string | null
+          created_at?: string
+          fabric_ref_code?: string | null
+          fabric_type_code?: string | null
+          id?: string
+          location?: string | null
+          measure_code?: string | null
+          min_quantity?: number
+          model_code?: string | null
+          name: string
+          quantity?: number
+          reserved?: number
+          structure_code?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          color_code?: string | null
+          created_at?: string
+          fabric_ref_code?: string | null
+          fabric_type_code?: string | null
+          id?: string
+          location?: string | null
+          measure_code?: string | null
+          min_quantity?: number
+          model_code?: string | null
+          name?: string
+          quantity?: number
+          reserved?: number
+          structure_code?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      fabric_rolls: {
+        Row: {
+          active: boolean
+          color_code: string | null
+          created_at: string
+          fabric_ref_code: string | null
+          id: string
+          location: string | null
+          meters: number
+          min_meters: number
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          color_code?: string | null
+          created_at?: string
+          fabric_ref_code?: string | null
+          id?: string
+          location?: string | null
+          meters?: number
+          min_meters?: number
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          color_code?: string | null
+          created_at?: string
+          fabric_ref_code?: string | null
+          id?: string
+          location?: string | null
+          meters?: number
+          min_meters?: number
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       import_mappings: {
         Row: {
           created_at: string
@@ -201,6 +297,59 @@ export type Database = {
           },
         ]
       }
+      product_recipe: {
+        Row: {
+          category_code: string
+          cover_required: boolean
+          created_at: string
+          foam_description: string | null
+          id: string
+          measure_code: string
+          meters_per_unit: number | null
+          model_code: string
+          notes: string | null
+          shell_id: string | null
+          structure_code: string
+          updated_at: string
+        }
+        Insert: {
+          category_code: string
+          cover_required?: boolean
+          created_at?: string
+          foam_description?: string | null
+          id?: string
+          measure_code: string
+          meters_per_unit?: number | null
+          model_code: string
+          notes?: string | null
+          shell_id?: string | null
+          structure_code: string
+          updated_at?: string
+        }
+        Update: {
+          category_code?: string
+          cover_required?: boolean
+          created_at?: string
+          foam_description?: string | null
+          id?: string
+          measure_code?: string
+          meters_per_unit?: number | null
+          model_code?: string
+          notes?: string | null
+          shell_id?: string | null
+          structure_code?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_recipe_shell_id_fkey"
+            columns: ["shell_id"]
+            isOneToOne: false
+            referencedRelation: "shells"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       production_orders: {
         Row: {
           barcode: string | null
@@ -213,6 +362,7 @@ export type Database = {
           fabric_type: string | null
           finishing: string | null
           id: string
+          is_stock_production: boolean
           measure: string | null
           model_id: string | null
           notes: string | null
@@ -221,6 +371,9 @@ export type Database = {
           priority: number
           product_description: string
           status: Database["public"]["Enums"]["order_status"]
+          stock_item_id: string | null
+          stock_item_type: string | null
+          stock_quantity: number | null
           structure_type: string | null
         }
         Insert: {
@@ -234,6 +387,7 @@ export type Database = {
           fabric_type?: string | null
           finishing?: string | null
           id?: string
+          is_stock_production?: boolean
           measure?: string | null
           model_id?: string | null
           notes?: string | null
@@ -242,6 +396,9 @@ export type Database = {
           priority?: number
           product_description: string
           status?: Database["public"]["Enums"]["order_status"]
+          stock_item_id?: string | null
+          stock_item_type?: string | null
+          stock_quantity?: number | null
           structure_type?: string | null
         }
         Update: {
@@ -255,6 +412,7 @@ export type Database = {
           fabric_type?: string | null
           finishing?: string | null
           id?: string
+          is_stock_production?: boolean
           measure?: string | null
           model_id?: string | null
           notes?: string | null
@@ -263,6 +421,9 @@ export type Database = {
           priority?: number
           product_description?: string
           status?: Database["public"]["Enums"]["order_status"]
+          stock_item_id?: string | null
+          stock_item_type?: string | null
+          stock_quantity?: number | null
           structure_type?: string | null
         }
         Relationships: [
@@ -477,6 +638,81 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      shells: {
+        Row: {
+          active: boolean
+          category_code: string | null
+          code: string
+          created_at: string
+          id: string
+          location: string | null
+          min_quantity: number
+          name: string
+          quantity: number
+          reserved: number
+          structure_code: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          category_code?: string | null
+          code: string
+          created_at?: string
+          id?: string
+          location?: string | null
+          min_quantity?: number
+          name: string
+          quantity?: number
+          reserved?: number
+          structure_code?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          category_code?: string | null
+          code?: string
+          created_at?: string
+          id?: string
+          location?: string | null
+          min_quantity?: number
+          name?: string
+          quantity?: number
+          reserved?: number
+          structure_code?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      stock_movements: {
+        Row: {
+          created_at: string
+          delta: number
+          id: string
+          item_id: string
+          item_type: string
+          reason: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          delta: number
+          id?: string
+          item_id: string
+          item_type: string
+          reason?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          delta?: number
+          id?: string
+          item_id?: string
+          item_type?: string
+          reason?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {
