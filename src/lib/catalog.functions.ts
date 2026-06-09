@@ -46,8 +46,8 @@ export const listRef = createServerFn({ method: "POST" })
     const cols = data.kind === "models"
       ? "id, code, name, active, category_id"
       : "id, code, name, active";
-    const { data: rows, error } = await context.supabase
-      .from(REF_TABLE[data.kind] as any)
+    const { data: rows, error } = await (context.supabase as any)
+      .from(REF_TABLE[data.kind])
       .select(cols)
       .order("code");
     if (error) throw new Error(error.message);
