@@ -87,6 +87,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "UP Produção" },
+      { name: "twitter:description", content: "Gestão de produção de estofos — UP Móveis" },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/8534d028-db6e-41e5-95a5-d19e6dc22057/id-preview-de981bce--f61d95c9-0846-4475-8cd9-c96c7da62357.lovable.app-1781007551968.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/8534d028-db6e-41e5-95a5-d19e6dc22057/id-preview-de981bce--f61d95c9-0846-4475-8cd9-c96c7da62357.lovable.app-1781007551968.png" },
     ],
     links: [
       {
