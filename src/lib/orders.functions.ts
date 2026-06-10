@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
-import { computeLines, type ConvergenceLines } from "@/components/kanban/ConvergenceStatus";
+import { computeLines, type ConvergenceLines } from "@/lib/convergence";
 
 export type DashboardOrder = {
   id: string;
