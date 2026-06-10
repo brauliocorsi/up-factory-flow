@@ -44,7 +44,7 @@ export const getProductionData = createServerFn({ method: "GET" })
       .neq("status", "concluida")
       .order("started_at", { ascending: true, nullsFirst: false });
     if (error) throw new Error(error.message);
-    const byStage = Object.fromEntries(STAGES.map((s) => [s, []])) as Record<Stage, ProductionStageOrder[]>;
+    const byStage = Object.fromEntries(STAGES.map((s) => [s, []])) as unknown as Record<Stage, ProductionStageOrder[]>;
     for (const row of (data ?? []) as any[]) {
       const o = row.production_orders;
       byStage[row.stage as Stage].push({
