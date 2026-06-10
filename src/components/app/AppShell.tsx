@@ -1,5 +1,5 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { LayoutGrid, ListOrdered, LogOut, Factory, Upload, Library, Boxes } from "lucide-react";
+import { LayoutGrid, ListOrdered, LogOut, Factory, Upload, Library, Boxes, HardHat, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -7,10 +7,12 @@ import type { ReactNode } from "react";
 
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutGrid },
+  { to: "/producao", label: "Produção", icon: HardHat },
   { to: "/encomendas", label: "Encomendas", icon: ListOrdered },
   { to: "/stock", label: "Stock", icon: Boxes },
   { to: "/importar", label: "Importar", icon: Upload },
   { to: "/admin/catalogo", label: "Catálogo", icon: Library },
+  { to: "/configuracoes", label: "Configurações", icon: Settings },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
