@@ -14,6 +14,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_settings: {
+        Row: {
+          id: number
+          identification_mode: string
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          identification_mode?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          identification_mode?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       covers: {
         Row: {
           active: boolean
@@ -213,6 +231,35 @@ export type Database = {
           },
         ]
       }
+      operator_stages: {
+        Row: {
+          created_at: string
+          id: string
+          operator_id: string
+          stage: Database["public"]["Enums"]["production_stage"]
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          operator_id: string
+          stage: Database["public"]["Enums"]["production_stage"]
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          operator_id?: string
+          stage?: Database["public"]["Enums"]["production_stage"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "operator_stages_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       operators: {
         Row: {
           active: boolean
@@ -246,9 +293,12 @@ export type Database = {
           duration_minutes: number | null
           finished_at: string | null
           id: string
+          is_paused: boolean
           notes: string | null
           operator_id: string | null
           order_id: string
+          paused_seconds: number
+          productive_seconds: number
           stage: Database["public"]["Enums"]["production_stage"]
           started_at: string | null
           status: Database["public"]["Enums"]["stage_status"]
@@ -259,9 +309,12 @@ export type Database = {
           duration_minutes?: number | null
           finished_at?: string | null
           id?: string
+          is_paused?: boolean
           notes?: string | null
           operator_id?: string | null
           order_id: string
+          paused_seconds?: number
+          productive_seconds?: number
           stage: Database["public"]["Enums"]["production_stage"]
           started_at?: string | null
           status?: Database["public"]["Enums"]["stage_status"]
@@ -272,9 +325,12 @@ export type Database = {
           duration_minutes?: number | null
           finished_at?: string | null
           id?: string
+          is_paused?: boolean
           notes?: string | null
           operator_id?: string | null
           order_id?: string
+          paused_seconds?: number
+          productive_seconds?: number
           stage?: Database["public"]["Enums"]["production_stage"]
           started_at?: string | null
           status?: Database["public"]["Enums"]["stage_status"]
@@ -684,6 +740,48 @@ export type Database = {
         }
         Relationships: []
       }
+      stage_time_logs: {
+        Row: {
+          created_at: string
+          event: string
+          event_at: string
+          id: string
+          operator_id: string | null
+          order_stage_id: string
+        }
+        Insert: {
+          created_at?: string
+          event: string
+          event_at?: string
+          id?: string
+          operator_id?: string | null
+          order_stage_id: string
+        }
+        Update: {
+          created_at?: string
+          event?: string
+          event_at?: string
+          id?: string
+          operator_id?: string | null
+          order_stage_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stage_time_logs_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stage_time_logs_order_stage_id_fkey"
+            columns: ["order_stage_id"]
+            isOneToOne: false
+            referencedRelation: "order_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stock_movements: {
         Row: {
           created_at: string
@@ -776,6 +874,14 @@ export type Database = {
         Returns: boolean
       }
       preview_cancel_order: { Args: { _order_id: string }; Returns: Json }
+      record_stage_event: {
+        Args: {
+          _event: string
+          _operator_code: string
+          _order_stage_id: string
+        }
+        Returns: Json
+      }
       resolve_order_recipe: {
         Args: { _order_id: string }
         Returns: {
