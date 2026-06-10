@@ -63,13 +63,13 @@ export function AppShell({ children }: { children: ReactNode }) {
       <main className="flex-1 pb-20 md:pb-6">{children}</main>
 
       {/* Bottom nav (mobile) */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t bg-card">
-        <div className="grid grid-cols-5">
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t bg-card overflow-x-auto">
+        <div className="flex min-w-max">
           {nav.map((n) => {
             const active = n.to === "/" ? pathname === "/" : pathname.startsWith(n.to);
             const Icon = n.icon;
             return (
-              <Link key={n.to} to={n.to} className={`flex flex-col items-center justify-center gap-1 py-3 text-xs ${active ? "text-primary" : "text-muted-foreground"}`}>
+              <Link key={n.to} to={n.to} className={`flex-1 min-w-[72px] flex flex-col items-center justify-center gap-1 py-3 text-[11px] ${active ? "text-primary" : "text-muted-foreground"}`}>
                 <Icon className="size-5" />
                 {n.label}
               </Link>
