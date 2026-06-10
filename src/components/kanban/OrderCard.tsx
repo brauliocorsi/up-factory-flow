@@ -3,6 +3,9 @@ import { Card } from "@/components/ui/card";
 import { timeAgo } from "@/lib/format";
 import type { DashboardOrder } from "@/lib/orders.functions";
 import { Clock, AlertTriangle, Flame } from "lucide-react";
+import { ConvergenceStatus } from "./ConvergenceStatus";
+
+const CONVERGENCE_STAGES = new Set(["corte", "costura", "estrutura", "branco", "estofagem"]);
 
 export function OrderCard({ order }: { order: DashboardOrder }) {
   const overdue = order.due_date && new Date(order.due_date) < new Date();
@@ -27,6 +30,13 @@ export function OrderCard({ order }: { order: DashboardOrder }) {
           <AlertTriangle className="size-3 mt-0.5 shrink-0 text-warning" />
           <span className="leading-tight">{order.observation}</span>
         </div>
+      )}
+      {order.lines && CONVERGENCE_STAGES.has(order.current_stage) && (
+        <ConvergenceStatus
+          lines={order.lines}
+          variant={order.current_stage === "estofagem" ? "full" : "compact"}
+          highlightWhenReady={order.current_stage === "estofagem"}
+        />
       )}
       <div className="flex items-center gap-1 text-[11px] text-muted-foreground pt-1">
         <Clock className="size-3" />

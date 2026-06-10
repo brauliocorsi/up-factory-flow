@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import { computeLines, type ConvergenceLines } from "@/lib/convergence";
 
 export type DashboardOrder = {
   id: string;
@@ -16,10 +17,11 @@ export type DashboardOrder = {
   observation: string | null;
   is_stock_production?: boolean;
   has_stock_completed?: boolean;
+  lines?: ConvergenceLines;
 };
 
 export type DashboardData = {
-  stats: { pendentes: number; em_producao: number; concluidas_hoje: number; bloqueadas: number };
+  stats: { pendentes: number; em_producao: number; concluidas_hoje: number; bloqueadas: number; prontas_estofar: number };
   byStage: Record<string, DashboardOrder[]>;
 };
 
@@ -40,7 +42,7 @@ export const getDashboardData = createServerFn({ method: "GET" })
     const byStage: Record<string, DashboardOrder[]> = {};
     STAGES.forEach((s) => (byStage[s] = []));
 
-    let pendentes = 0, em_producao = 0, bloqueadas = 0;
+    let pendentes = 0, em_producao = 0, bloqueadas = 0, prontas_estofar = 0;
     const today = new Date(); today.setHours(0,0,0,0);
 
     for (const o of orders ?? []) {
@@ -53,6 +55,10 @@ export const getDashboardData = createServerFn({ method: "GET" })
                     STAGES.map((name) => stages.find((s) => s.stage === name && s.status !== "concluida")).find(Boolean);
       if (!current) continue; // concluida toda
       if (current.status === "bloqueada") bloqueadas++;
+      const lines = computeLines(stages as any);
+      if (current.stage === "estofagem" && lines.tecido.ready && lines.estrutura.ready) {
+        prontas_estofar++;
+      }
       const card: DashboardOrder = {
         id: o.id as string,
         order_number: o.order_number as string,
@@ -67,6 +73,7 @@ export const getDashboardData = createServerFn({ method: "GET" })
         observation: ((o as any).observation as string | null) ?? null,
         is_stock_production: Boolean((o as any).is_stock_production),
         has_stock_completed: stages.some((s: any) => typeof s.notes === "string" && s.notes.startsWith("Concluída de stock")),
+        lines,
       };
       byStage[current.stage].push(card);
     }
@@ -80,7 +87,7 @@ export const getDashboardData = createServerFn({ method: "GET" })
       .gte("finished_at", today.toISOString());
 
     return {
-      stats: { pendentes, em_producao, concluidas_hoje: count ?? 0, bloqueadas },
+      stats: { pendentes, em_producao, concluidas_hoje: count ?? 0, bloqueadas, prontas_estofar },
       byStage,
     };
   });

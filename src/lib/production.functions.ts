@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import { computeLines, type ConvergenceLines } from "@/lib/convergence";
 
 /**
  * PRODUÇÃO — Operadores
@@ -27,6 +28,7 @@ export type ProductionStageOrder = {
   productive_seconds: number;
   paused_seconds: number;
   operator_code: string | null;
+  lines?: ConvergenceLines;
 };
 
 export type ProductionData = {
@@ -44,6 +46,27 @@ export const getProductionData = createServerFn({ method: "GET" })
       .neq("status", "concluida")
       .order("started_at", { ascending: true, nullsFirst: false });
     if (error) throw new Error(error.message);
+
+    // Buscar TODAS as etapas das encomendas envolvidas, para calcular o
+    // estado das duas linhas paralelas (Tecido + Estrutura).
+    const orderIds = Array.from(new Set(((data ?? []) as any[]).map((r) => r.production_orders.id)));
+    const linesByOrder = new Map<string, ConvergenceLines>();
+    if (orderIds.length > 0) {
+      const { data: allStages } = await (supabase as any)
+        .from("order_stages")
+        .select("order_id, stage, status, notes")
+        .in("order_id", orderIds);
+      const stagesByOrder = new Map<string, any[]>();
+      for (const s of (allStages ?? []) as any[]) {
+        const arr = stagesByOrder.get(s.order_id) ?? [];
+        arr.push(s);
+        stagesByOrder.set(s.order_id, arr);
+      }
+      for (const [oid, st] of stagesByOrder) {
+        linesByOrder.set(oid, computeLines(st));
+      }
+    }
+
     const byStage = Object.fromEntries(STAGES.map((s) => [s, []])) as unknown as Record<Stage, ProductionStageOrder[]>;
     for (const row of (data ?? []) as any[]) {
       const o = row.production_orders;
@@ -60,6 +83,7 @@ export const getProductionData = createServerFn({ method: "GET" })
         productive_seconds: row.productive_seconds ?? 0,
         paused_seconds: row.paused_seconds ?? 0,
         operator_code: row.operators?.code ?? null,
+        lines: linesByOrder.get(o.id),
       });
     }
     return { byStage };

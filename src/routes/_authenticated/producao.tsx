@@ -14,6 +14,7 @@ import {
   getProductionData, recordStageEvent, getAppSettings,
   listOperatorsWithStages, STAGES, type ProductionStageOrder, type Stage,
 } from "@/lib/production.functions";
+import { ConvergenceStatus } from "@/components/kanban/ConvergenceStatus";
 import { useRealtimeOrders } from "@/hooks/useRealtimeOrders";
 
 export const Route = createFileRoute("/_authenticated/producao")({
@@ -194,6 +195,11 @@ function StageCard({ item, canAct, onAction, pending }: {
   const blocked = item.status === "bloqueada";
   const running = item.status === "em_curso" && !item.is_paused;
   const paused = item.is_paused;
+  const isUpholstery = item.stage === "estofagem";
+  const convergenceReady = item.lines ? item.lines.tecido.ready && item.lines.estrutura.ready : true;
+  const showConvergence = item.lines && (
+    isUpholstery || ["corte","costura","estrutura","branco"].includes(item.stage)
+  );
 
   return (
     <Card className={`p-4 border-l-4 ${
@@ -218,6 +224,15 @@ function StageCard({ item, canAct, onAction, pending }: {
               {item.observation}
             </div>
           )}
+          {showConvergence && item.lines && (
+            <div className="mt-2">
+              <ConvergenceStatus
+                lines={item.lines}
+                variant={isUpholstery ? "full" : "compact"}
+                highlightWhenReady={isUpholstery}
+              />
+            </div>
+          )}
           <div className="flex items-center gap-3 text-xs text-muted-foreground mt-2">
             <span className="inline-flex items-center gap-1"><Clock className="size-3" />Produtivo: <strong className="text-foreground">{fmtTime(liveSeconds)}</strong></span>
             {item.paused_seconds > 0 && <span>Pausa: {fmtTime(item.paused_seconds)}</span>}
@@ -233,10 +248,17 @@ function StageCard({ item, canAct, onAction, pending }: {
           </div>
         ) : (
           <>
-            {item.status !== "em_curso" && !blocked && (
+            {item.status !== "em_curso" && !blocked && (!isUpholstery || convergenceReady) && (
               <Button size="lg" disabled={pending} onClick={() => onAction("iniciar")} className="gap-2">
                 <Play className="size-4" /> Iniciar
               </Button>
+            )}
+            {isUpholstery && !convergenceReady && item.status !== "em_curso" && (
+              <div className="text-xs text-muted-foreground flex items-center gap-1">
+                <Lock className="size-3" /> Aguarda {!item.lines?.tecido.ready ? "Costura" : ""}
+                {!item.lines?.tecido.ready && !item.lines?.estrutura.ready ? " + " : ""}
+                {!item.lines?.estrutura.ready ? "Branco" : ""}
+              </div>
             )}
             {running && (
               <Button size="lg" variant="outline" disabled={pending} onClick={() => onAction("pausar")} className="gap-2">
