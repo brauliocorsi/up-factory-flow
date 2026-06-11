@@ -45,6 +45,8 @@ function ProducaoPage() {
   useRealtimeOrders([["production"]]);
 
   const [activeStage, setActiveStage] = useState<Stage>("estofagem");
+  const [onlyReady, setOnlyReady] = useState<boolean>(true);
+  const [onlyMine, setOnlyMine] = useState<boolean>(true);
   const [operatorCode, setOperatorCode] = useState<string>(() =>
     (typeof window !== "undefined" && sessionStorage.getItem("op_code")) || ""
   );
@@ -88,7 +90,21 @@ function ProducaoPage() {
     setTimeout(() => codeInputRef.current?.focus(), 50);
   }
 
-  const items = data?.byStage[activeStage] ?? [];
+  const isReadyToStart = (it: ProductionStageOrder) => {
+    if (it.status === "bloqueada") return false;
+    if (it.status === "em_curso") return false;
+    if (it.stage === "estofagem" && it.lines) {
+      return it.lines.tecido.ready && it.lines.estrutura.ready;
+    }
+    return true;
+  };
+  const allItems = data?.byStage[activeStage] ?? [];
+  const items = allItems.filter((it) => {
+    if (onlyMine && !canActOnStage(it.stage)) return false;
+    if (onlyReady && !isReadyToStart(it)) return false;
+    return true;
+  });
+  const hiddenCount = allItems.length - items.length;
 
   return (
     <div className="max-w-5xl mx-auto p-4 space-y-4">
@@ -156,6 +172,31 @@ function ProducaoPage() {
             );
           })}
         </div>
+      </div>
+
+      {/* Filtros */}
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          onClick={() => setOnlyReady((v) => !v)}
+          className={`text-xs font-medium px-2.5 py-1.5 rounded-md border transition ${
+            onlyReady ? "bg-emerald-600 text-white border-emerald-600" : "bg-card hover:bg-accent"
+          }`}
+        >
+          {onlyReady ? "✓ " : ""}Só prontas para iniciar
+        </button>
+        <button
+          onClick={() => setOnlyMine((v) => !v)}
+          className={`text-xs font-medium px-2.5 py-1.5 rounded-md border transition ${
+            onlyMine ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-accent"
+          }`}
+        >
+          {onlyMine ? "✓ " : ""}Só as minhas etapas
+        </button>
+        {hiddenCount > 0 && (
+          <span className="text-[11px] text-muted-foreground">
+            {hiddenCount} ocultas pelos filtros
+          </span>
+        )}
       </div>
 
       {/* Lista */}
