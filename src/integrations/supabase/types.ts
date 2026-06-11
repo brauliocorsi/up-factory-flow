@@ -409,6 +409,60 @@ export type Database = {
           },
         ]
       }
+      picking_dispatches: {
+        Row: {
+          batch_id: string
+          created_at: string
+          dispatched_at: string
+          id: string
+          operator_id: string | null
+          order_id: string
+          response_body: string | null
+          response_code: number | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          batch_id: string
+          created_at?: string
+          dispatched_at?: string
+          id?: string
+          operator_id?: string | null
+          order_id: string
+          response_body?: string | null
+          response_code?: number | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          batch_id?: string
+          created_at?: string
+          dispatched_at?: string
+          id?: string
+          operator_id?: string | null
+          order_id?: string
+          response_body?: string | null
+          response_code?: number | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "picking_dispatches_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "picking_dispatches_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "production_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_recipe: {
         Row: {
           category_code: string
