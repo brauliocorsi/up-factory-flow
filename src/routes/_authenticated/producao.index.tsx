@@ -19,6 +19,7 @@ import { ConvergenceStatus } from "@/components/kanban/ConvergenceStatus";
 import { useRealtimeOrders } from "@/hooks/useRealtimeOrders";
 import { ReworkDialog } from "@/components/rework/ReworkDialog";
 import { QualityCheckDialog } from "@/components/quality/QualityCheckDialog";
+import { getExpectedForOrders } from "@/lib/sla.functions";
 
 export const Route = createFileRoute("/_authenticated/producao/")({
   component: ProducaoPage,
@@ -54,6 +55,25 @@ function ProducaoPage() {
   const { data } = useQuery({ queryKey: ["production"], queryFn: () => fetchData(), refetchInterval: 30000 });
   const { data: settings } = useQuery({ queryKey: ["app-settings"], queryFn: () => fetchSettings() });
   const { data: operators } = useQuery({ queryKey: ["operators-stages"], queryFn: () => fetchOps() });
+  const fetchExpected = useServerFn(getExpectedForOrders);
+
+  // Lista de (order_id, stage) visíveis em todas as etapas para resolver SLA em lote
+  const orderStagePairs = useMemo(() => {
+    if (!data) return [] as { order_id: string; stage: Stage }[];
+    const out: { order_id: string; stage: Stage }[] = [];
+    for (const s of STAGES) {
+      for (const it of data.byStage[s] ?? []) {
+        out.push({ order_id: it.order_id, stage: it.stage });
+      }
+    }
+    return out;
+  }, [data]);
+
+  const { data: expectedMap } = useQuery({
+    queryKey: ["production-sla", orderStagePairs.length, orderStagePairs.map((p) => `${p.order_id}|${p.stage}`).join(",")],
+    queryFn: () => fetchExpected({ data: { orders: orderStagePairs } }),
+    enabled: orderStagePairs.length > 0,
+  });
 
   useRealtimeOrders([["production"]]);
 
@@ -234,6 +254,7 @@ function ProducaoPage() {
             onAction={(event) => mutation.mutate({ order_stage_id: it.id, event })}
             pending={mutation.isPending}
             operatorCode={operatorCode.trim()}
+            expectedMinutes={expectedMap?.[it.order_id]?.[it.stage] ?? null}
           />
         ))}
       </div>
