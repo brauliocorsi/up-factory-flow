@@ -18,7 +18,7 @@ import {
 import { ConvergenceStatus } from "@/components/kanban/ConvergenceStatus";
 import { useRealtimeOrders } from "@/hooks/useRealtimeOrders";
 
-export const Route = createFileRoute("/_authenticated/producao")({
+export const Route = createFileRoute("/_authenticated/producao/")({
   component: ProducaoPage,
 });
 
