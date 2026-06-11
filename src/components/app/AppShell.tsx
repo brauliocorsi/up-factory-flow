@@ -15,6 +15,7 @@ const nav = [
   { to: "/importar", label: "Importar", icon: Upload },
   { to: "/admin/catalogo", label: "Catálogo", icon: Library },
   { to: "/admin/qualidade", label: "Qualidade", icon: ClipboardCheck },
+  { to: "/admin/sla", label: "SLA", icon: Clock },
   { to: "/configuracoes", label: "Configurações", icon: Settings },
 ];
 
