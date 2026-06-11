@@ -262,12 +262,13 @@ function ProducaoPage() {
   );
 }
 
-function StageCard({ item, canAct, onAction, pending, operatorCode }: {
+function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinutes }: {
   item: ProductionStageOrder;
   canAct: boolean;
   onAction: (event: "iniciar"|"pausar"|"retomar"|"finalizar") => void;
   pending: boolean;
   operatorCode: string;
+  expectedMinutes: number | null;
 }) {
   // Calcular tempo decorrido em vivo se estiver em curso
   const liveSeconds = useMemo(() => {
@@ -334,6 +335,9 @@ function StageCard({ item, canAct, onAction, pending, operatorCode }: {
             {item.paused_seconds > 0 && <span>Pausa: {fmtTime(item.paused_seconds)}</span>}
             {(item.rework_seconds ?? 0) > 0 && <span className="text-orange-700">Retrabalho: {fmtTime(item.rework_seconds ?? 0)}</span>}
           </div>
+          {expectedMinutes != null && expectedMinutes > 0 && (
+            <SlaBar productiveSeconds={liveSeconds} expectedMinutes={expectedMinutes} />
+          )}
         </div>
       </div>
 
@@ -398,5 +402,34 @@ function StageCard({ item, canAct, onAction, pending, operatorCode }: {
         )}
       </div>
     </Card>
+  );
+}
+
+function SlaBar({ productiveSeconds, expectedMinutes }: { productiveSeconds: number; expectedMinutes: number }) {
+  const expectedSec = expectedMinutes * 60;
+  const ratio = expectedSec > 0 ? productiveSeconds / expectedSec : 0;
+  const pct = Math.min(100, Math.round(ratio * 100));
+  const exceeded = productiveSeconds > expectedSec;
+  const warn = !exceeded && ratio >= 0.8;
+  const color = exceeded ? "bg-destructive" : warn ? "bg-amber-500" : "bg-primary";
+  const overSec = productiveSeconds - expectedSec;
+  return (
+    <div className="mt-2">
+      <div className="flex items-center justify-between text-[11px] mb-1">
+        <span className="text-muted-foreground">
+          Previsto: <strong className="text-foreground">{expectedMinutes}m</strong>
+          {" · "}
+          Realizado: <strong className="text-foreground">{fmtTime(productiveSeconds)}</strong>
+        </span>
+        {exceeded && (
+          <span className="inline-flex items-center gap-1 text-destructive font-semibold">
+            <AlertTriangle className="size-3" /> Excedido +{fmtTime(overSec)}
+          </span>
+        )}
+      </div>
+      <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+        <div className={`h-full ${color} transition-all`} style={{ width: `${exceeded ? 100 : pct}%` }} />
+      </div>
+    </div>
   );
 }
