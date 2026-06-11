@@ -210,7 +210,7 @@ function NovaEncomendaPage() {
       }));
       setTimeout(() => scanRef.current?.focus(), 50);
     },
-    onError: (e: any) => toast.error(e.message ?? "Erro ao criar encomenda"),
+    onError: (e: any) => toast.error(friendlyError(e?.message)),
   });
 
   function set<K extends keyof typeof form>(k: K, v: (typeof form)[K]) {
