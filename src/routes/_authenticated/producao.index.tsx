@@ -19,6 +19,7 @@ import { ConvergenceStatus } from "@/components/kanban/ConvergenceStatus";
 import { useRealtimeOrders } from "@/hooks/useRealtimeOrders";
 import { ReworkDialog } from "@/components/rework/ReworkDialog";
 import { QualityCheckDialog } from "@/components/quality/QualityCheckDialog";
+import { getExpectedForOrders } from "@/lib/sla.functions";
 
 export const Route = createFileRoute("/_authenticated/producao/")({
   component: ProducaoPage,
@@ -54,6 +55,25 @@ function ProducaoPage() {
   const { data } = useQuery({ queryKey: ["production"], queryFn: () => fetchData(), refetchInterval: 30000 });
   const { data: settings } = useQuery({ queryKey: ["app-settings"], queryFn: () => fetchSettings() });
   const { data: operators } = useQuery({ queryKey: ["operators-stages"], queryFn: () => fetchOps() });
+  const fetchExpected = useServerFn(getExpectedForOrders);
+
+  // Lista de (order_id, stage) visíveis em todas as etapas para resolver SLA em lote
+  const orderStagePairs = useMemo(() => {
+    if (!data) return [] as { order_id: string; stage: Stage }[];
+    const out: { order_id: string; stage: Stage }[] = [];
+    for (const s of STAGES) {
+      for (const it of data.byStage[s] ?? []) {
+        out.push({ order_id: it.order_id, stage: it.stage });
+      }
+    }
+    return out;
+  }, [data]);
+
+  const { data: expectedMap } = useQuery({
+    queryKey: ["production-sla", orderStagePairs.length, orderStagePairs.map((p) => `${p.order_id}|${p.stage}`).join(",")],
+    queryFn: () => fetchExpected({ data: { orders: orderStagePairs } }),
+    enabled: orderStagePairs.length > 0,
+  });
 
   useRealtimeOrders([["production"]]);
 
@@ -234,6 +254,7 @@ function ProducaoPage() {
             onAction={(event) => mutation.mutate({ order_stage_id: it.id, event })}
             pending={mutation.isPending}
             operatorCode={operatorCode.trim()}
+            expectedMinutes={expectedMap?.[it.order_id]?.[it.stage] ?? null}
           />
         ))}
       </div>
@@ -241,23 +262,29 @@ function ProducaoPage() {
   );
 }
 
-function StageCard({ item, canAct, onAction, pending, operatorCode }: {
+function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinutes }: {
   item: ProductionStageOrder;
   canAct: boolean;
   onAction: (event: "iniciar"|"pausar"|"retomar"|"finalizar") => void;
   pending: boolean;
   operatorCode: string;
+  expectedMinutes: number | null;
 }) {
-  // Calcular tempo decorrido em vivo se estiver em curso
-  const liveSeconds = useMemo(() => {
-    if (item.status !== "em_curso" || item.is_paused || !item.started_at) return item.productive_seconds;
-    // aproximação: started_at é o início da etapa, não da última retoma
-    // o servidor recalcula com precisão a partir dos logs
-    return item.productive_seconds;
-  }, [item]);
+  // Contador "live": parte do productive_seconds vindo do servidor e soma
+  // o tempo decorrido no cliente desde a última atualização, enquanto a
+  // etapa estiver em curso e sem pausa. O servidor é a fonte de verdade.
+  const baselineRef = useRef<{ seconds: number; at: number }>({
+    seconds: item.productive_seconds, at: Date.now(),
+  });
+  useEffect(() => {
+    baselineRef.current = { seconds: item.productive_seconds, at: Date.now() };
+  }, [item.productive_seconds, item.id, item.status, item.is_paused]);
+  const running = item.status === "em_curso" && !item.is_paused;
+  const liveSeconds = running
+    ? baselineRef.current.seconds + Math.max(0, Math.floor((Date.now() - baselineRef.current.at) / 1000))
+    : item.productive_seconds;
 
   const blocked = item.status === "bloqueada";
-  const running = item.status === "em_curso" && !item.is_paused;
   const paused = item.is_paused;
   const isUpholstery = item.stage === "estofagem";
   const convergenceReady = item.lines
@@ -313,6 +340,9 @@ function StageCard({ item, canAct, onAction, pending, operatorCode }: {
             {item.paused_seconds > 0 && <span>Pausa: {fmtTime(item.paused_seconds)}</span>}
             {(item.rework_seconds ?? 0) > 0 && <span className="text-orange-700">Retrabalho: {fmtTime(item.rework_seconds ?? 0)}</span>}
           </div>
+          {expectedMinutes != null && expectedMinutes > 0 && (
+            <SlaBar productiveSeconds={liveSeconds} expectedMinutes={expectedMinutes} />
+          )}
         </div>
       </div>
 
@@ -377,5 +407,34 @@ function StageCard({ item, canAct, onAction, pending, operatorCode }: {
         )}
       </div>
     </Card>
+  );
+}
+
+function SlaBar({ productiveSeconds, expectedMinutes }: { productiveSeconds: number; expectedMinutes: number }) {
+  const expectedSec = expectedMinutes * 60;
+  const ratio = expectedSec > 0 ? productiveSeconds / expectedSec : 0;
+  const pct = Math.min(100, Math.round(ratio * 100));
+  const exceeded = productiveSeconds > expectedSec;
+  const warn = !exceeded && ratio >= 0.8;
+  const color = exceeded ? "bg-destructive" : warn ? "bg-amber-500" : "bg-primary";
+  const overSec = productiveSeconds - expectedSec;
+  return (
+    <div className="mt-2">
+      <div className="flex items-center justify-between text-[11px] mb-1">
+        <span className="text-muted-foreground">
+          Previsto: <strong className="text-foreground">{expectedMinutes}m</strong>
+          {" · "}
+          Realizado: <strong className="text-foreground">{fmtTime(productiveSeconds)}</strong>
+        </span>
+        {exceeded && (
+          <span className="inline-flex items-center gap-1 text-destructive font-semibold">
+            <AlertTriangle className="size-3" /> Excedido +{fmtTime(overSec)}
+          </span>
+        )}
+      </div>
+      <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+        <div className={`h-full ${color} transition-all`} style={{ width: `${exceeded ? 100 : pct}%` }} />
+      </div>
+    </div>
   );
 }
