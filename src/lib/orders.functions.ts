@@ -276,6 +276,38 @@ export const getImportMapping = createServerFn({ method: "GET" })
     return (data?.mapping as Record<string, string> | null) ?? null;
   });
 
+// ---------- Check existing order numbers (for import validation) ----------
+
+export type ExistingOrderInfo = {
+  order_number: string;
+  count: number;
+  products: string[];
+};
+
+export const checkExistingOrderNumbers = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ numbers: z.array(z.string().trim().min(1)).min(1).max(2000) }).parse(d),
+  )
+  .handler(async ({ data, context }): Promise<ExistingOrderInfo[]> => {
+    const unique = Array.from(new Set(data.numbers));
+    const { data: rows, error } = await context.supabase
+      .from("production_orders")
+      .select("order_number, product_description")
+      .in("order_number", unique);
+    if (error) throw new Error(error.message);
+    const map = new Map<string, ExistingOrderInfo>();
+    for (const r of rows ?? []) {
+      const num = (r as any).order_number as string;
+      const prod = ((r as any).product_description as string) ?? "";
+      const cur = map.get(num) ?? { order_number: num, count: 0, products: [] };
+      cur.count += 1;
+      if (prod) cur.products.push(prod);
+      map.set(num, cur);
+    }
+    return Array.from(map.values());
+  });
+
 export const saveImportMapping = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ mapping: z.record(z.string(), z.string()) }).parse(d))
