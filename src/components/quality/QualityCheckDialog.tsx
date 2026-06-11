@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -43,13 +43,14 @@ export function QualityCheckDialog({
   });
 
   // Inicializa itens quando o template carrega
-  useMemo(() => {
+  useEffect(() => {
     if (tpl && items.length === 0) {
       setItems(tpl.items.map((i) => ({
         template_item_id: i.id, label: i.label, status: null, photo_url: null,
       })));
     }
-  }, [tpl]); // eslint-disable-line
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tpl]);
 
   function setItem(i: number, patch: Partial<ItemState>) {
     setItems((arr) => arr.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
