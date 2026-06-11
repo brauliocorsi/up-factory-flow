@@ -31,7 +31,7 @@ export function ConvergenceStatus({
 
   return (
     <div className="space-y-1">
-      <div className="flex items-center gap-1.5">
+      <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 gap-1.5">
         <LinePill
           icon={<Scissors className="size-3" />}
           label="Tecido"
@@ -48,7 +48,7 @@ export function ConvergenceStatus({
         />
       </div>
       <div
-        className={`text-[11px] font-medium inline-flex items-center gap-1 rounded px-1.5 py-0.5 ${
+        className={`text-[11px] font-medium flex items-start gap-1 rounded px-1.5 py-0.5 w-full break-words ${
           isReady
             ? `bg-emerald-600 text-white ${highlightWhenReady ? "ring-2 ring-emerald-300" : ""}`
             : "bg-muted text-muted-foreground"
@@ -56,13 +56,15 @@ export function ConvergenceStatus({
       >
         {isReady ? (
           <>
-            <Check className="size-3" />
-            {variant === "full" ? "2 de 2 prontas — pronta para estofar" : "2/2 pronta p/ estofar"}
+            <Check className="size-3 mt-0.5 shrink-0" />
+            <span className="min-w-0">{variant === "full" ? "2 de 2 prontas — pronta para estofar" : "2/2 pronta p/ estofar"}</span>
           </>
         ) : (
           <>
-            <AlertCircle className="size-3" />
-            {readyCount} de 2 prontas {missing.length ? `— falta ${missing.join(" + ")}` : ""}
+            <AlertCircle className="size-3 mt-0.5 shrink-0" />
+            <span className="min-w-0">
+              {readyCount} de 2 prontas{missing.length ? <> — falta {missing.join(" + ")}</> : null}
+            </span>
           </>
         )}
       </div>
@@ -81,17 +83,17 @@ function LinePill({
 }) {
   return (
     <div
-      className={`flex-1 min-w-0 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium border ${
+      className={`min-w-0 w-full flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium border ${
         state.ready
           ? "bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800"
           : "bg-muted text-muted-foreground border-border"
       }`}
       title={`${label}: ${state.ready ? readyLabel : pendingLabel}`}
     >
-      <span className="opacity-70">{icon}</span>
-      <span className="truncate">{state.ready ? readyLabel : pendingLabel}</span>
+      <span className="opacity-70 shrink-0">{icon}</span>
+      <span className="truncate flex-1 min-w-0">{state.ready ? readyLabel : pendingLabel}</span>
       {state.ready && state.fromStock && (
-        <span className="ml-auto text-[8px] uppercase tracking-wide bg-emerald-600 text-white rounded px-1">stock</span>
+        <span className="shrink-0 text-[8px] uppercase tracking-wide bg-emerald-600 text-white rounded px-1">stock</span>
       )}
     </div>
   );
