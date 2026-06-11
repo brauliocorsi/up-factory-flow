@@ -270,16 +270,21 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
   operatorCode: string;
   expectedMinutes: number | null;
 }) {
-  // Calcular tempo decorrido em vivo se estiver em curso
-  const liveSeconds = useMemo(() => {
-    if (item.status !== "em_curso" || item.is_paused || !item.started_at) return item.productive_seconds;
-    // aproximação: started_at é o início da etapa, não da última retoma
-    // o servidor recalcula com precisão a partir dos logs
-    return item.productive_seconds;
-  }, [item]);
+  // Contador "live": parte do productive_seconds vindo do servidor e soma
+  // o tempo decorrido no cliente desde a última atualização, enquanto a
+  // etapa estiver em curso e sem pausa. O servidor é a fonte de verdade.
+  const baselineRef = useRef<{ seconds: number; at: number }>({
+    seconds: item.productive_seconds, at: Date.now(),
+  });
+  useEffect(() => {
+    baselineRef.current = { seconds: item.productive_seconds, at: Date.now() };
+  }, [item.productive_seconds, item.id, item.status, item.is_paused]);
+  const running = item.status === "em_curso" && !item.is_paused;
+  const liveSeconds = running
+    ? baselineRef.current.seconds + Math.max(0, Math.floor((Date.now() - baselineRef.current.at) / 1000))
+    : item.productive_seconds;
 
   const blocked = item.status === "bloqueada";
-  const running = item.status === "em_curso" && !item.is_paused;
   const paused = item.is_paused;
   const isUpholstery = item.stage === "estofagem";
   const convergenceReady = item.lines
