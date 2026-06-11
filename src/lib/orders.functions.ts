@@ -219,20 +219,11 @@ export const bulkCreateOrders = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => bulkSchema.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const numbers = data.rows.map((r) => r.order_number);
-    const { data: existing } = await supabase
-      .from("production_orders")
-      .select("order_number")
-      .in("order_number", numbers);
-    const taken = new Set((existing ?? []).map((e: any) => e.order_number));
-
+    // Mesmo nº pode ter várias camas (linhas). A validação de duplicados é
+    // feita no UI (informativa) — aqui inserimos tudo o que o utilizador escolheu.
     const ok: any[] = [];
     const skipped: { order_number: string; reason: string }[] = [];
     for (const r of data.rows) {
-      if (taken.has(r.order_number)) {
-        skipped.push({ order_number: r.order_number, reason: "já existe" });
-        continue;
-      }
       ok.push({
         order_number: r.order_number,
         product_description: r.product_description,
