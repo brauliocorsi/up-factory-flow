@@ -1,5 +1,5 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { LayoutGrid, ListOrdered, LogOut, Factory, Upload, Library, Boxes, HardHat, Settings, Wrench, PackageCheck, ClipboardCheck } from "lucide-react";
+import { LayoutGrid, ListOrdered, LogOut, Factory, Upload, Library, Boxes, HardHat, Settings, Wrench, PackageCheck, ClipboardCheck, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
