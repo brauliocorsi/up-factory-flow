@@ -1148,6 +1148,117 @@ export type Database = {
         }
         Relationships: []
       }
+      sla_breaches: {
+        Row: {
+          actual_productive_minutes: number
+          created_at: string
+          expected_minutes: number
+          id: string
+          operator_id: string | null
+          order_id: string | null
+          over_minutes: number
+          stage: Database["public"]["Enums"]["production_stage"]
+        }
+        Insert: {
+          actual_productive_minutes: number
+          created_at?: string
+          expected_minutes: number
+          id?: string
+          operator_id?: string | null
+          order_id?: string | null
+          over_minutes: number
+          stage: Database["public"]["Enums"]["production_stage"]
+        }
+        Update: {
+          actual_productive_minutes?: number
+          created_at?: string
+          expected_minutes?: number
+          id?: string
+          operator_id?: string | null
+          order_id?: string | null
+          over_minutes?: number
+          stage?: Database["public"]["Enums"]["production_stage"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sla_breaches_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sla_breaches_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "production_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stage_sla_category: {
+        Row: {
+          category_code: string
+          created_at: string
+          expected_minutes: number
+          id: string
+          stage: Database["public"]["Enums"]["production_stage"]
+          updated_at: string
+        }
+        Insert: {
+          category_code: string
+          created_at?: string
+          expected_minutes: number
+          id?: string
+          stage: Database["public"]["Enums"]["production_stage"]
+          updated_at?: string
+        }
+        Update: {
+          category_code?: string
+          created_at?: string
+          expected_minutes?: number
+          id?: string
+          stage?: Database["public"]["Enums"]["production_stage"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      stage_sla_product: {
+        Row: {
+          category_code: string
+          created_at: string
+          expected_minutes: number
+          id: string
+          measure_code: string
+          model_code: string
+          stage: Database["public"]["Enums"]["production_stage"]
+          structure_code: string
+          updated_at: string
+        }
+        Insert: {
+          category_code: string
+          created_at?: string
+          expected_minutes: number
+          id?: string
+          measure_code: string
+          model_code: string
+          stage: Database["public"]["Enums"]["production_stage"]
+          structure_code: string
+          updated_at?: string
+        }
+        Update: {
+          category_code?: string
+          created_at?: string
+          expected_minutes?: number
+          id?: string
+          measure_code?: string
+          model_code?: string
+          stage?: Database["public"]["Enums"]["production_stage"]
+          structure_code?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       stage_time_logs: {
         Row: {
           created_at: string
@@ -1277,6 +1388,13 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      get_expected_minutes: {
+        Args: {
+          _order_id: string
+          _stage: Database["public"]["Enums"]["production_stage"]
+        }
+        Returns: number
       }
       has_role: {
         Args: {
