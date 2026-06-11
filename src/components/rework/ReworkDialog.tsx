@@ -49,11 +49,19 @@ export function ReworkDialog({
       }});
     },
     onSuccess: () => {
+      // Fechar o diálogo e mostrar o toast ANTES de invalidar dados.
+      // Caso contrário, o refetch pode desmontar o cartão (e o diálogo)
+      // antes do React conseguir aplicar este estado, deixando ecrã em branco.
+      setOpen(false);
+      setTarget(""); setReasonId(""); setNotes("");
       toast.success(`Encomenda ${orderNumber} enviada para retrabalho`);
-      setOpen(false); setTarget(""); setReasonId(""); setNotes("");
-      qc.invalidateQueries({ queryKey: ["production"] });
-      qc.invalidateQueries({ queryKey: ["rework-events"] });
-      qc.invalidateQueries({ queryKey: ["rework-metrics"] });
+      // Adiar a invalidação para o próximo tick para garantir que o diálogo
+      // já está fechado quando os dados mudam.
+      setTimeout(() => {
+        qc.invalidateQueries({ queryKey: ["production"] });
+        qc.invalidateQueries({ queryKey: ["rework-events"] });
+        qc.invalidateQueries({ queryKey: ["rework-metrics"] });
+      }, 0);
     },
     onError: (e: any) => toast.error(e?.message ?? "Erro ao enviar para retrabalho"),
   });
