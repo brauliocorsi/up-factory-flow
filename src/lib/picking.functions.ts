@@ -178,7 +178,7 @@ export const sendPickingBatchToStock = createServerFn({ method: "POST" })
     const items = (orders ?? []).map(o => ({
       order_number: o.order_number,
       product_code: (o as any).models?.code ?? o.product_description,
-      barcode: o.barcode || o.order_number,
+      barcode: o.barcode || o.order_number || "", // Ensures it's a string, not null
       product_description: o.product_description,
       measure: o.measure,
       fabric_type: o.fabric_type,
