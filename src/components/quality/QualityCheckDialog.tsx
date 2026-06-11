@@ -133,6 +133,11 @@ export function QualityCheckDialog({
             <div className="text-xs text-muted-foreground">
               Template: <strong>{tpl.name}</strong> ({tpl.category_code})
             </div>
+            {tpl.is_default && (
+              <div className="text-[11px] text-muted-foreground italic">
+                A usar conferência geral (sem template específico para esta categoria).
+              </div>
+            )}
             <div className="space-y-2">
               {items.map((it, i) => (
                 <div key={i} className={`p-3 rounded border ${
