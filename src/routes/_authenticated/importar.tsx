@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { listModels, bulkCreateOrders, getImportMapping, saveImportMapping } from "@/lib/orders.functions";
+import { listModels, bulkCreateOrders, getImportMapping, saveImportMapping, checkExistingOrderNumbers, type ExistingOrderInfo } from "@/lib/orders.functions";
 import { SYSTEM_FIELDS, autoGuessMapping, applyMapping, type MappedRow } from "@/lib/import-helpers";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Upload, FileSpreadsheet, Check, X, ArrowRight, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
@@ -29,7 +31,9 @@ function ImportarPage() {
   const [headers, setHeaders] = useState<string[]>([]);
   const [mapping, setMapping] = useState<Record<string, string>>({});
   const [mapped, setMapped] = useState<MappedRow[]>([]);
-  const [excluded, setExcluded] = useState<Set<number>>(new Set());
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [existing, setExisting] = useState<Map<string, ExistingOrderInfo>>(new Map());
+  const [checkingDb, setCheckingDb] = useState(false);
 
   const save = useMutation({
     mutationFn: (m: Record<string, string>) => saveImportMapping({ data: { mapping: m } }),
@@ -51,7 +55,8 @@ function ImportarPage() {
     setRows([]);
     setHeaders([]);
     setMapped([]);
-    setExcluded(new Set());
+    setSelected(new Set());
+    setExisting(new Map());
     setFileName("");
   }
 
@@ -73,35 +78,62 @@ function ImportarPage() {
     setStep(2);
   }
 
-  function goValidate() {
+  async function goValidate() {
     if (!mapping.order_number) {
       toast.error("Mapeia pelo menos o Nº Encomenda");
       return;
     }
     const out = applyMapping(rows, mapping, models ?? []);
-    // detect dup order_numbers in the file itself
-    const seen = new Map<string, number>();
-    out.forEach((r, i) => {
-      if (!r.order_number) return;
-      const prev = seen.get(r.order_number);
-      if (prev != null) r.errors.push("Duplicado no ficheiro");
-      seen.set(r.order_number, i);
-    });
     setMapped(out);
-    setExcluded(new Set());
+    // select all valid by default
+    const sel = new Set<number>();
+    out.forEach((r, i) => { if (r.errors.length === 0) sel.add(i); });
+    setSelected(sel);
     save.mutate(mapping);
     setStep(3);
+    // background BD check
+    const nums = Array.from(new Set(out.map((r) => r.order_number).filter(Boolean)));
+    if (nums.length) {
+      setCheckingDb(true);
+      try {
+        const res = await checkExistingOrderNumbers({ data: { numbers: nums } });
+        const m = new Map<string, ExistingOrderInfo>();
+        for (const e of res) m.set(e.order_number, e);
+        setExisting(m);
+      } catch (e: any) {
+        toast.error("Falha a verificar números na base de dados: " + (e?.message ?? ""));
+      } finally {
+        setCheckingDb(false);
+      }
+    }
   }
 
-  const validCount = useMemo(
-    () => mapped.filter((r, i) => r.errors.length === 0 && !excluded.has(i)).length,
-    [mapped, excluded],
+  // file-level duplicate groups (same order_number repeated in file)
+  const fileGroups = useMemo(() => {
+    const m = new Map<string, number[]>();
+    mapped.forEach((r, i) => {
+      if (!r.order_number) return;
+      const arr = m.get(r.order_number) ?? [];
+      arr.push(i);
+      m.set(r.order_number, arr);
+    });
+    return m;
+  }, [mapped]);
+
+  const validCount = selected.size;
+  const existsCount = useMemo(
+    () => mapped.filter((r) => existing.has(r.order_number)).length,
+    [mapped, existing],
+  );
+  const repeatedGroups = useMemo(
+    () => Array.from(fileGroups.values()).filter((arr) => arr.length > 1).length,
+    [fileGroups],
   );
 
   function doImport() {
     const payload = mapped
       .map((r, i) => ({ r, i }))
-      .filter(({ r, i }) => r.errors.length === 0 && !excluded.has(i))
+      .filter(({ r, i }) => r.errors.length === 0 && selected.has(i))
       .map(({ r }) => ({
         order_number: r.order_number,
         product_description: r.product_description,
@@ -117,7 +149,7 @@ function ImportarPage() {
         notes: r.notes,
       }));
     if (!payload.length) {
-      toast.error("Nenhuma linha válida para importar");
+      toast.error("Nenhuma linha selecionada para importar");
       return;
     }
     bulk.mutate({ rows: payload });
@@ -148,9 +180,14 @@ function ImportarPage() {
         <StepValidate
           mapped={mapped}
           setMapped={setMapped}
-          excluded={excluded}
-          setExcluded={setExcluded}
+          selected={selected}
+          setSelected={setSelected}
+          existing={existing}
+          fileGroups={fileGroups}
+          checkingDb={checkingDb}
           validCount={validCount}
+          existsCount={existsCount}
+          repeatedGroups={repeatedGroups}
           onBack={() => setStep(2)}
           onImport={doImport}
           pending={bulk.isPending}
