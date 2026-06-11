@@ -97,7 +97,7 @@ export function QualityCheckDialog({
       setItems([]); setNotes("");
       toast.success(result === "aprovado"
         ? `Encomenda ${orderNumber} aprovada e enviada para embalagem`
-        : `Conferência guardada — reprovada`);
+        : `Conferência guardada como reprovada. Usa "Enviar para retrabalho" no cartão para definir a etapa de destino.`);
       setTimeout(() => {
         qc.invalidateQueries({ queryKey: ["production"] });
         qc.invalidateQueries({ queryKey: ["quality-checks"] });
