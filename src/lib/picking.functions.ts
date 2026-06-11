@@ -59,6 +59,10 @@ export const resolveOrderForPicking = createServerFn({ method: "POST" })
     }
 
     // 3. Resolve the expected packages (colis) from model_packages
+    if (!order.model_id) {
+      throw new Error(`Encomenda sem modelo atribuído.`);
+    }
+
     const { data: pkgs, error: pkgsErr } = await supabase
       .from("model_packages")
       .select("package_number, package_total, package_name, structure_type")

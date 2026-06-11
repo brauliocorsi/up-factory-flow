@@ -145,7 +145,7 @@ function PicagemPage() {
     mutationFn: async (vars: { orderId: string; stageId: string; operatorCode: string }) => {
       return finalizePickingStage({
         data: {
-          stage_id: vars.stage_id,
+          stage_id: vars.stageId,
           operator_code: vars.operatorCode
         }
       });
