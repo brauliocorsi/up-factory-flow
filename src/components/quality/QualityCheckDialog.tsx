@@ -8,7 +8,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogT
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { ReworkDialog } from "@/components/rework/ReworkDialog";
 import { getTemplateForOrder, submitQualityCheck } from "@/lib/quality.functions";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -186,21 +185,10 @@ export function QualityCheckDialog({
           <Button variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
           {tpl && (
             <>
-              {/* Reprovar usa o sistema de retrabalho já existente */}
-              <div onClick={async () => {
-                // Guarda a conferência como reprovada antes de abrir retrabalho
-                if (!allAnswered) { toast.error("Responde a todos os itens (OK/NOK)"); return; }
-                try {
-                  await mut.mutateAsync("reprovado");
-                } catch { /* já tratado */ }
-              }}>
-                <ReworkDialog
-                  orderId={orderId}
-                  orderNumber={orderNumber}
-                  detectedStage="qualidade"
-                  operatorCode={operatorCode}
-                />
-              </div>
+              <Button variant="destructive" disabled={mut.isPending || !allAnswered}
+                onClick={() => mut.mutate("reprovado")}>
+                <XCircle className="size-4" /> Reprovar
+              </Button>
               <Button onClick={() => mut.mutate("aprovado")}
                 disabled={mut.isPending || !allAnswered}
                 className="bg-emerald-600 hover:bg-emerald-700 gap-1">
