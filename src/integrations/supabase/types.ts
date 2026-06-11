@@ -298,6 +298,7 @@ export type Database = {
           operator_id: string | null
           order_id: string
           paused_seconds: number
+          production_mode: string
           productive_seconds: number
           stage: Database["public"]["Enums"]["production_stage"]
           started_at: string | null
@@ -314,6 +315,7 @@ export type Database = {
           operator_id?: string | null
           order_id: string
           paused_seconds?: number
+          production_mode?: string
           productive_seconds?: number
           stage: Database["public"]["Enums"]["production_stage"]
           started_at?: string | null
@@ -330,6 +332,7 @@ export type Database = {
           operator_id?: string | null
           order_id?: string
           paused_seconds?: number
+          production_mode?: string
           productive_seconds?: number
           stage?: Database["public"]["Enums"]["production_stage"]
           started_at?: string | null
@@ -695,6 +698,114 @@ export type Database = {
           },
         ]
       }
+      shell_batch_logs: {
+        Row: {
+          batch_id: string
+          event: string
+          event_at: string
+          id: string
+          operator_id: string | null
+        }
+        Insert: {
+          batch_id: string
+          event: string
+          event_at?: string
+          id?: string
+          operator_id?: string | null
+        }
+        Update: {
+          batch_id?: string
+          event?: string
+          event_at?: string
+          id?: string
+          operator_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shell_batch_logs_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "shell_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shell_batch_logs_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shell_batches: {
+        Row: {
+          added_to_stock: number
+          assigned_to_orders: number
+          created_at: string
+          finished_at: string | null
+          id: string
+          is_paused: boolean
+          operator_id: string | null
+          paused_seconds: number
+          productive_seconds: number
+          quantity: number
+          seconds_per_unit: number | null
+          shell_id: string | null
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          added_to_stock?: number
+          assigned_to_orders?: number
+          created_at?: string
+          finished_at?: string | null
+          id?: string
+          is_paused?: boolean
+          operator_id?: string | null
+          paused_seconds?: number
+          productive_seconds?: number
+          quantity: number
+          seconds_per_unit?: number | null
+          shell_id?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          added_to_stock?: number
+          assigned_to_orders?: number
+          created_at?: string
+          finished_at?: string | null
+          id?: string
+          is_paused?: boolean
+          operator_id?: string | null
+          paused_seconds?: number
+          productive_seconds?: number
+          quantity?: number
+          seconds_per_unit?: number | null
+          shell_id?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shell_batches_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shell_batches_shell_id_fkey"
+            columns: ["shell_id"]
+            isOneToOne: false
+            referencedRelation: "shells"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shells: {
         Row: {
           active: boolean
@@ -839,6 +950,10 @@ export type Database = {
     }
     Functions: {
       cancel_order_with_recovery: { Args: { _order_id: string }; Returns: Json }
+      finalize_shell_batch: {
+        Args: { _batch_id: string; _operator_code: string }
+        Returns: Json
+      }
       find_matching_cover: {
         Args: { _order_id: string }
         Returns: {
@@ -874,6 +989,10 @@ export type Database = {
         Returns: boolean
       }
       preview_cancel_order: { Args: { _order_id: string }; Returns: Json }
+      record_shell_batch_event: {
+        Args: { _batch_id: string; _event: string; _operator_code: string }
+        Returns: Json
+      }
       record_stage_event: {
         Args: {
           _event: string
@@ -904,6 +1023,24 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      shell_needs_grouped: {
+        Args: never
+        Returns: {
+          available: number
+          gross_need: number
+          net_need: number
+          quantity: number
+          reserved: number
+          shell_code: string
+          shell_id: string
+          shell_name: string
+          waiting_orders: Json
+        }[]
+      }
+      start_shell_batch: {
+        Args: { _operator_code: string; _quantity: number; _shell_id: string }
+        Returns: string
       }
       try_reserve_for_order: { Args: { _order_id: string }; Returns: Json }
     }
