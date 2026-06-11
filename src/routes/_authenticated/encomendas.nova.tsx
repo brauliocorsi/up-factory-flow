@@ -30,6 +30,40 @@ const SEGMENTS = [
 ] as const;
 const EXPECTED_LEN = SEGMENTS.reduce((a, s) => a + s.len, 0);
 
+// Traduz mensagens de erro (Zod JSON cru, etc.) em PT amigável.
+function friendlyError(msg?: string | null): string {
+  if (!msg) return "Erro ao criar encomenda";
+  const FIELD_PT: Record<string, string> = {
+    order_number: "Nº de encomenda",
+    product_description: "Descrição",
+    measure: "Medida",
+    fabric_type: "Tipo de tecido",
+    fabric_ref: "Ref. tecido",
+    color: "Cor",
+    structure_type: "Estrutura",
+    finishing: "Acabamento",
+    due_date: "Data prevista",
+    entry_date: "Data de entrada",
+    priority: "Prioridade",
+  };
+  try {
+    const arr = JSON.parse(msg);
+    if (Array.isArray(arr) && arr.length) {
+      return arr
+        .map((i: any) => {
+          const f = Array.isArray(i.path) && i.path.length ? FIELD_PT[i.path[0]] ?? i.path.join(".") : "Campo";
+          if (i.code === "too_small") return `${f} obrigatório`;
+          if (i.code === "too_big") return `${f} demasiado longo`;
+          if (i.code === "invalid_type") return `${f} inválido`;
+          return `${f}: ${i.message ?? "inválido"}`;
+        })
+        .join(" · ");
+    }
+  } catch {}
+  if (msg.includes("já existe")) return msg;
+  return msg;
+}
+
 function splitCode(raw: string) {
   const code = (raw || "").replace(/\s+/g, "").toUpperCase();
   const out: Record<string, string> = {};
