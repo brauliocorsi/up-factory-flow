@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Lock, Play, Pause, Check, RotateCcw, Clock, UserCircle2, AlertTriangle, Boxes } from "lucide-react";
+import { Lock, Play, Pause, Check, RotateCcw, Clock, UserCircle2, AlertTriangle, Boxes, Wrench } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { STAGE_LABELS } from "@/lib/format";
 import {
@@ -17,6 +17,7 @@ import {
 } from "@/lib/production.functions";
 import { ConvergenceStatus } from "@/components/kanban/ConvergenceStatus";
 import { useRealtimeOrders } from "@/hooks/useRealtimeOrders";
+import { ReworkDialog } from "@/components/rework/ReworkDialog";
 
 export const Route = createFileRoute("/_authenticated/producao/")({
   component: ProducaoPage,
@@ -221,6 +222,7 @@ function ProducaoPage() {
             canAct={canActOnStage(activeStage) && !!currentOp}
             onAction={(event) => mutation.mutate({ order_stage_id: it.id, event })}
             pending={mutation.isPending}
+            operatorCode={operatorCode.trim()}
           />
         ))}
       </div>
@@ -228,11 +230,12 @@ function ProducaoPage() {
   );
 }
 
-function StageCard({ item, canAct, onAction, pending }: {
+function StageCard({ item, canAct, onAction, pending, operatorCode }: {
   item: ProductionStageOrder;
   canAct: boolean;
   onAction: (event: "iniciar"|"pausar"|"retomar"|"finalizar") => void;
   pending: boolean;
+  operatorCode: string;
 }) {
   // Calcular tempo decorrido em vivo se estiver em curso
   const liveSeconds = useMemo(() => {
@@ -253,6 +256,7 @@ function StageCard({ item, canAct, onAction, pending }: {
 
   return (
     <Card className={`p-4 border-l-4 ${
+      item.is_rework ? "border-l-orange-500 bg-orange-50/40" :
       blocked ? "border-l-destructive bg-destructive/5"
       : paused ? "border-l-warning bg-warning/5"
       : running ? "border-l-emerald-500"
@@ -262,10 +266,18 @@ function StageCard({ item, canAct, onAction, pending }: {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-mono text-sm font-bold">{item.order_number}</span>
+            {item.is_rework && (
+              <Badge className="bg-orange-600 text-white gap-1">
+                <Wrench className="size-3" /> RETRABALHO
+              </Badge>
+            )}
             {paused && <Badge className="bg-warning text-warning-foreground">EM PAUSA</Badge>}
             {running && <Badge className="bg-emerald-600 text-white">A PRODUZIR</Badge>}
             {blocked && <Badge variant="destructive">BLOQUEADA</Badge>}
             {item.operator_code && <Badge variant="secondary">Op {item.operator_code}</Badge>}
+            {(item.rework_count ?? 0) > 0 && (
+              <span className="text-[10px] text-orange-700 font-medium">×{item.rework_count} retrabalhos</span>
+            )}
           </div>
           <div className="text-sm font-medium mt-1">{item.product_description}</div>
           {item.observation && (
@@ -286,6 +298,7 @@ function StageCard({ item, canAct, onAction, pending }: {
           <div className="flex items-center gap-3 text-xs text-muted-foreground mt-2">
             <span className="inline-flex items-center gap-1"><Clock className="size-3" />Produtivo: <strong className="text-foreground">{fmtTime(liveSeconds)}</strong></span>
             {item.paused_seconds > 0 && <span>Pausa: {fmtTime(item.paused_seconds)}</span>}
+            {(item.rework_seconds ?? 0) > 0 && <span className="text-orange-700">Retrabalho: {fmtTime(item.rework_seconds ?? 0)}</span>}
           </div>
         </div>
       </div>
@@ -329,6 +342,14 @@ function StageCard({ item, canAct, onAction, pending }: {
               <div className="text-xs text-destructive flex items-center gap-1">
                 <AlertTriangle className="size-3" /> Aguarda etapas anteriores
               </div>
+            )}
+            {item.stage !== "estrutura" && (
+              <ReworkDialog
+                orderId={item.order_id}
+                orderNumber={item.order_number}
+                detectedStage={item.stage}
+                operatorCode={operatorCode}
+              />
             )}
           </>
         )}

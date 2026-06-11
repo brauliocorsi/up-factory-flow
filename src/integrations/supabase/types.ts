@@ -294,12 +294,15 @@ export type Database = {
           finished_at: string | null
           id: string
           is_paused: boolean
+          is_rework: boolean
           notes: string | null
           operator_id: string | null
           order_id: string
           paused_seconds: number
           production_mode: string
           productive_seconds: number
+          rework_count: number
+          rework_seconds: number
           stage: Database["public"]["Enums"]["production_stage"]
           started_at: string | null
           status: Database["public"]["Enums"]["stage_status"]
@@ -311,12 +314,15 @@ export type Database = {
           finished_at?: string | null
           id?: string
           is_paused?: boolean
+          is_rework?: boolean
           notes?: string | null
           operator_id?: string | null
           order_id: string
           paused_seconds?: number
           production_mode?: string
           productive_seconds?: number
+          rework_count?: number
+          rework_seconds?: number
           stage: Database["public"]["Enums"]["production_stage"]
           started_at?: string | null
           status?: Database["public"]["Enums"]["stage_status"]
@@ -328,12 +334,15 @@ export type Database = {
           finished_at?: string | null
           id?: string
           is_paused?: boolean
+          is_rework?: boolean
           notes?: string | null
           operator_id?: string | null
           order_id?: string
           paused_seconds?: number
           production_mode?: string
           productive_seconds?: number
+          rework_count?: number
+          rework_seconds?: number
           stage?: Database["public"]["Enums"]["production_stage"]
           started_at?: string | null
           status?: Database["public"]["Enums"]["stage_status"]
@@ -654,6 +663,88 @@ export type Database = {
           id?: string
           name?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      rework_events: {
+        Row: {
+          created_at: string
+          detected_at_stage: Database["public"]["Enums"]["production_stage"]
+          id: string
+          operator_id: string | null
+          order_id: string | null
+          reason_id: string | null
+          reason_notes: string | null
+          resolved_at: string | null
+          sent_to_stage: Database["public"]["Enums"]["production_stage"]
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          detected_at_stage: Database["public"]["Enums"]["production_stage"]
+          id?: string
+          operator_id?: string | null
+          order_id?: string | null
+          reason_id?: string | null
+          reason_notes?: string | null
+          resolved_at?: string | null
+          sent_to_stage: Database["public"]["Enums"]["production_stage"]
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          detected_at_stage?: Database["public"]["Enums"]["production_stage"]
+          id?: string
+          operator_id?: string | null
+          order_id?: string | null
+          reason_id?: string | null
+          reason_notes?: string | null
+          resolved_at?: string | null
+          sent_to_stage?: Database["public"]["Enums"]["production_stage"]
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rework_events_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rework_events_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "production_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rework_events_reason_id_fkey"
+            columns: ["reason_id"]
+            isOneToOne: false
+            referencedRelation: "rework_reasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rework_reasons: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          label: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          label: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          label?: string
         }
         Relationships: []
       }
@@ -1024,6 +1115,17 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      send_to_rework: {
+        Args: {
+          _detected_stage: Database["public"]["Enums"]["production_stage"]
+          _operator_code: string
+          _order_id: string
+          _reason_id: string
+          _reason_notes: string
+          _target_stage: Database["public"]["Enums"]["production_stage"]
+        }
+        Returns: Json
+      }
       shell_needs_grouped: {
         Args: never
         Returns: {
@@ -1037,6 +1139,10 @@ export type Database = {
           shell_name: string
           waiting_orders: Json
         }[]
+      }
+      stage_order_index: {
+        Args: { _s: Database["public"]["Enums"]["production_stage"] }
+        Returns: number
       }
       start_shell_batch: {
         Args: { _operator_code: string; _quantity: number; _shell_id: string }
