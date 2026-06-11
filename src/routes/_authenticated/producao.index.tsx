@@ -270,18 +270,16 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
   operatorCode: string;
   expectedMinutes: number | null;
 }) {
-  // Contador "live": parte do productive_seconds vindo do servidor e soma
-  // o tempo decorrido no cliente desde a última atualização, enquanto a
-  // etapa estiver em curso e sem pausa. O servidor é a fonte de verdade.
-  const baselineRef = useRef<{ seconds: number; at: number }>({
-    seconds: item.productive_seconds, at: Date.now(),
-  });
-  useEffect(() => {
-    baselineRef.current = { seconds: item.productive_seconds, at: Date.now() };
-  }, [item.productive_seconds, item.id, item.status, item.is_paused]);
+  // Contador "live": usa como âncora o instante em que o segmento ativo
+  // começou (último `iniciar`/`retomar`, vindo do servidor). Assim o tempo
+  // mantém-se contínuo entre montagens do componente (ex.: trocar de aba
+  // de etapa e voltar) — não reinicia com base em Date.now() do mount.
   const running = item.status === "em_curso" && !item.is_paused;
-  const liveSeconds = running
-    ? baselineRef.current.seconds + Math.max(0, Math.floor((Date.now() - baselineRef.current.at) / 1000))
+  const segmentStartMs = item.current_segment_started_at
+    ? new Date(item.current_segment_started_at).getTime()
+    : null;
+  const liveSeconds = running && segmentStartMs
+    ? item.productive_seconds + Math.max(0, Math.floor((Date.now() - segmentStartMs) / 1000))
     : item.productive_seconds;
 
   // Notificações de SLA (perto do limite / excedido). Cada limiar dispara
