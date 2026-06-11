@@ -454,6 +454,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminCatalogoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin/qualidade': {
+      id: '/_authenticated/admin/qualidade'
+      path: '/admin/qualidade'
+      fullPath: '/admin/qualidade'
+      preLoaderRoute: typeof AuthenticatedAdminQualidadeRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/stock/produto-final': {
+      id: '/_authenticated/stock/produto-final'
+      path: '/stock/produto-final'
+      fullPath: '/stock/produto-final'
+      preLoaderRoute: typeof AuthenticatedStockProdutoFinalRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/encomendas/$id/etiqueta': {
       id: '/_authenticated/encomendas/$id/etiqueta'
       path: '/encomendas/$id/etiqueta'
@@ -471,6 +485,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedAdminCatalogoRoute: typeof AuthenticatedAdminCatalogoRoute
   AuthenticatedAdminColisRoute: typeof AuthenticatedAdminColisRoute
+  AuthenticatedAdminQualidadeRoute: typeof AuthenticatedAdminQualidadeRoute
   AuthenticatedAdminQualidadeRoute: typeof AuthenticatedAdminQualidadeRoute
   AuthenticatedEncomendasNovaRoute: typeof AuthenticatedEncomendasNovaRoute
   AuthenticatedEtiquetasImprimirRoute: typeof AuthenticatedEtiquetasImprimirRoute
@@ -494,6 +509,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedAdminCatalogoRoute: AuthenticatedAdminCatalogoRoute,
   AuthenticatedAdminColisRoute: AuthenticatedAdminColisRoute,
+  AuthenticatedAdminQualidadeRoute: AuthenticatedAdminQualidadeRoute,
   AuthenticatedAdminQualidadeRoute: AuthenticatedAdminQualidadeRoute,
   AuthenticatedEncomendasNovaRoute: AuthenticatedEncomendasNovaRoute,
   AuthenticatedEtiquetasImprimirRoute: AuthenticatedEtiquetasImprimirRoute,
