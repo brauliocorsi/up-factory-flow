@@ -96,7 +96,7 @@ function ProducaoPage() {
     if (it.status === "bloqueada") return false;
     if (it.status === "em_curso") return false;
     if (it.stage === "estofagem" && it.lines) {
-      return it.lines.tecido.ready && it.lines.estrutura.ready;
+      return !!(it.lines.tecido?.ready && it.lines.estrutura?.ready);
     }
     return true;
   };
@@ -249,7 +249,9 @@ function StageCard({ item, canAct, onAction, pending, operatorCode }: {
   const running = item.status === "em_curso" && !item.is_paused;
   const paused = item.is_paused;
   const isUpholstery = item.stage === "estofagem";
-  const convergenceReady = item.lines ? item.lines.tecido.ready && item.lines.estrutura.ready : true;
+  const convergenceReady = item.lines
+    ? !!(item.lines.tecido?.ready && item.lines.estrutura?.ready)
+    : true;
   const showConvergence = item.lines && (
     isUpholstery || ["corte","costura","estrutura","branco"].includes(item.stage)
   );
@@ -318,9 +320,9 @@ function StageCard({ item, canAct, onAction, pending, operatorCode }: {
             )}
             {isUpholstery && !convergenceReady && item.status !== "em_curso" && (
               <div className="text-xs text-muted-foreground flex items-center gap-1">
-                <Lock className="size-3" /> Aguarda {!item.lines?.tecido.ready ? "Costura" : ""}
-                {!item.lines?.tecido.ready && !item.lines?.estrutura.ready ? " + " : ""}
-                {!item.lines?.estrutura.ready ? "Branco" : ""}
+                <Lock className="size-3" /> Aguarda {!item.lines?.tecido?.ready ? "Costura" : ""}
+                {!item.lines?.tecido?.ready && !item.lines?.estrutura?.ready ? " + " : ""}
+                {!item.lines?.estrutura?.ready ? "Branco" : ""}
               </div>
             )}
             {running && (
