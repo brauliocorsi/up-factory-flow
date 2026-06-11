@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedRetrabalhoRouteImport } from './routes/_authenticated/retrabalho'
 import { Route as AuthenticatedImportarRouteImport } from './routes/_authenticated/importar'
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
 import { Route as AuthenticatedStockIndexRouteImport } from './routes/_authenticated/stock.index'
@@ -41,6 +42,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedRetrabalhoRoute = AuthenticatedRetrabalhoRouteImport.update({
+  id: '/retrabalho',
+  path: '/retrabalho',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedImportarRoute = AuthenticatedImportarRouteImport.update({
@@ -141,6 +147,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/importar': typeof AuthenticatedImportarRoute
+  '/retrabalho': typeof AuthenticatedRetrabalhoRoute
   '/admin/catalogo': typeof AuthenticatedAdminCatalogoRoute
   '/admin/colis': typeof AuthenticatedAdminColisRoute
   '/encomendas/nova': typeof AuthenticatedEncomendasNovaRoute
@@ -160,6 +167,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/importar': typeof AuthenticatedImportarRoute
+  '/retrabalho': typeof AuthenticatedRetrabalhoRoute
   '/': typeof AuthenticatedIndexRoute
   '/admin/catalogo': typeof AuthenticatedAdminCatalogoRoute
   '/admin/colis': typeof AuthenticatedAdminColisRoute
@@ -182,6 +190,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/_authenticated/importar': typeof AuthenticatedImportarRoute
+  '/_authenticated/retrabalho': typeof AuthenticatedRetrabalhoRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/admin/catalogo': typeof AuthenticatedAdminCatalogoRoute
   '/_authenticated/admin/colis': typeof AuthenticatedAdminColisRoute
@@ -205,6 +214,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/configuracoes'
     | '/importar'
+    | '/retrabalho'
     | '/admin/catalogo'
     | '/admin/colis'
     | '/encomendas/nova'
@@ -224,6 +234,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/configuracoes'
     | '/importar'
+    | '/retrabalho'
     | '/'
     | '/admin/catalogo'
     | '/admin/colis'
@@ -245,6 +256,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/configuracoes'
     | '/_authenticated/importar'
+    | '/_authenticated/retrabalho'
     | '/_authenticated/'
     | '/_authenticated/admin/catalogo'
     | '/_authenticated/admin/colis'
@@ -288,6 +300,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/retrabalho': {
+      id: '/_authenticated/retrabalho'
+      path: '/retrabalho'
+      fullPath: '/retrabalho'
+      preLoaderRoute: typeof AuthenticatedRetrabalhoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/importar': {
@@ -408,6 +427,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
   AuthenticatedImportarRoute: typeof AuthenticatedImportarRoute
+  AuthenticatedRetrabalhoRoute: typeof AuthenticatedRetrabalhoRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedAdminCatalogoRoute: typeof AuthenticatedAdminCatalogoRoute
   AuthenticatedAdminColisRoute: typeof AuthenticatedAdminColisRoute
@@ -428,6 +448,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
   AuthenticatedImportarRoute: AuthenticatedImportarRoute,
+  AuthenticatedRetrabalhoRoute: AuthenticatedRetrabalhoRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedAdminCatalogoRoute: AuthenticatedAdminCatalogoRoute,
   AuthenticatedAdminColisRoute: AuthenticatedAdminColisRoute,
