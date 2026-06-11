@@ -45,31 +45,35 @@ export const getTemplateForOrder = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ order_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }): Promise<QualityTemplate | null> => {
     const sb = context.supabase as any;
-    const { data: o } = await sb
-      .from("production_orders")
-      .select("id, product_description, product_code, barcode, models(ref_categories:category_id(code))")
-      .eq("id", data.order_id)
-      .maybeSingle();
-
-    // 1) Detetar a categoria de forma robusta
     const norm = (s: unknown) => (typeof s === "string" ? s.trim().toUpperCase() : "");
-    let code = norm(o?.models?.ref_categories?.code);
 
-    // 2) Fallback: primeiros 3 chars de product_code ou barcode
-    if (!code) {
-      const fromCode = norm(o?.product_code).slice(0, 3);
-      const fromBarcode = norm(o?.barcode).slice(0, 3);
-      code = fromCode || fromBarcode;
+    // 1) Buscar dados mínimos da encomenda (defensivo — qualquer falha é ignorada,
+    //    caímos no template-base genérico mais à frente).
+    let desc = "";
+    let barcode = "";
+    let catCode = "";
+    try {
+      const { data: o } = await sb
+        .from("production_orders")
+        .select("id, product_description, barcode, models(category_id, ref_categories:category_id(code))")
+        .eq("id", data.order_id)
+        .maybeSingle();
+      desc = norm(o?.product_description);
+      barcode = norm(o?.barcode);
+      catCode = norm(o?.models?.ref_categories?.code);
+    } catch {
+      /* ignora — o fallback final trata */
     }
 
-    // 3) Fallback: inferir pelo nome
-    if (!code) {
-      const desc = norm(o?.product_description);
+    // 2) Detetar categoria: categoria do modelo → prefixo do código de barras → nome do produto
+    let code = catCode;
+    if (!code && barcode) code = barcode.slice(0, 3);
+    if (!code || (code !== "CAM" && code !== "SOF" && code !== "GEN")) {
       if (/\bCAMA\b/.test(desc)) code = "CAM";
       else if (/\bSOF[AÁ]\b/.test(desc)) code = "SOF";
     }
 
-    // Tentar template específico da categoria detetada
+    // 3) Tentar template específico (só faz sentido para códigos plausíveis)
     let tpl: any = null;
     if (code) {
       const { data: t } = await sb.from("quality_templates")
@@ -79,12 +83,20 @@ export const getTemplateForOrder = createServerFn({ method: "POST" })
       tpl = t ?? null;
     }
 
-    // 4) Fallback final: template-base genérico (is_default)
+    // 4) Fallback final: template-base (is_default = true) ou, em último recurso,
+    //    qualquer template com category_code = 'GEN' ativo.
     if (!tpl) {
       const { data: t } = await sb.from("quality_templates")
         .select("id, category_code, name, active, is_default")
         .eq("is_default", true).eq("active", true)
         .limit(1).maybeSingle();
+      tpl = t ?? null;
+    }
+    if (!tpl) {
+      const { data: t } = await sb.from("quality_templates")
+        .select("id, category_code, name, active, is_default")
+        .eq("category_code", "GEN").eq("active", true)
+        .order("created_at", { ascending: false }).limit(1).maybeSingle();
       tpl = t ?? null;
     }
 
