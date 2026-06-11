@@ -12,6 +12,7 @@ export type QualityTemplate = {
   category_code: string;
   name: string;
   active: boolean;
+  is_default?: boolean;
   items: { id: string; label: string; sort_order: number }[];
 };
 
@@ -21,7 +22,7 @@ export const listQualityTemplates = createServerFn({ method: "GET" })
     const sb = context.supabase as any;
     const { data: tpls, error } = await sb
       .from("quality_templates")
-      .select("id, category_code, name, active")
+      .select("id, category_code, name, active, is_default")
       .order("category_code");
     if (error) throw new Error(error.message);
     const ids = (tpls ?? []).map((t: any) => t.id);
@@ -46,15 +47,47 @@ export const getTemplateForOrder = createServerFn({ method: "POST" })
     const sb = context.supabase as any;
     const { data: o } = await sb
       .from("production_orders")
-      .select("id, models(ref_categories:category_id(code))")
+      .select("id, product_description, product_code, barcode, models(ref_categories:category_id(code))")
       .eq("id", data.order_id)
       .maybeSingle();
-    const code = o?.models?.ref_categories?.code as string | undefined;
-    if (!code) return null;
-    const { data: tpl } = await sb.from("quality_templates")
-      .select("id, category_code, name, active")
-      .eq("category_code", code).eq("active", true)
-      .order("created_at", { ascending: false }).limit(1).maybeSingle();
+
+    // 1) Detetar a categoria de forma robusta
+    const norm = (s: unknown) => (typeof s === "string" ? s.trim().toUpperCase() : "");
+    let code = norm(o?.models?.ref_categories?.code);
+
+    // 2) Fallback: primeiros 3 chars de product_code ou barcode
+    if (!code) {
+      const fromCode = norm(o?.product_code).slice(0, 3);
+      const fromBarcode = norm(o?.barcode).slice(0, 3);
+      code = fromCode || fromBarcode;
+    }
+
+    // 3) Fallback: inferir pelo nome
+    if (!code) {
+      const desc = norm(o?.product_description);
+      if (/\bCAMA\b/.test(desc)) code = "CAM";
+      else if (/\bSOF[AÁ]\b/.test(desc)) code = "SOF";
+    }
+
+    // Tentar template específico da categoria detetada
+    let tpl: any = null;
+    if (code) {
+      const { data: t } = await sb.from("quality_templates")
+        .select("id, category_code, name, active, is_default")
+        .eq("category_code", code).eq("active", true)
+        .order("created_at", { ascending: false }).limit(1).maybeSingle();
+      tpl = t ?? null;
+    }
+
+    // 4) Fallback final: template-base genérico (is_default)
+    if (!tpl) {
+      const { data: t } = await sb.from("quality_templates")
+        .select("id, category_code, name, active, is_default")
+        .eq("is_default", true).eq("active", true)
+        .limit(1).maybeSingle();
+      tpl = t ?? null;
+    }
+
     if (!tpl) return null;
     const { data: items } = await sb.from("quality_template_items")
       .select("id, label, sort_order").eq("template_id", tpl.id).order("sort_order");
