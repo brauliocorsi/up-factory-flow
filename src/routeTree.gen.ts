@@ -13,6 +13,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedRetrabalhoRouteImport } from './routes/_authenticated/retrabalho'
+import { Route as AuthenticatedPicagemRouteImport } from './routes/_authenticated/picagem'
 import { Route as AuthenticatedImportarRouteImport } from './routes/_authenticated/importar'
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
 import { Route as AuthenticatedStockIndexRouteImport } from './routes/_authenticated/stock.index'
@@ -50,6 +51,11 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
 const AuthenticatedRetrabalhoRoute = AuthenticatedRetrabalhoRouteImport.update({
   id: '/retrabalho',
   path: '/retrabalho',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedPicagemRoute = AuthenticatedPicagemRouteImport.update({
+  id: '/picagem',
+  path: '/picagem',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedImportarRoute = AuthenticatedImportarRouteImport.update({
@@ -167,6 +173,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/importar': typeof AuthenticatedImportarRoute
+  '/picagem': typeof AuthenticatedPicagemRoute
   '/retrabalho': typeof AuthenticatedRetrabalhoRoute
   '/admin/catalogo': typeof AuthenticatedAdminCatalogoRoute
   '/admin/colis': typeof AuthenticatedAdminColisRoute
@@ -190,6 +197,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/importar': typeof AuthenticatedImportarRoute
+  '/picagem': typeof AuthenticatedPicagemRoute
   '/retrabalho': typeof AuthenticatedRetrabalhoRoute
   '/': typeof AuthenticatedIndexRoute
   '/admin/catalogo': typeof AuthenticatedAdminCatalogoRoute
@@ -216,6 +224,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/_authenticated/importar': typeof AuthenticatedImportarRoute
+  '/_authenticated/picagem': typeof AuthenticatedPicagemRoute
   '/_authenticated/retrabalho': typeof AuthenticatedRetrabalhoRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/admin/catalogo': typeof AuthenticatedAdminCatalogoRoute
@@ -243,6 +252,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/configuracoes'
     | '/importar'
+    | '/picagem'
     | '/retrabalho'
     | '/admin/catalogo'
     | '/admin/colis'
@@ -266,6 +276,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/configuracoes'
     | '/importar'
+    | '/picagem'
     | '/retrabalho'
     | '/'
     | '/admin/catalogo'
@@ -291,6 +302,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/configuracoes'
     | '/_authenticated/importar'
+    | '/_authenticated/picagem'
     | '/_authenticated/retrabalho'
     | '/_authenticated/'
     | '/_authenticated/admin/catalogo'
@@ -345,6 +357,13 @@ declare module '@tanstack/react-router' {
       path: '/retrabalho'
       fullPath: '/retrabalho'
       preLoaderRoute: typeof AuthenticatedRetrabalhoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/picagem': {
+      id: '/_authenticated/picagem'
+      path: '/picagem'
+      fullPath: '/picagem'
+      preLoaderRoute: typeof AuthenticatedPicagemRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/importar': {
@@ -486,6 +505,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
   AuthenticatedImportarRoute: typeof AuthenticatedImportarRoute
+  AuthenticatedPicagemRoute: typeof AuthenticatedPicagemRoute
   AuthenticatedRetrabalhoRoute: typeof AuthenticatedRetrabalhoRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedAdminCatalogoRoute: typeof AuthenticatedAdminCatalogoRoute
@@ -510,6 +530,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
   AuthenticatedImportarRoute: AuthenticatedImportarRoute,
+  AuthenticatedPicagemRoute: AuthenticatedPicagemRoute,
   AuthenticatedRetrabalhoRoute: AuthenticatedRetrabalhoRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedAdminCatalogoRoute: AuthenticatedAdminCatalogoRoute,
@@ -542,3 +563,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
