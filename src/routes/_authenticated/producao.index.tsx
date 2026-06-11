@@ -284,6 +284,39 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
     ? baselineRef.current.seconds + Math.max(0, Math.floor((Date.now() - baselineRef.current.at) / 1000))
     : item.productive_seconds;
 
+  // Notificações de SLA (perto do limite / excedido). Cada limiar dispara
+  // uma única vez por instância de etapa; reinicia quando muda a etapa.
+  const notifiedRef = useRef<{ id: string; warn: boolean; exceeded: boolean }>({
+    id: item.id, warn: false, exceeded: false,
+  });
+  useEffect(() => {
+    if (notifiedRef.current.id !== item.id) {
+      notifiedRef.current = { id: item.id, warn: false, exceeded: false };
+    }
+    if (!running || !expectedMinutes || expectedMinutes <= 0) return;
+    const expectedSec = expectedMinutes * 60;
+    const ratio = liveSeconds / expectedSec;
+    if (ratio >= 1 && !notifiedRef.current.exceeded) {
+      notifiedRef.current.exceeded = true;
+      notifiedRef.current.warn = true;
+      toast.error(`Tempo excedido — ${item.order_number}`, {
+        description: `Etapa ${item.stage}: previsto ${expectedMinutes}m, já vai em ${fmtTime(liveSeconds)}.`,
+        duration: 8000,
+      });
+    } else if (ratio >= 0.8 && !notifiedRef.current.warn && !notifiedRef.current.exceeded) {
+      notifiedRef.current.warn = true;
+      toast.warning(`Perto do limite (80%) — ${item.order_number}`, {
+        description: `Etapa ${item.stage}: previsto ${expectedMinutes}m, decorrido ${fmtTime(liveSeconds)}.`,
+        duration: 6000,
+      });
+    }
+  }, [liveSeconds, running, expectedMinutes, item.id, item.order_number, item.stage]);
+
+  const slaRatio = expectedMinutes && expectedMinutes > 0
+    ? liveSeconds / (expectedMinutes * 60) : 0;
+  const slaExceeded = expectedMinutes != null && expectedMinutes > 0 && slaRatio >= 1;
+  const slaWarn = !slaExceeded && slaRatio >= 0.8;
+
   const blocked = item.status === "bloqueada";
   const paused = item.is_paused;
   const isUpholstery = item.stage === "estofagem";
@@ -315,6 +348,16 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
             {running && <Badge className="bg-emerald-600 text-white">A PRODUZIR</Badge>}
             {blocked && <Badge variant="destructive">BLOQUEADA</Badge>}
             {item.operator_code && <Badge variant="secondary">Op {item.operator_code}</Badge>}
+            {slaExceeded && (
+              <Badge variant="destructive" className="gap-1">
+                <AlertTriangle className="size-3" /> Tempo excedido
+              </Badge>
+            )}
+            {slaWarn && (
+              <Badge className="bg-amber-500 text-white gap-1">
+                <AlertTriangle className="size-3" /> Perto do limite
+              </Badge>
+            )}
             {(item.rework_count ?? 0) > 0 && (
               <span className="text-[10px] text-orange-700 font-medium">×{item.rework_count} retrabalhos</span>
             )}
