@@ -30,8 +30,6 @@ import { Route as AuthenticatedEncomendasNovaRouteImport } from './routes/_authe
 import { Route as AuthenticatedAdminQualidadeRouteImport } from './routes/_authenticated/admin.qualidade'
 import { Route as AuthenticatedAdminColisRouteImport } from './routes/_authenticated/admin.colis'
 import { Route as AuthenticatedAdminCatalogoRouteImport } from './routes/_authenticated/admin.catalogo'
-import { Route as AuthenticatedAdminQualidadeRouteImport } from './routes/_authenticated/admin.qualidade'
-import { Route as AuthenticatedStockProdutoFinalRouteImport } from './routes/_authenticated/stock.produto-final'
 import { Route as AuthenticatedEncomendasIdEtiquetaRouteImport } from './routes/_authenticated/encomendas.$id.etiqueta'
 
 const AuthRoute = AuthRouteImport.update({
@@ -149,18 +147,6 @@ const AuthenticatedAdminCatalogoRoute =
   AuthenticatedAdminCatalogoRouteImport.update({
     id: '/admin/catalogo',
     path: '/admin/catalogo',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedAdminQualidadeRoute =
-  AuthenticatedAdminQualidadeRouteImport.update({
-    id: '/admin/qualidade',
-    path: '/admin/qualidade',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedStockProdutoFinalRoute =
-  AuthenticatedStockProdutoFinalRouteImport.update({
-    id: '/stock/produto-final',
-    path: '/stock/produto-final',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedEncomendasIdEtiquetaRoute =
@@ -535,13 +521,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
