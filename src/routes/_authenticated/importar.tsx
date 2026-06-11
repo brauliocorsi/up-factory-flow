@@ -4,6 +4,7 @@ import * as XLSX from "xlsx";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { listModels, bulkCreateOrders, getImportMapping, saveImportMapping, checkExistingOrderNumbers, type ExistingOrderInfo } from "@/lib/orders.functions";
 import { SYSTEM_FIELDS, autoGuessMapping, applyMapping, type MappedRow } from "@/lib/import-helpers";
+import { bulkUpsertProductSla } from "@/lib/sla.functions";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -13,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Upload, FileSpreadsheet, Check, X, ArrowRight, ArrowLeft } from "lucide-react";
+import { Upload, FileSpreadsheet, Check, X, ArrowRight, ArrowLeft, Download } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/importar")({
@@ -41,7 +42,30 @@ function ImportarPage() {
 
   const bulk = useMutation({
     mutationFn: (payload: any) => bulkCreateOrders({ data: payload }),
-    onSuccess: (res: any) => {
+    onSuccess: async (res: any) => {
+      // A seguir à criação das encomendas, escrever os overrides de SLA por
+      // produto vindos do Excel (só para linhas com códigos completos).
+      const slaRows = mapped
+        .filter((r, i) => r.errors.length === 0 && selected.has(i))
+        .flatMap((r) => {
+          if (!r.category_code || !r.model_code || !r.structure_code || !r.measure_code) return [];
+          return Object.entries(r.sla).map(([stage, minutes]) => ({
+            category_code: r.category_code!,
+            model_code: r.model_code!,
+            structure_code: r.structure_code!,
+            measure_code: r.measure_code!,
+            stage: stage as any,
+            expected_minutes: minutes!,
+          }));
+        });
+      if (slaRows.length > 0) {
+        try {
+          await bulkUpsertProductSla({ data: { rows: slaRows } });
+          toast.success(`${slaRows.length} tempo(s) previsto(s) por produto guardado(s)`);
+        } catch (e: any) {
+          toast.error("Encomendas importadas, mas falhou gravar SLA: " + (e?.message ?? ""));
+        }
+      }
       toast.success(`${res.inserted} encomenda(s) importadas. ${res.skipped.length} ignoradas.`);
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
@@ -49,6 +73,22 @@ function ImportarPage() {
     },
     onError: (e: any) => toast.error(e.message ?? "Erro ao importar"),
   });
+
+  function downloadTemplate() {
+    const headers = [
+      "Nº Encomenda", "Descrição", "Modelo (nome)", "Modelo (código)", "Estrutura (código)",
+      "Medida (código)", "Categoria (código)", "Medida", "Tipo de tecido", "Ref. tecido", "Cor",
+      "Tipo de estrutura", "Data de entrada", "Data saída prevista", "Prioridade",
+      "SLA Estrutura (min)", "SLA Corte (min)", "SLA Costura (min)", "SLA Branco (min)",
+      "SLA Estofagem (min)", "SLA Qualidade (min)", "SLA Embalagem (min)", "SLA Picagem (min)",
+    ];
+    const ex1 = ["2026-0099","Cama Lisa 160","Lisa","LISA","MAD","160","CAM","160x200","Pano","REF-001","Bege","Madeira","2026-01-10","2026-01-20",5, 30,45,60,20,90,10,15,5];
+    const ex2 = ["2026-0100","Sofá Conforto 3L","Conforto","CONFORTO","MAD","3L","SOF","3 lugares","Pano","REF-002","Cinza","Madeira","2026-01-11","2026-01-25",3, 40,50,80,25,120,15,20,5];
+    const ws = XLSX.utils.aoa_to_sheet([headers, ex1, ex2]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Encomendas");
+    XLSX.writeFile(wb, "modelo-importacao-up-producao.xlsx");
+  }
 
   function reset() {
     setStep(1);
@@ -160,6 +200,11 @@ function ImportarPage() {
       <div>
         <h1 className="text-2xl font-bold">Importar encomendas</h1>
         <p className="text-sm text-muted-foreground">Carregar lista de produção em Excel ou CSV</p>
+      </div>
+      <div>
+        <Button variant="outline" size="sm" onClick={downloadTemplate} className="gap-2">
+          <Download className="size-4" /> Descarregar modelo Excel
+        </Button>
       </div>
 
       <Stepper step={step} />
