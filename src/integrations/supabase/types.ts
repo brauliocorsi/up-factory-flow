@@ -686,6 +686,7 @@ export type Database = {
           category_code: string
           created_at: string
           id: string
+          is_default: boolean
           name: string
           updated_at: string
         }
@@ -694,6 +695,7 @@ export type Database = {
           category_code: string
           created_at?: string
           id?: string
+          is_default?: boolean
           name: string
           updated_at?: string
         }
@@ -702,6 +704,7 @@ export type Database = {
           category_code?: string
           created_at?: string
           id?: string
+          is_default?: boolean
           name?: string
           updated_at?: string
         }
