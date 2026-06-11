@@ -21,6 +21,16 @@ import { ReworkDialog } from "@/components/rework/ReworkDialog";
 
 export const Route = createFileRoute("/_authenticated/producao/")({
   component: ProducaoPage,
+  errorComponent: ({ error, reset }) => (
+    <div className="max-w-2xl mx-auto p-6 text-center space-y-3">
+      <AlertTriangle className="size-8 text-orange-600 mx-auto" />
+      <h2 className="text-lg font-semibold">Algo correu mal a atualizar</h2>
+      <p className="text-sm text-muted-foreground">
+        {error?.message ?? "Erro inesperado a carregar a produção."}
+      </p>
+      <Button onClick={() => reset()}>Recarregar</Button>
+    </div>
+  ),
 });
 
 function fmtTime(seconds: number) {
@@ -96,7 +106,7 @@ function ProducaoPage() {
     if (it.status === "bloqueada") return false;
     if (it.status === "em_curso") return false;
     if (it.stage === "estofagem" && it.lines) {
-      return it.lines.tecido.ready && it.lines.estrutura.ready;
+      return !!(it.lines.tecido?.ready && it.lines.estrutura?.ready);
     }
     return true;
   };
@@ -249,7 +259,9 @@ function StageCard({ item, canAct, onAction, pending, operatorCode }: {
   const running = item.status === "em_curso" && !item.is_paused;
   const paused = item.is_paused;
   const isUpholstery = item.stage === "estofagem";
-  const convergenceReady = item.lines ? item.lines.tecido.ready && item.lines.estrutura.ready : true;
+  const convergenceReady = item.lines
+    ? !!(item.lines.tecido?.ready && item.lines.estrutura?.ready)
+    : true;
   const showConvergence = item.lines && (
     isUpholstery || ["corte","costura","estrutura","branco"].includes(item.stage)
   );
@@ -318,9 +330,9 @@ function StageCard({ item, canAct, onAction, pending, operatorCode }: {
             )}
             {isUpholstery && !convergenceReady && item.status !== "em_curso" && (
               <div className="text-xs text-muted-foreground flex items-center gap-1">
-                <Lock className="size-3" /> Aguarda {!item.lines?.tecido.ready ? "Costura" : ""}
-                {!item.lines?.tecido.ready && !item.lines?.estrutura.ready ? " + " : ""}
-                {!item.lines?.estrutura.ready ? "Branco" : ""}
+                <Lock className="size-3" /> Aguarda {!item.lines?.tecido?.ready ? "Costura" : ""}
+                {!item.lines?.tecido?.ready && !item.lines?.estrutura?.ready ? " + " : ""}
+                {!item.lines?.estrutura?.ready ? "Branco" : ""}
               </div>
             )}
             {running && (
