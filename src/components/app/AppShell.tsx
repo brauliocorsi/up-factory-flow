@@ -1,5 +1,5 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { LayoutGrid, ListOrdered, LogOut, Factory, Upload, Library, Boxes, HardHat, Settings, Wrench, PackageCheck, ClipboardCheck, Clock } from "lucide-react";
+import { LayoutGrid, ListOrdered, LogOut, Factory, Upload, Library, Boxes, HardHat, Settings, Wrench, PackageCheck, ClipboardCheck, Clock, Barcode } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -8,6 +8,7 @@ import type { ReactNode } from "react";
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutGrid },
   { to: "/producao", label: "Produção", icon: HardHat },
+  { to: "/picagem", label: "Picagem", icon: Barcode },
   { to: "/retrabalho", label: "Retrabalho", icon: Wrench },
   { to: "/encomendas", label: "Encomendas", icon: ListOrdered },
   { to: "/stock", label: "Stock", icon: Boxes },
