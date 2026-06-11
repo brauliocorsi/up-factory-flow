@@ -19,6 +19,7 @@ import { Route as AuthenticatedStockIndexRouteImport } from './routes/_authentic
 import { Route as AuthenticatedProducaoIndexRouteImport } from './routes/_authenticated/producao.index'
 import { Route as AuthenticatedEncomendasIndexRouteImport } from './routes/_authenticated/encomendas.index'
 import { Route as AuthenticatedStockTecidosRouteImport } from './routes/_authenticated/stock.tecidos'
+import { Route as AuthenticatedStockProdutoFinalRouteImport } from './routes/_authenticated/stock.produto-final'
 import { Route as AuthenticatedStockProducaoRouteImport } from './routes/_authenticated/stock.producao'
 import { Route as AuthenticatedStockCascosRouteImport } from './routes/_authenticated/stock.cascos'
 import { Route as AuthenticatedStockCapasRouteImport } from './routes/_authenticated/stock.capas'
@@ -26,6 +27,7 @@ import { Route as AuthenticatedProdutosReceitasRouteImport } from './routes/_aut
 import { Route as AuthenticatedProducaoCascosRouteImport } from './routes/_authenticated/producao.cascos'
 import { Route as AuthenticatedEtiquetasImprimirRouteImport } from './routes/_authenticated/etiquetas.imprimir'
 import { Route as AuthenticatedEncomendasNovaRouteImport } from './routes/_authenticated/encomendas.nova'
+import { Route as AuthenticatedAdminQualidadeRouteImport } from './routes/_authenticated/admin.qualidade'
 import { Route as AuthenticatedAdminColisRouteImport } from './routes/_authenticated/admin.colis'
 import { Route as AuthenticatedAdminCatalogoRouteImport } from './routes/_authenticated/admin.catalogo'
 import { Route as AuthenticatedEncomendasIdEtiquetaRouteImport } from './routes/_authenticated/encomendas.$id.etiqueta'
@@ -83,6 +85,12 @@ const AuthenticatedStockTecidosRoute =
     path: '/stock/tecidos',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedStockProdutoFinalRoute =
+  AuthenticatedStockProdutoFinalRouteImport.update({
+    id: '/stock/produto-final',
+    path: '/stock/produto-final',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedStockProducaoRoute =
   AuthenticatedStockProducaoRouteImport.update({
     id: '/stock/producao',
@@ -124,6 +132,12 @@ const AuthenticatedEncomendasNovaRoute =
     path: '/encomendas/nova',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAdminQualidadeRoute =
+  AuthenticatedAdminQualidadeRouteImport.update({
+    id: '/admin/qualidade',
+    path: '/admin/qualidade',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAdminColisRoute = AuthenticatedAdminColisRouteImport.update({
   id: '/admin/colis',
   path: '/admin/colis',
@@ -150,6 +164,7 @@ export interface FileRoutesByFullPath {
   '/retrabalho': typeof AuthenticatedRetrabalhoRoute
   '/admin/catalogo': typeof AuthenticatedAdminCatalogoRoute
   '/admin/colis': typeof AuthenticatedAdminColisRoute
+  '/admin/qualidade': typeof AuthenticatedAdminQualidadeRoute
   '/encomendas/nova': typeof AuthenticatedEncomendasNovaRoute
   '/etiquetas/imprimir': typeof AuthenticatedEtiquetasImprimirRoute
   '/producao/cascos': typeof AuthenticatedProducaoCascosRoute
@@ -157,6 +172,7 @@ export interface FileRoutesByFullPath {
   '/stock/capas': typeof AuthenticatedStockCapasRoute
   '/stock/cascos': typeof AuthenticatedStockCascosRoute
   '/stock/producao': typeof AuthenticatedStockProducaoRoute
+  '/stock/produto-final': typeof AuthenticatedStockProdutoFinalRoute
   '/stock/tecidos': typeof AuthenticatedStockTecidosRoute
   '/encomendas/': typeof AuthenticatedEncomendasIndexRoute
   '/producao/': typeof AuthenticatedProducaoIndexRoute
@@ -171,6 +187,7 @@ export interface FileRoutesByTo {
   '/': typeof AuthenticatedIndexRoute
   '/admin/catalogo': typeof AuthenticatedAdminCatalogoRoute
   '/admin/colis': typeof AuthenticatedAdminColisRoute
+  '/admin/qualidade': typeof AuthenticatedAdminQualidadeRoute
   '/encomendas/nova': typeof AuthenticatedEncomendasNovaRoute
   '/etiquetas/imprimir': typeof AuthenticatedEtiquetasImprimirRoute
   '/producao/cascos': typeof AuthenticatedProducaoCascosRoute
@@ -178,6 +195,7 @@ export interface FileRoutesByTo {
   '/stock/capas': typeof AuthenticatedStockCapasRoute
   '/stock/cascos': typeof AuthenticatedStockCascosRoute
   '/stock/producao': typeof AuthenticatedStockProducaoRoute
+  '/stock/produto-final': typeof AuthenticatedStockProdutoFinalRoute
   '/stock/tecidos': typeof AuthenticatedStockTecidosRoute
   '/encomendas': typeof AuthenticatedEncomendasIndexRoute
   '/producao': typeof AuthenticatedProducaoIndexRoute
@@ -194,6 +212,7 @@ export interface FileRoutesById {
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/admin/catalogo': typeof AuthenticatedAdminCatalogoRoute
   '/_authenticated/admin/colis': typeof AuthenticatedAdminColisRoute
+  '/_authenticated/admin/qualidade': typeof AuthenticatedAdminQualidadeRoute
   '/_authenticated/encomendas/nova': typeof AuthenticatedEncomendasNovaRoute
   '/_authenticated/etiquetas/imprimir': typeof AuthenticatedEtiquetasImprimirRoute
   '/_authenticated/producao/cascos': typeof AuthenticatedProducaoCascosRoute
@@ -201,6 +220,7 @@ export interface FileRoutesById {
   '/_authenticated/stock/capas': typeof AuthenticatedStockCapasRoute
   '/_authenticated/stock/cascos': typeof AuthenticatedStockCascosRoute
   '/_authenticated/stock/producao': typeof AuthenticatedStockProducaoRoute
+  '/_authenticated/stock/produto-final': typeof AuthenticatedStockProdutoFinalRoute
   '/_authenticated/stock/tecidos': typeof AuthenticatedStockTecidosRoute
   '/_authenticated/encomendas/': typeof AuthenticatedEncomendasIndexRoute
   '/_authenticated/producao/': typeof AuthenticatedProducaoIndexRoute
@@ -217,6 +237,7 @@ export interface FileRouteTypes {
     | '/retrabalho'
     | '/admin/catalogo'
     | '/admin/colis'
+    | '/admin/qualidade'
     | '/encomendas/nova'
     | '/etiquetas/imprimir'
     | '/producao/cascos'
@@ -224,6 +245,7 @@ export interface FileRouteTypes {
     | '/stock/capas'
     | '/stock/cascos'
     | '/stock/producao'
+    | '/stock/produto-final'
     | '/stock/tecidos'
     | '/encomendas/'
     | '/producao/'
@@ -238,6 +260,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin/catalogo'
     | '/admin/colis'
+    | '/admin/qualidade'
     | '/encomendas/nova'
     | '/etiquetas/imprimir'
     | '/producao/cascos'
@@ -245,6 +268,7 @@ export interface FileRouteTypes {
     | '/stock/capas'
     | '/stock/cascos'
     | '/stock/producao'
+    | '/stock/produto-final'
     | '/stock/tecidos'
     | '/encomendas'
     | '/producao'
@@ -260,6 +284,7 @@ export interface FileRouteTypes {
     | '/_authenticated/'
     | '/_authenticated/admin/catalogo'
     | '/_authenticated/admin/colis'
+    | '/_authenticated/admin/qualidade'
     | '/_authenticated/encomendas/nova'
     | '/_authenticated/etiquetas/imprimir'
     | '/_authenticated/producao/cascos'
@@ -267,6 +292,7 @@ export interface FileRouteTypes {
     | '/_authenticated/stock/capas'
     | '/_authenticated/stock/cascos'
     | '/_authenticated/stock/producao'
+    | '/_authenticated/stock/produto-final'
     | '/_authenticated/stock/tecidos'
     | '/_authenticated/encomendas/'
     | '/_authenticated/producao/'
@@ -351,6 +377,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedStockTecidosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/stock/produto-final': {
+      id: '/_authenticated/stock/produto-final'
+      path: '/stock/produto-final'
+      fullPath: '/stock/produto-final'
+      preLoaderRoute: typeof AuthenticatedStockProdutoFinalRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/stock/producao': {
       id: '/_authenticated/stock/producao'
       path: '/stock/producao'
@@ -400,6 +433,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEncomendasNovaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin/qualidade': {
+      id: '/_authenticated/admin/qualidade'
+      path: '/admin/qualidade'
+      fullPath: '/admin/qualidade'
+      preLoaderRoute: typeof AuthenticatedAdminQualidadeRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin/colis': {
       id: '/_authenticated/admin/colis'
       path: '/admin/colis'
@@ -431,6 +471,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedAdminCatalogoRoute: typeof AuthenticatedAdminCatalogoRoute
   AuthenticatedAdminColisRoute: typeof AuthenticatedAdminColisRoute
+  AuthenticatedAdminQualidadeRoute: typeof AuthenticatedAdminQualidadeRoute
   AuthenticatedEncomendasNovaRoute: typeof AuthenticatedEncomendasNovaRoute
   AuthenticatedEtiquetasImprimirRoute: typeof AuthenticatedEtiquetasImprimirRoute
   AuthenticatedProducaoCascosRoute: typeof AuthenticatedProducaoCascosRoute
@@ -438,6 +479,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedStockCapasRoute: typeof AuthenticatedStockCapasRoute
   AuthenticatedStockCascosRoute: typeof AuthenticatedStockCascosRoute
   AuthenticatedStockProducaoRoute: typeof AuthenticatedStockProducaoRoute
+  AuthenticatedStockProdutoFinalRoute: typeof AuthenticatedStockProdutoFinalRoute
   AuthenticatedStockTecidosRoute: typeof AuthenticatedStockTecidosRoute
   AuthenticatedEncomendasIndexRoute: typeof AuthenticatedEncomendasIndexRoute
   AuthenticatedProducaoIndexRoute: typeof AuthenticatedProducaoIndexRoute
@@ -452,6 +494,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedAdminCatalogoRoute: AuthenticatedAdminCatalogoRoute,
   AuthenticatedAdminColisRoute: AuthenticatedAdminColisRoute,
+  AuthenticatedAdminQualidadeRoute: AuthenticatedAdminQualidadeRoute,
   AuthenticatedEncomendasNovaRoute: AuthenticatedEncomendasNovaRoute,
   AuthenticatedEtiquetasImprimirRoute: AuthenticatedEtiquetasImprimirRoute,
   AuthenticatedProducaoCascosRoute: AuthenticatedProducaoCascosRoute,
@@ -459,6 +502,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedStockCapasRoute: AuthenticatedStockCapasRoute,
   AuthenticatedStockCascosRoute: AuthenticatedStockCascosRoute,
   AuthenticatedStockProducaoRoute: AuthenticatedStockProducaoRoute,
+  AuthenticatedStockProdutoFinalRoute: AuthenticatedStockProdutoFinalRoute,
   AuthenticatedStockTecidosRoute: AuthenticatedStockTecidosRoute,
   AuthenticatedEncomendasIndexRoute: AuthenticatedEncomendasIndexRoute,
   AuthenticatedProducaoIndexRoute: AuthenticatedProducaoIndexRoute,
@@ -477,3 +521,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
