@@ -128,6 +128,50 @@ export type Database = {
         }
         Relationships: []
       }
+      finished_goods: {
+        Row: {
+          barcode: string | null
+          created_at: string
+          id: string
+          order_id: string | null
+          product_code: string | null
+          quantity: number
+          ready_for_transfer: boolean
+          status: string
+          transferred_at: string | null
+        }
+        Insert: {
+          barcode?: string | null
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          product_code?: string | null
+          quantity?: number
+          ready_for_transfer?: boolean
+          status?: string
+          transferred_at?: string | null
+        }
+        Update: {
+          barcode?: string | null
+          created_at?: string
+          id?: string
+          order_id?: string | null
+          product_code?: string | null
+          quantity?: number
+          ready_for_transfer?: boolean
+          status?: string
+          transferred_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finished_goods_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "production_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       import_mappings: {
         Row: {
           created_at: string
@@ -503,6 +547,165 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      quality_check_items: {
+        Row: {
+          check_id: string
+          created_at: string
+          id: string
+          label: string
+          photo_url: string | null
+          status: string
+          template_item_id: string | null
+        }
+        Insert: {
+          check_id: string
+          created_at?: string
+          id?: string
+          label: string
+          photo_url?: string | null
+          status: string
+          template_item_id?: string | null
+        }
+        Update: {
+          check_id?: string
+          created_at?: string
+          id?: string
+          label?: string
+          photo_url?: string | null
+          status?: string
+          template_item_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quality_check_items_check_id_fkey"
+            columns: ["check_id"]
+            isOneToOne: false
+            referencedRelation: "quality_checks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quality_check_items_template_item_id_fkey"
+            columns: ["template_item_id"]
+            isOneToOne: false
+            referencedRelation: "quality_template_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quality_checks: {
+        Row: {
+          created_at: string
+          has_nok: boolean
+          id: string
+          notes: string | null
+          operator_id: string | null
+          order_id: string
+          result: string
+          template_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          has_nok?: boolean
+          id?: string
+          notes?: string | null
+          operator_id?: string | null
+          order_id: string
+          result: string
+          template_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          has_nok?: boolean
+          id?: string
+          notes?: string | null
+          operator_id?: string | null
+          order_id?: string
+          result?: string
+          template_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quality_checks_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quality_checks_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "production_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quality_checks_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "quality_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quality_template_items: {
+        Row: {
+          created_at: string
+          id: string
+          label: string
+          sort_order: number
+          template_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label: string
+          sort_order?: number
+          template_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string
+          sort_order?: number
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quality_template_items_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "quality_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quality_templates: {
+        Row: {
+          active: boolean
+          category_code: string
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          category_code: string
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          category_code?: string
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       ref_categories: {
         Row: {
