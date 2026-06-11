@@ -29,6 +29,9 @@ export type ProductionStageOrder = {
   paused_seconds: number;
   operator_code: string | null;
   lines?: ConvergenceLines;
+  is_rework?: boolean;
+  rework_seconds?: number;
+  rework_count?: number;
 };
 
 export type ProductionData = {
@@ -41,7 +44,7 @@ export const getProductionData = createServerFn({ method: "GET" })
     const { supabase } = context;
     const { data, error } = await (supabase as any)
       .from("order_stages")
-      .select("id, stage, status, started_at, productive_seconds, paused_seconds, is_paused, production_orders!inner(id, order_number, product_description, observation, status), operators(code)")
+      .select("id, stage, status, started_at, productive_seconds, paused_seconds, is_paused, is_rework, rework_seconds, rework_count, production_orders!inner(id, order_number, product_description, observation, status), operators(code)")
       .neq("production_orders.status", "cancelada")
       .neq("status", "concluida")
       .order("started_at", { ascending: true, nullsFirst: false });
@@ -84,6 +87,9 @@ export const getProductionData = createServerFn({ method: "GET" })
         paused_seconds: row.paused_seconds ?? 0,
         operator_code: row.operators?.code ?? null,
         lines: linesByOrder.get(o.id),
+        is_rework: Boolean(row.is_rework),
+        rework_seconds: row.rework_seconds ?? 0,
+        rework_count: row.rework_count ?? 0,
       });
     }
     return { byStage };
