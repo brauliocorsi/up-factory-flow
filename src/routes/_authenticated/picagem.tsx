@@ -119,7 +119,7 @@ function PicagemPage() {
           if (operatorCode) {
             finalizeOrderMutation.mutate({
               orderId: order.id,
-              stageId: order.stage_id,
+              stageId: order.stage_id, // This needs to match the mutationFn param signature or wait, is stage_id correct?
               operatorCode
             });
           } else {
