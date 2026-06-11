@@ -18,6 +18,7 @@ import {
 import { ConvergenceStatus } from "@/components/kanban/ConvergenceStatus";
 import { useRealtimeOrders } from "@/hooks/useRealtimeOrders";
 import { ReworkDialog } from "@/components/rework/ReworkDialog";
+import { QualityCheckDialog } from "@/components/quality/QualityCheckDialog";
 
 export const Route = createFileRoute("/_authenticated/producao/")({
   component: ProducaoPage,
@@ -360,6 +361,15 @@ function StageCard({ item, canAct, onAction, pending, operatorCode }: {
                 orderId={item.order_id}
                 orderNumber={item.order_number}
                 detectedStage={item.stage}
+                operatorCode={operatorCode}
+              />
+            )}
+            {item.stage === "qualidade" && (
+              <QualityCheckDialog
+                orderId={item.order_id}
+                orderStageId={item.id}
+                orderNumber={item.order_number}
+                productDescription={item.product_description}
                 operatorCode={operatorCode}
               />
             )}
