@@ -21,6 +21,16 @@ import { ReworkDialog } from "@/components/rework/ReworkDialog";
 
 export const Route = createFileRoute("/_authenticated/producao/")({
   component: ProducaoPage,
+  errorComponent: ({ error, reset }) => (
+    <div className="max-w-2xl mx-auto p-6 text-center space-y-3">
+      <AlertTriangle className="size-8 text-orange-600 mx-auto" />
+      <h2 className="text-lg font-semibold">Algo correu mal a atualizar</h2>
+      <p className="text-sm text-muted-foreground">
+        {error?.message ?? "Erro inesperado a carregar a produção."}
+      </p>
+      <Button onClick={() => reset()}>Recarregar</Button>
+    </div>
+  ),
 });
 
 function fmtTime(seconds: number) {
