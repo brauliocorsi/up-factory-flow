@@ -219,20 +219,11 @@ export const bulkCreateOrders = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => bulkSchema.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const numbers = data.rows.map((r) => r.order_number);
-    const { data: existing } = await supabase
-      .from("production_orders")
-      .select("order_number")
-      .in("order_number", numbers);
-    const taken = new Set((existing ?? []).map((e: any) => e.order_number));
-
+    // Mesmo nº pode ter várias camas (linhas). A validação de duplicados é
+    // feita no UI (informativa) — aqui inserimos tudo o que o utilizador escolheu.
     const ok: any[] = [];
     const skipped: { order_number: string; reason: string }[] = [];
     for (const r of data.rows) {
-      if (taken.has(r.order_number)) {
-        skipped.push({ order_number: r.order_number, reason: "já existe" });
-        continue;
-      }
       ok.push({
         order_number: r.order_number,
         product_description: r.product_description,
@@ -274,6 +265,38 @@ export const getImportMapping = createServerFn({ method: "GET" })
       .eq("user_id", context.userId)
       .maybeSingle();
     return (data?.mapping as Record<string, string> | null) ?? null;
+  });
+
+// ---------- Check existing order numbers (for import validation) ----------
+
+export type ExistingOrderInfo = {
+  order_number: string;
+  count: number;
+  products: string[];
+};
+
+export const checkExistingOrderNumbers = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ numbers: z.array(z.string().trim().min(1)).min(1).max(2000) }).parse(d),
+  )
+  .handler(async ({ data, context }): Promise<ExistingOrderInfo[]> => {
+    const unique = Array.from(new Set(data.numbers));
+    const { data: rows, error } = await context.supabase
+      .from("production_orders")
+      .select("order_number, product_description")
+      .in("order_number", unique);
+    if (error) throw new Error(error.message);
+    const map = new Map<string, ExistingOrderInfo>();
+    for (const r of rows ?? []) {
+      const num = (r as any).order_number as string;
+      const prod = ((r as any).product_description as string) ?? "";
+      const cur = map.get(num) ?? { order_number: num, count: 0, products: [] };
+      cur.count += 1;
+      if (prod) cur.products.push(prod);
+      map.set(num, cur);
+    }
+    return Array.from(map.values());
   });
 
 export const saveImportMapping = createServerFn({ method: "POST" })

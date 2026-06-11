@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { listModels, bulkCreateOrders, getImportMapping, saveImportMapping } from "@/lib/orders.functions";
+import { listModels, bulkCreateOrders, getImportMapping, saveImportMapping, checkExistingOrderNumbers, type ExistingOrderInfo } from "@/lib/orders.functions";
 import { SYSTEM_FIELDS, autoGuessMapping, applyMapping, type MappedRow } from "@/lib/import-helpers";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Upload, FileSpreadsheet, Check, X, ArrowRight, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
@@ -29,7 +31,9 @@ function ImportarPage() {
   const [headers, setHeaders] = useState<string[]>([]);
   const [mapping, setMapping] = useState<Record<string, string>>({});
   const [mapped, setMapped] = useState<MappedRow[]>([]);
-  const [excluded, setExcluded] = useState<Set<number>>(new Set());
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [existing, setExisting] = useState<Map<string, ExistingOrderInfo>>(new Map());
+  const [checkingDb, setCheckingDb] = useState(false);
 
   const save = useMutation({
     mutationFn: (m: Record<string, string>) => saveImportMapping({ data: { mapping: m } }),
@@ -51,7 +55,8 @@ function ImportarPage() {
     setRows([]);
     setHeaders([]);
     setMapped([]);
-    setExcluded(new Set());
+    setSelected(new Set());
+    setExisting(new Map());
     setFileName("");
   }
 
@@ -73,35 +78,62 @@ function ImportarPage() {
     setStep(2);
   }
 
-  function goValidate() {
+  async function goValidate() {
     if (!mapping.order_number) {
       toast.error("Mapeia pelo menos o Nº Encomenda");
       return;
     }
     const out = applyMapping(rows, mapping, models ?? []);
-    // detect dup order_numbers in the file itself
-    const seen = new Map<string, number>();
-    out.forEach((r, i) => {
-      if (!r.order_number) return;
-      const prev = seen.get(r.order_number);
-      if (prev != null) r.errors.push("Duplicado no ficheiro");
-      seen.set(r.order_number, i);
-    });
     setMapped(out);
-    setExcluded(new Set());
+    // select all valid by default
+    const sel = new Set<number>();
+    out.forEach((r, i) => { if (r.errors.length === 0) sel.add(i); });
+    setSelected(sel);
     save.mutate(mapping);
     setStep(3);
+    // background BD check
+    const nums = Array.from(new Set(out.map((r) => r.order_number).filter(Boolean)));
+    if (nums.length) {
+      setCheckingDb(true);
+      try {
+        const res = await checkExistingOrderNumbers({ data: { numbers: nums } });
+        const m = new Map<string, ExistingOrderInfo>();
+        for (const e of res) m.set(e.order_number, e);
+        setExisting(m);
+      } catch (e: any) {
+        toast.error("Falha a verificar números na base de dados: " + (e?.message ?? ""));
+      } finally {
+        setCheckingDb(false);
+      }
+    }
   }
 
-  const validCount = useMemo(
-    () => mapped.filter((r, i) => r.errors.length === 0 && !excluded.has(i)).length,
-    [mapped, excluded],
+  // file-level duplicate groups (same order_number repeated in file)
+  const fileGroups = useMemo(() => {
+    const m = new Map<string, number[]>();
+    mapped.forEach((r, i) => {
+      if (!r.order_number) return;
+      const arr = m.get(r.order_number) ?? [];
+      arr.push(i);
+      m.set(r.order_number, arr);
+    });
+    return m;
+  }, [mapped]);
+
+  const validCount = selected.size;
+  const existsCount = useMemo(
+    () => mapped.filter((r) => existing.has(r.order_number)).length,
+    [mapped, existing],
+  );
+  const repeatedGroups = useMemo(
+    () => Array.from(fileGroups.values()).filter((arr) => arr.length > 1).length,
+    [fileGroups],
   );
 
   function doImport() {
     const payload = mapped
       .map((r, i) => ({ r, i }))
-      .filter(({ r, i }) => r.errors.length === 0 && !excluded.has(i))
+      .filter(({ r, i }) => r.errors.length === 0 && selected.has(i))
       .map(({ r }) => ({
         order_number: r.order_number,
         product_description: r.product_description,
@@ -117,7 +149,7 @@ function ImportarPage() {
         notes: r.notes,
       }));
     if (!payload.length) {
-      toast.error("Nenhuma linha válida para importar");
+      toast.error("Nenhuma linha selecionada para importar");
       return;
     }
     bulk.mutate({ rows: payload });
@@ -148,9 +180,14 @@ function ImportarPage() {
         <StepValidate
           mapped={mapped}
           setMapped={setMapped}
-          excluded={excluded}
-          setExcluded={setExcluded}
+          selected={selected}
+          setSelected={setSelected}
+          existing={existing}
+          fileGroups={fileGroups}
+          checkingDb={checkingDb}
           validCount={validCount}
+          existsCount={existsCount}
+          repeatedGroups={repeatedGroups}
           onBack={() => setStep(2)}
           onImport={doImport}
           pending={bulk.isPending}
@@ -282,64 +319,116 @@ function StepMapping(props: {
 function StepValidate(props: {
   mapped: MappedRow[];
   setMapped: (m: MappedRow[]) => void;
-  excluded: Set<number>;
-  setExcluded: (s: Set<number>) => void;
+  selected: Set<number>;
+  setSelected: (s: Set<number>) => void;
+  existing: Map<string, ExistingOrderInfo>;
+  fileGroups: Map<string, number[]>;
+  checkingDb: boolean;
   validCount: number;
+  existsCount: number;
+  repeatedGroups: number;
   onBack: () => void;
   onImport: () => void;
   pending: boolean;
 }) {
-  const { mapped, setMapped, excluded, setExcluded, validCount, onBack, onImport, pending } = props;
+  const { mapped, setMapped, selected, setSelected, existing, fileGroups, checkingDb,
+    validCount, existsCount, repeatedGroups, onBack, onImport, pending } = props;
   const errorCount = mapped.filter((r) => r.errors.length).length;
 
-  function toggleExclude(i: number) {
-    const n = new Set(excluded);
+  function toggleSelected(i: number) {
+    const n = new Set(selected);
     n.has(i) ? n.delete(i) : n.add(i);
-    setExcluded(n);
+    setSelected(n);
+  }
+
+  function selectAll(check: boolean) {
+    if (!check) { setSelected(new Set()); return; }
+    const n = new Set<number>();
+    mapped.forEach((r, i) => { if (r.errors.length === 0) n.add(i); });
+    setSelected(n);
+  }
+
+  function deselectExisting() {
+    const n = new Set(selected);
+    mapped.forEach((r, i) => { if (existing.has(r.order_number)) n.delete(i); });
+    setSelected(n);
   }
 
   function editCell(i: number, k: "order_number" | "product_description", v: string) {
     const next = [...mapped];
     next[i] = { ...next[i], [k]: v };
-    // recompute order_number error
     next[i].errors = next[i].errors.filter((e) => e !== "Nº encomenda em falta");
     if (k === "order_number" && !v.trim()) next[i].errors.push("Nº encomenda em falta");
     setMapped(next);
+    // ensure rows with errors are not selected
+    if (next[i].errors.length > 0 && selected.has(i)) {
+      const s = new Set(selected); s.delete(i); setSelected(s);
+    }
   }
+
+  const allSelectable = mapped.filter((r) => r.errors.length === 0).length;
+  const allChecked = allSelectable > 0 && selected.size >= allSelectable;
+
+  // assign a group index to colour rows that share an order_number in the file
+  const groupIndex = useMemo(() => {
+    const m = new Map<string, number>();
+    let idx = 0;
+    for (const [num, arr] of fileGroups) {
+      if (arr.length > 1) { m.set(num, idx); idx++; }
+    }
+    return m;
+  }, [fileGroups]);
+  const groupBg = ["bg-blue-500/5", "bg-amber-500/5", "bg-emerald-500/5", "bg-violet-500/5", "bg-rose-500/5"];
 
   return (
     <div className="space-y-4">
-      <Card className="p-4 flex flex-wrap items-center gap-4">
-        <div><span className="text-2xl font-bold text-success">{validCount}</span> <span className="text-sm text-muted-foreground">válidas</span></div>
+      <Card className="p-4 flex flex-wrap items-center gap-x-6 gap-y-2">
+        <div><span className="text-2xl font-bold">{mapped.length}</span> <span className="text-sm text-muted-foreground">linhas no ficheiro</span></div>
+        <div><span className="text-2xl font-bold text-success">{validCount}</span> <span className="text-sm text-muted-foreground">selecionadas para importar</span></div>
+        <div><span className="text-2xl font-bold text-amber-600">{existsCount}</span> <span className="text-sm text-muted-foreground">já existem na BD {checkingDb && "(a verificar…)"}</span></div>
+        <div><span className="text-2xl font-bold text-primary">{repeatedGroups}</span> <span className="text-sm text-muted-foreground">grupos com nº repetido</span></div>
         <div><span className="text-2xl font-bold text-destructive">{errorCount}</span> <span className="text-sm text-muted-foreground">com erro</span></div>
-        <div><span className="text-2xl font-bold text-muted-foreground">{excluded.size}</span> <span className="text-sm text-muted-foreground">excluídas</span></div>
+        <div className="ml-auto flex gap-2">
+          <Button size="sm" variant="outline" onClick={deselectExisting} disabled={existsCount === 0}>
+            Desselecionar as que já existem na BD
+          </Button>
+        </div>
       </Card>
 
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
+          <TooltipProvider>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead></TableHead>
+                <TableHead className="w-8">
+                  <Checkbox checked={allChecked} onCheckedChange={(v) => selectAll(Boolean(v))} aria-label="Selecionar tudo" />
+                </TableHead>
                 <TableHead>Nº</TableHead>
                 <TableHead>Descrição</TableHead>
                 <TableHead>Modelo</TableHead>
                 <TableHead>Entrada</TableHead>
                 <TableHead>Saída</TableHead>
-                <TableHead>Erros</TableHead>
-                <TableHead></TableHead>
+                <TableHead>Estado</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {mapped.map((r, i) => {
-                const isExcl = excluded.has(i);
-                const ok = r.errors.length === 0 && !isExcl;
+                const hasError = r.errors.length > 0;
+                const isSel = selected.has(i);
+                const exists = existing.get(r.order_number);
+                const groupSize = fileGroups.get(r.order_number)?.length ?? 1;
+                const gIdx = groupIndex.get(r.order_number);
+                const rowBg = gIdx != null ? groupBg[gIdx % groupBg.length] : "";
                 return (
-                  <TableRow key={i} className={isExcl ? "opacity-40" : ""}>
+                  <TableRow key={i} className={`${rowBg} ${!isSel && !hasError ? "opacity-60" : ""}`}>
                     <TableCell>
-                      {isExcl ? <Badge variant="outline">excl.</Badge>
-                        : ok ? <Badge className="bg-success text-success-foreground">OK</Badge>
-                        : <Badge variant="destructive">erro</Badge>}
+                      <Checkbox
+                        checked={isSel}
+                        disabled={hasError}
+                        onCheckedChange={() => toggleSelected(i)}
+                        aria-label="Selecionar linha"
+                      />
                     </TableCell>
                     <TableCell className="font-mono text-xs">
                       <Input value={r.order_number} onChange={(e) => editCell(i, "order_number", e.target.value)} className="h-8 w-32 text-xs" />
@@ -350,24 +439,51 @@ function StepValidate(props: {
                     <TableCell className="text-xs">{r.model_name_raw ?? "—"}</TableCell>
                     <TableCell className="text-xs">{r.entry_date ?? "—"}</TableCell>
                     <TableCell className="text-xs">{r.due_date ?? "—"}</TableCell>
-                    <TableCell className="text-xs text-destructive">{r.errors.join("; ")}</TableCell>
-                    <TableCell>
-                      <Button size="sm" variant="ghost" onClick={() => toggleExclude(i)} className="gap-1 text-xs">
-                        {isExcl ? "incluir" : <><X className="size-3" /> excluir</>}
-                      </Button>
+                    <TableCell className="text-xs">
+                      <div className="flex flex-wrap gap-1">
+                        {hasError && (
+                          <Badge variant="destructive" title={r.errors.join("; ")}>Erro: {r.errors.join("; ")}</Badge>
+                        )}
+                        {!hasError && !exists && groupSize === 1 && (
+                          <Badge className="bg-success text-success-foreground">OK</Badge>
+                        )}
+                        {exists && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge className="bg-amber-500 text-white cursor-help">
+                                Já existe na BD ({exists.count} cama{exists.count > 1 ? "s" : ""})
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                              <div className="text-xs">
+                                <div className="font-semibold mb-1">Nº {exists.order_number} na base de dados:</div>
+                                <ul className="list-disc pl-4">
+                                  {exists.products.map((p, k) => <li key={k}>{p}</li>)}
+                                </ul>
+                              </div>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                        {groupSize > 1 && (
+                          <Badge variant="outline" className="border-primary text-primary">
+                            Repetido no ficheiro (grupo de {groupSize})
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
               })}
             </TableBody>
           </Table>
+          </TooltipProvider>
         </div>
       </Card>
 
       <div className="flex justify-between">
         <Button variant="outline" onClick={onBack} className="gap-2"><ArrowLeft className="size-4" /> Voltar</Button>
         <Button onClick={onImport} disabled={pending || validCount === 0} size="lg">
-          {pending ? "A importar…" : `Importar ${validCount} encomenda(s)`}
+          {pending ? "A importar…" : `Importar ${validCount} selecionada(s)`}
         </Button>
       </div>
     </div>
