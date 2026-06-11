@@ -32,6 +32,13 @@ export type ProductionStageOrder = {
   is_rework?: boolean;
   rework_seconds?: number;
   rework_count?: number;
+  /**
+   * Instante (ISO) em que o segmento ativo começou — o último evento
+   * `iniciar` ou `retomar` em stage_time_logs. Permite ao cliente
+   * calcular o tempo "live" de forma contínua, sem reiniciar quando o
+   * componente é remontado (mudar de aba e voltar).
+   */
+  current_segment_started_at?: string | null;
 };
 
 export type ProductionData = {
@@ -71,6 +78,28 @@ export const getProductionData = createServerFn({ method: "GET" })
     }
 
     const byStage = Object.fromEntries(STAGES.map((s) => [s, []])) as unknown as Record<Stage, ProductionStageOrder[]>;
+
+    // Para etapas em curso (não pausadas), procurar o último evento
+    // `iniciar`/`retomar` em stage_time_logs. Este timestamp é a âncora
+    // estável do segmento ativo, partilhada entre montagens do cliente.
+    const runningIds = ((data ?? []) as any[])
+      .filter((r) => r.status === "em_curso" && !r.is_paused)
+      .map((r) => r.id as string);
+    const segmentStartByStageId = new Map<string, string>();
+    if (runningIds.length > 0) {
+      const { data: logs } = await (supabase as any)
+        .from("stage_time_logs")
+        .select("order_stage_id, event, event_at")
+        .in("order_stage_id", runningIds)
+        .in("event", ["iniciar", "retomar"])
+        .order("event_at", { ascending: false });
+      for (const l of (logs ?? []) as any[]) {
+        if (!segmentStartByStageId.has(l.order_stage_id)) {
+          segmentStartByStageId.set(l.order_stage_id, l.event_at);
+        }
+      }
+    }
+
     for (const row of (data ?? []) as any[]) {
       const o = row.production_orders;
       byStage[row.stage as Stage].push({
@@ -90,6 +119,7 @@ export const getProductionData = createServerFn({ method: "GET" })
         is_rework: Boolean(row.is_rework),
         rework_seconds: row.rework_seconds ?? 0,
         rework_count: row.rework_count ?? 0,
+        current_segment_started_at: segmentStartByStageId.get(row.id) ?? null,
       });
     }
     return { byStage };
