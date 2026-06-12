@@ -20,6 +20,9 @@ import { useRealtimeOrders } from "@/hooks/useRealtimeOrders";
 import { ReworkDialog } from "@/components/rework/ReworkDialog";
 import { QualityCheckDialog } from "@/components/quality/QualityCheckDialog";
 import { getExpectedForOrders } from "@/lib/sla.functions";
+import {
+  getColisByStage, recordColiStageEvent, type ColiStageItem,
+} from "@/lib/colis.functions";
 
 export const Route = createFileRoute("/_authenticated/producao/")({
   component: ProducaoPage,
@@ -56,6 +59,8 @@ function ProducaoPage() {
   const { data: settings } = useQuery({ queryKey: ["app-settings"], queryFn: () => fetchSettings() });
   const { data: operators } = useQuery({ queryKey: ["operators-stages"], queryFn: () => fetchOps() });
   const fetchExpected = useServerFn(getExpectedForOrders);
+  const fetchColis = useServerFn(getColisByStage);
+  const recordColiFn = useServerFn(recordColiStageEvent);
 
   // Lista de (order_id, stage) visíveis em todas as etapas para resolver SLA em lote
   const orderStagePairs = useMemo(() => {
@@ -78,11 +83,34 @@ function ProducaoPage() {
   useRealtimeOrders([["production"]]);
 
   const [activeStage, setActiveStage] = useState<Stage>("estofagem");
+
+  // Colis por etapa ativa (agrupados por encomenda)
+  const { data: colisByStage } = useQuery({
+    queryKey: ["production-colis", activeStage],
+    queryFn: () => fetchColis({ data: { stage: activeStage } }),
+    refetchInterval: 30000,
+  });
+
+  const coliMutation = useMutation({
+    mutationFn: (vars: { order_coli_stage_id: string; event: "iniciar"|"pausar"|"retomar"|"finalizar" }) => {
+      const code = operatorCodeRef.current.trim();
+      if (!code) throw new Error("Indica o teu código primeiro");
+      return recordColiFn({ data: { ...vars, operator_code: code } });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["production"] });
+      qc.invalidateQueries({ queryKey: ["production-colis", activeStage] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Erro ao registar"),
+  });
+
   const [onlyReady, setOnlyReady] = useState<boolean>(true);
   const [onlyMine, setOnlyMine] = useState<boolean>(true);
   const [operatorCode, setOperatorCode] = useState<string>(() =>
     (typeof window !== "undefined" && sessionStorage.getItem("op_code")) || ""
   );
+  const operatorCodeRef = useRef<string>(operatorCode);
+  useEffect(() => { operatorCodeRef.current = operatorCode; }, [operatorCode]);
   // Tick para atualizar contadores em tempo real
   const [, setTick] = useState(0);
   useEffect(() => {
