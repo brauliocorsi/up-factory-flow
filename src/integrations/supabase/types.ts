@@ -331,6 +331,111 @@ export type Database = {
         }
         Relationships: []
       }
+      order_coli_stages: {
+        Row: {
+          created_at: string
+          finished_at: string | null
+          id: string
+          is_paused: boolean
+          operator_id: string | null
+          order_coli_id: string
+          order_id: string
+          paused_seconds: number
+          productive_seconds: number
+          stage: Database["public"]["Enums"]["production_stage"]
+          started_at: string | null
+          status: Database["public"]["Enums"]["stage_status"]
+        }
+        Insert: {
+          created_at?: string
+          finished_at?: string | null
+          id?: string
+          is_paused?: boolean
+          operator_id?: string | null
+          order_coli_id: string
+          order_id: string
+          paused_seconds?: number
+          productive_seconds?: number
+          stage: Database["public"]["Enums"]["production_stage"]
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["stage_status"]
+        }
+        Update: {
+          created_at?: string
+          finished_at?: string | null
+          id?: string
+          is_paused?: boolean
+          operator_id?: string | null
+          order_coli_id?: string
+          order_id?: string
+          paused_seconds?: number
+          productive_seconds?: number
+          stage?: Database["public"]["Enums"]["production_stage"]
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["stage_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_coli_stages_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_coli_stages_order_coli_id_fkey"
+            columns: ["order_coli_id"]
+            isOneToOne: false
+            referencedRelation: "order_colis"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_coli_stages_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "production_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_colis: {
+        Row: {
+          coli_barcode: string | null
+          coli_name: string
+          coli_number: number
+          created_at: string
+          id: string
+          order_id: string
+          status: string
+        }
+        Insert: {
+          coli_barcode?: string | null
+          coli_name: string
+          coli_number: number
+          created_at?: string
+          id?: string
+          order_id: string
+          status?: string
+        }
+        Update: {
+          coli_barcode?: string | null
+          coli_name?: string
+          coli_number?: number
+          created_at?: string
+          id?: string
+          order_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_colis_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "production_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_stages: {
         Row: {
           check_valid: boolean
@@ -1385,6 +1490,68 @@ export type Database = {
         }
         Relationships: []
       }
+      structure_coli_routes: {
+        Row: {
+          category_code: string
+          coli_name: string
+          coli_number: number
+          created_at: string
+          id: string
+          structure_code: string
+          updated_at: string
+        }
+        Insert: {
+          category_code: string
+          coli_name: string
+          coli_number: number
+          created_at?: string
+          id?: string
+          structure_code: string
+          updated_at?: string
+        }
+        Update: {
+          category_code?: string
+          coli_name?: string
+          coli_number?: number
+          created_at?: string
+          id?: string
+          structure_code?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      structure_coli_stages: {
+        Row: {
+          id: string
+          included: boolean
+          route_id: string
+          sort_order: number
+          stage: Database["public"]["Enums"]["production_stage"]
+        }
+        Insert: {
+          id?: string
+          included?: boolean
+          route_id: string
+          sort_order?: number
+          stage: Database["public"]["Enums"]["production_stage"]
+        }
+        Update: {
+          id?: string
+          included?: boolean
+          route_id?: string
+          sort_order?: number
+          stage?: Database["public"]["Enums"]["production_stage"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "structure_coli_stages_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "structure_coli_routes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -1412,6 +1579,7 @@ export type Database = {
     }
     Functions: {
       cancel_order_with_recovery: { Args: { _order_id: string }; Returns: Json }
+      create_order_colis: { Args: { _order_id: string }; Returns: Json }
       finalize_shell_batch: {
         Args: { _batch_id: string; _operator_code: string }
         Returns: Json
@@ -1449,6 +1617,13 @@ export type Database = {
           _stage: Database["public"]["Enums"]["production_stage"]
         }
         Returns: number
+      }
+      get_order_route_keys: {
+        Args: { _order_id: string }
+        Returns: {
+          category_code: string
+          structure_code: string
+        }[]
       }
       has_role: {
         Args: {
