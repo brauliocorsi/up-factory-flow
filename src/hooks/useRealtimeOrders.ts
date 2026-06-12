@@ -14,6 +14,9 @@ export function useRealtimeOrders(invalidateKeys: string[][]) {
       .on("postgres_changes", { event: "*", schema: "public", table: "order_stages" }, () => {
         invalidateKeys.forEach((k) => qc.invalidateQueries({ queryKey: k }));
       })
+      .on("postgres_changes", { event: "*", schema: "public", table: "order_coli_stages" }, () => {
+        invalidateKeys.forEach((k) => qc.invalidateQueries({ queryKey: k }));
+      })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
