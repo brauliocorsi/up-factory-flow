@@ -15,6 +15,7 @@ const nav = [
   { to: "/stock/produto-final", label: "Produto final", icon: PackageCheck },
   { to: "/importar", label: "Importar", icon: Upload },
   { to: "/admin/catalogo", label: "Catálogo", icon: Library },
+  { to: "/admin/rotas-colis", label: "Rotas Colis", icon: Boxes },
   { to: "/admin/qualidade", label: "Qualidade", icon: ClipboardCheck },
   { to: "/admin/sla", label: "SLA", icon: Clock },
   { to: "/configuracoes", label: "Configurações", icon: Settings },
