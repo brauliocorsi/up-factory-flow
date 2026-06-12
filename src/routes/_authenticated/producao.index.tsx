@@ -283,6 +283,11 @@ function ProducaoPage() {
             pending={mutation.isPending}
             operatorCode={operatorCode.trim()}
             expectedMinutes={expectedMap?.[it.order_id]?.[it.stage] ?? null}
+            colis={colisByStage?.byOrder?.[it.order_id] ?? []}
+            onColiAction={(coli_stage_id, event) =>
+              coliMutation.mutate({ order_coli_stage_id: coli_stage_id, event })
+            }
+            coliPending={coliMutation.isPending}
           />
         ))}
       </div>
@@ -290,13 +295,16 @@ function ProducaoPage() {
   );
 }
 
-function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinutes }: {
+function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinutes, colis, onColiAction, coliPending }: {
   item: ProductionStageOrder;
   canAct: boolean;
   onAction: (event: "iniciar"|"pausar"|"retomar"|"finalizar") => void;
   pending: boolean;
   operatorCode: string;
   expectedMinutes: number | null;
+  colis: ColiStageItem[];
+  onColiAction: (coli_stage_id: string, event: "iniciar"|"pausar"|"retomar"|"finalizar") => void;
+  coliPending: boolean;
 }) {
   // Contador "live": usa como âncora o instante em que o segmento ativo
   // começou (último `iniciar`/`retomar`, vindo do servidor). Assim o tempo
