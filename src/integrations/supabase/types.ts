@@ -337,9 +337,12 @@ export type Database = {
           finished_at: string | null
           id: string
           is_paused: boolean
+          last_resume_at: string | null
+          notes: string | null
           operator_id: string | null
           order_coli_id: string
           order_id: string
+          pause_started_at: string | null
           paused_seconds: number
           productive_seconds: number
           stage: Database["public"]["Enums"]["production_stage"]
@@ -351,9 +354,12 @@ export type Database = {
           finished_at?: string | null
           id?: string
           is_paused?: boolean
+          last_resume_at?: string | null
+          notes?: string | null
           operator_id?: string | null
           order_coli_id: string
           order_id: string
+          pause_started_at?: string | null
           paused_seconds?: number
           productive_seconds?: number
           stage: Database["public"]["Enums"]["production_stage"]
@@ -365,9 +371,12 @@ export type Database = {
           finished_at?: string | null
           id?: string
           is_paused?: boolean
+          last_resume_at?: string | null
+          notes?: string | null
           operator_id?: string | null
           order_coli_id?: string
           order_id?: string
+          pause_started_at?: string | null
           paused_seconds?: number
           productive_seconds?: number
           stage?: Database["public"]["Enums"]["production_stage"]
@@ -1633,6 +1642,14 @@ export type Database = {
         Returns: boolean
       }
       preview_cancel_order: { Args: { _order_id: string }; Returns: Json }
+      record_coli_stage_event: {
+        Args: {
+          _event: string
+          _operator_code: string
+          _order_coli_stage_id: string
+        }
+        Returns: Json
+      }
       record_shell_batch_event: {
         Args: { _batch_id: string; _event: string; _operator_code: string }
         Returns: Json
@@ -1700,6 +1717,13 @@ export type Database = {
       start_shell_batch: {
         Args: { _operator_code: string; _quantity: number; _shell_id: string }
         Returns: string
+      }
+      sync_order_stage_from_colis: {
+        Args: {
+          _order_id: string
+          _stage: Database["public"]["Enums"]["production_stage"]
+        }
+        Returns: undefined
       }
       try_reserve_for_order: { Args: { _order_id: string }; Returns: Json }
     }
