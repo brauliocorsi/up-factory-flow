@@ -20,6 +20,9 @@ import { useRealtimeOrders } from "@/hooks/useRealtimeOrders";
 import { ReworkDialog } from "@/components/rework/ReworkDialog";
 import { QualityCheckDialog } from "@/components/quality/QualityCheckDialog";
 import { getExpectedForOrders } from "@/lib/sla.functions";
+import {
+  getColisByStage, recordColiStageEvent, type ColiStageItem,
+} from "@/lib/colis.functions";
 
 export const Route = createFileRoute("/_authenticated/producao/")({
   component: ProducaoPage,
@@ -56,6 +59,8 @@ function ProducaoPage() {
   const { data: settings } = useQuery({ queryKey: ["app-settings"], queryFn: () => fetchSettings() });
   const { data: operators } = useQuery({ queryKey: ["operators-stages"], queryFn: () => fetchOps() });
   const fetchExpected = useServerFn(getExpectedForOrders);
+  const fetchColis = useServerFn(getColisByStage);
+  const recordColiFn = useServerFn(recordColiStageEvent);
 
   // Lista de (order_id, stage) visíveis em todas as etapas para resolver SLA em lote
   const orderStagePairs = useMemo(() => {
@@ -78,11 +83,34 @@ function ProducaoPage() {
   useRealtimeOrders([["production"]]);
 
   const [activeStage, setActiveStage] = useState<Stage>("estofagem");
+
+  // Colis por etapa ativa (agrupados por encomenda)
+  const { data: colisByStage } = useQuery({
+    queryKey: ["production-colis", activeStage],
+    queryFn: () => fetchColis({ data: { stage: activeStage } }),
+    refetchInterval: 30000,
+  });
+
+  const coliMutation = useMutation({
+    mutationFn: (vars: { order_coli_stage_id: string; event: "iniciar"|"pausar"|"retomar"|"finalizar" }) => {
+      const code = operatorCodeRef.current.trim();
+      if (!code) throw new Error("Indica o teu código primeiro");
+      return recordColiFn({ data: { ...vars, operator_code: code } });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["production"] });
+      qc.invalidateQueries({ queryKey: ["production-colis", activeStage] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Erro ao registar"),
+  });
+
   const [onlyReady, setOnlyReady] = useState<boolean>(true);
   const [onlyMine, setOnlyMine] = useState<boolean>(true);
   const [operatorCode, setOperatorCode] = useState<string>(() =>
     (typeof window !== "undefined" && sessionStorage.getItem("op_code")) || ""
   );
+  const operatorCodeRef = useRef<string>(operatorCode);
+  useEffect(() => { operatorCodeRef.current = operatorCode; }, [operatorCode]);
   // Tick para atualizar contadores em tempo real
   const [, setTick] = useState(0);
   useEffect(() => {
@@ -255,6 +283,11 @@ function ProducaoPage() {
             pending={mutation.isPending}
             operatorCode={operatorCode.trim()}
             expectedMinutes={expectedMap?.[it.order_id]?.[it.stage] ?? null}
+            colis={colisByStage?.byOrder?.[it.order_id] ?? []}
+            onColiAction={(coli_stage_id, event) =>
+              coliMutation.mutate({ order_coli_stage_id: coli_stage_id, event })
+            }
+            coliPending={coliMutation.isPending}
           />
         ))}
       </div>
@@ -262,13 +295,16 @@ function ProducaoPage() {
   );
 }
 
-function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinutes }: {
+function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinutes, colis, onColiAction, coliPending }: {
   item: ProductionStageOrder;
   canAct: boolean;
   onAction: (event: "iniciar"|"pausar"|"retomar"|"finalizar") => void;
   pending: boolean;
   operatorCode: string;
   expectedMinutes: number | null;
+  colis: ColiStageItem[];
+  onColiAction: (coli_stage_id: string, event: "iniciar"|"pausar"|"retomar"|"finalizar") => void;
+  coliPending: boolean;
 }) {
   // Contador "live": usa como âncora o instante em que o segmento ativo
   // começou (último `iniciar`/`retomar`, vindo do servidor). Assim o tempo
@@ -318,6 +354,10 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
   const blocked = item.status === "bloqueada";
   const paused = item.is_paused;
   const isUpholstery = item.stage === "estofagem";
+  // Quando há mais do que 1 coli, a operação faz-se ao nível do coli
+  // (cada um tem o seu Iniciar/Pausar/Finalizar). Encomendas de 1 coli
+  // ("Produto completo") continuam a comportar-se como antes.
+  const operateByColis = colis.length > 1;
   const convergenceReady = item.lines
     ? !!(item.lines.tecido?.ready && item.lines.estrutura?.ready)
     : true;
@@ -395,34 +435,34 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
           </div>
         ) : (
           <>
-            {item.status !== "em_curso" && !blocked && (!isUpholstery || convergenceReady) && (
+            {!operateByColis && item.status !== "em_curso" && !blocked && (!isUpholstery || convergenceReady) && (
               <Button size="lg" disabled={pending} onClick={() => onAction("iniciar")} className="gap-2">
                 <Play className="size-4" /> Iniciar
               </Button>
             )}
-            {isUpholstery && !convergenceReady && item.status !== "em_curso" && (
+            {!operateByColis && isUpholstery && !convergenceReady && item.status !== "em_curso" && (
               <div className="text-xs text-muted-foreground flex items-center gap-1">
                 <Lock className="size-3" /> Aguarda {!item.lines?.tecido?.ready ? "Costura" : ""}
                 {!item.lines?.tecido?.ready && !item.lines?.estrutura?.ready ? " + " : ""}
                 {!item.lines?.estrutura?.ready ? "Branco" : ""}
               </div>
             )}
-            {running && (
+            {!operateByColis && running && (
               <Button size="lg" variant="outline" disabled={pending} onClick={() => onAction("pausar")} className="gap-2">
                 <Pause className="size-4" /> Pausar
               </Button>
             )}
-            {paused && (
+            {!operateByColis && paused && (
               <Button size="lg" variant="outline" disabled={pending} onClick={() => onAction("retomar")} className="gap-2">
                 <RotateCcw className="size-4" /> Retomar
               </Button>
             )}
-            {item.status === "em_curso" && (
+            {!operateByColis && item.status === "em_curso" && (
               <Button size="lg" variant="default" disabled={pending} onClick={() => onAction("finalizar")} className="gap-2 bg-emerald-600 hover:bg-emerald-700">
                 <Check className="size-4" /> Finalizar
               </Button>
             )}
-            {blocked && (
+            {!operateByColis && blocked && (
               <div className="text-xs text-destructive flex items-center gap-1">
                 <AlertTriangle className="size-3" /> Aguarda etapas anteriores
               </div>
@@ -447,7 +487,92 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
           </>
         )}
       </div>
+
+      {/* Lista de colis (quando há mais do que um) */}
+      {operateByColis && (
+        <div className="mt-3 border-t pt-3 space-y-2">
+          <div className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
+            <Boxes className="size-3" /> Colis nesta etapa ({colis.length})
+          </div>
+          {colis.map((c) => (
+            <ColiRow
+              key={c.id}
+              coli={c}
+              canAct={canAct}
+              pending={coliPending}
+              onAction={(ev) => onColiAction(c.id, ev)}
+            />
+          ))}
+        </div>
+      )}
     </Card>
+  );
+}
+
+function ColiRow({ coli, canAct, pending, onAction }: {
+  coli: ColiStageItem;
+  canAct: boolean;
+  pending: boolean;
+  onAction: (event: "iniciar"|"pausar"|"retomar"|"finalizar") => void;
+}) {
+  const running = coli.status === "em_curso" && !coli.is_paused;
+  const paused = coli.is_paused;
+  const segStart = coli.last_resume_at ? new Date(coli.last_resume_at).getTime() : null;
+  const live = running && segStart
+    ? coli.productive_seconds + Math.max(0, Math.floor((Date.now() - segStart) / 1000))
+    : coli.productive_seconds;
+
+  return (
+    <div className={`rounded-md border p-2 flex items-center justify-between gap-2 flex-wrap ${
+      running ? "border-emerald-500/40 bg-emerald-50/40"
+      : paused ? "border-amber-500/40 bg-amber-50/40"
+      : "bg-card"
+    }`}>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs font-mono bg-muted rounded px-1.5 py-0.5">#{coli.coli_number}</span>
+          <span className="text-sm font-medium">{coli.coli_name}</span>
+          {running && <Badge className="bg-emerald-600 text-white text-[10px]">A PRODUZIR</Badge>}
+          {paused && <Badge className="bg-warning text-warning-foreground text-[10px]">EM PAUSA</Badge>}
+          {coli.operator_code && <Badge variant="secondary" className="text-[10px]">Op {coli.operator_code}</Badge>}
+          <span className="text-[11px] text-muted-foreground inline-flex items-center gap-1">
+            <Clock className="size-3" /> {fmtTime(live)}
+            {coli.paused_seconds > 0 && <> · pausa {fmtTime(coli.paused_seconds)}</>}
+          </span>
+        </div>
+      </div>
+      <div className="flex items-center gap-1">
+        {!canAct ? (
+          <span className="text-[11px] text-muted-foreground inline-flex items-center gap-1">
+            <Lock className="size-3" /> Sem permissão
+          </span>
+        ) : (
+          <>
+            {coli.status !== "em_curso" && (
+              <Button size="sm" disabled={pending} onClick={() => onAction("iniciar")} className="h-8 gap-1">
+                <Play className="size-3" /> Iniciar
+              </Button>
+            )}
+            {running && (
+              <Button size="sm" variant="outline" disabled={pending} onClick={() => onAction("pausar")} className="h-8 gap-1">
+                <Pause className="size-3" /> Pausar
+              </Button>
+            )}
+            {paused && (
+              <Button size="sm" variant="outline" disabled={pending} onClick={() => onAction("retomar")} className="h-8 gap-1">
+                <RotateCcw className="size-3" /> Retomar
+              </Button>
+            )}
+            {coli.status === "em_curso" && (
+              <Button size="sm" disabled={pending} onClick={() => onAction("finalizar")}
+                className="h-8 gap-1 bg-emerald-600 hover:bg-emerald-700">
+                <Check className="size-3" /> Finalizar
+              </Button>
+            )}
+          </>
+        )}
+      </div>
+    </div>
   );
 }
 
