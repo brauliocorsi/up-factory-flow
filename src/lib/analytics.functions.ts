@@ -86,7 +86,7 @@ export const getActiveByOperator = createServerFn({ method: "GET" })
     for (const r of (data ?? []) as any[]) {
       const op = r.operators;
       if (!op) continue;
-      const cur = map.get(r.operator_id) ?? {
+      const cur: OperatorActiveWork = map.get(r.operator_id) ?? {
         operator_id: r.operator_id,
         operator_code: op.code,
         operator_name: op.name,
