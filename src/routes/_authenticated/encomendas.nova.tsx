@@ -140,21 +140,27 @@ function NovaEncomendaPage() {
   // Autofocus no scan ao abrir
   useEffect(() => { scanRef.current?.focus(); }, []);
 
-  function decode(raw: string) {
+  // silent=true → preenchimento progressivo enquanto o utilizador escreve (sem toasts).
+  function decode(raw: string, silent = false) {
     if (!cat) {
-      toast.error("Catálogo ainda a carregar — tenta de novo num instante");
+      if (!silent) toast.error("Catálogo ainda a carregar — tenta de novo num instante");
       return;
     }
     const { code, segments } = splitCode(raw);
     if (!code) return;
-    if (code.length !== EXPECTED_LEN) {
+    if (!silent && code.length !== EXPECTED_LEN) {
       toast.warning(`Código com tamanho inesperado (${code.length} caracteres, esperados ${EXPECTED_LEN})`);
     }
     const missing = new Set<string>();
     const next = { ...form };
 
+    // Só consideramos um segmento "completo" quando atinge o seu comprimento esperado.
+    // Isso evita marcar como "em falta" enquanto o utilizador ainda está a escrever.
+    const isFull = (key: string, len: number) => (segments[key]?.length ?? 0) === len;
+
     const category = cat.categories.find((c: any) => c.code === segments.category);
-    if (category) next.category_id = category.id; else if (segments.category) missing.add("category");
+    if (category) next.category_id = category.id;
+    else if (isFull("category", 3)) missing.add("category");
 
     const model = (cat.models ?? []).find(
       (m: any) => m.code === segments.model && (!category || m.category_id === category.id),
@@ -167,7 +173,7 @@ function NovaEncomendaPage() {
       : null;
     const resolvedModel = model ?? modelFallback;
     if (resolvedModel) next.model_id = resolvedModel.id;
-    else if (segments.model) missing.add("model");
+    else if (isFull("model", 3)) missing.add("model");
     // Se a categoria não veio do código mas o modelo tem uma, herda-a (útil para autopreencher
     // a categoria quando o operador só sabe o modelo).
     if (!category && resolvedModel?.category_id) {
@@ -176,24 +182,31 @@ function NovaEncomendaPage() {
 
     const find = (list: any[], code: string) => list.find((x: any) => x.code === code);
     const structure = find(cat.structures, segments.structure);
-    if (structure) next.structure_id = structure.id; else if (segments.structure) missing.add("structure");
+    if (structure) next.structure_id = structure.id;
+    else if (isFull("structure", 2)) missing.add("structure");
     const measure = find(cat.measures, segments.measure);
-    if (measure) next.measure_id = measure.id; else if (segments.measure) missing.add("measure");
+    if (measure) next.measure_id = measure.id;
+    else if (isFull("measure", 3)) missing.add("measure");
     const ft = find(cat.fabric_types, segments.fabric_type);
-    if (ft) next.fabric_type_id = ft.id; else if (segments.fabric_type) missing.add("fabric_type");
+    if (ft) next.fabric_type_id = ft.id;
+    else if (isFull("fabric_type", 2)) missing.add("fabric_type");
     const fr = find(cat.fabric_refs, segments.fabric_ref);
-    if (fr) next.fabric_ref_id = fr.id; else if (segments.fabric_ref) missing.add("fabric_ref");
+    if (fr) next.fabric_ref_id = fr.id;
+    else if (isFull("fabric_ref", 2)) missing.add("fabric_ref");
     const color = find(cat.colors, segments.color);
-    if (color) next.color_id = color.id; else if (segments.color) missing.add("color");
+    if (color) next.color_id = color.id;
+    else if (isFull("color", 2)) missing.add("color");
 
     if (segments.finishing === "F" || segments.finishing === "N") {
       next.finishing = segments.finishing as "F" | "N";
-    } else if (segments.finishing) {
+    } else if (isFull("finishing", 1)) {
       missing.add("finishing");
     }
 
     setForm(next);
     setMissingSegments(missing);
+
+    if (silent) return;
 
     if (missing.size > 0) {
       const labels: Record<string, string> = {
@@ -222,7 +235,10 @@ function NovaEncomendaPage() {
   function onScanChange(v: string) {
     setScanValue(v);
     const clean = v.replace(/\s+/g, "");
+    // Preenchimento progressivo: descodifica a cada tecla, sem toasts.
+    // Quando atinge o tamanho exato, mostra o toast de sucesso.
     if (clean.length === EXPECTED_LEN) decode(clean);
+    else if (clean.length > 0) decode(clean, true);
   }
   function onScanPaste(e: React.ClipboardEvent<HTMLInputElement>) {
     const text = e.clipboardData.getData("text");
