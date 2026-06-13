@@ -159,7 +159,20 @@ function NovaEncomendaPage() {
     const model = (cat.models ?? []).find(
       (m: any) => m.code === segments.model && (!category || m.category_id === category.id),
     );
-    if (model) next.model_id = model.id; else if (segments.model) missing.add("model");
+    // Fallback: se não houver match com a categoria (ou se o modelo não tem categoria atribuída),
+    // procura apenas pelo código. Evita falsos "não encontrado" quando os modelos no catálogo
+    // ainda não estão ligados a uma categoria.
+    const modelFallback = !model
+      ? (cat.models ?? []).find((m: any) => m.code === segments.model)
+      : null;
+    const resolvedModel = model ?? modelFallback;
+    if (resolvedModel) next.model_id = resolvedModel.id;
+    else if (segments.model) missing.add("model");
+    // Se a categoria não veio do código mas o modelo tem uma, herda-a (útil para autopreencher
+    // a categoria quando o operador só sabe o modelo).
+    if (!category && resolvedModel?.category_id) {
+      next.category_id = resolvedModel.category_id;
+    }
 
     const find = (list: any[], code: string) => list.find((x: any) => x.code === code);
     const structure = find(cat.structures, segments.structure);
