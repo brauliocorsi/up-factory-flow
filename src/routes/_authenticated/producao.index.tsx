@@ -162,6 +162,7 @@ function ProducaoPage() {
   };
   const allItems = data?.byStage[activeStage] ?? [];
   const items = allItems.filter((it) => {
+    if (searchQuery.trim() && !it.order_number.toLowerCase().includes(searchQuery.toLowerCase().trim())) return false;
     if (onlyMine && !canActOnStage(it.stage)) return false;
     if (onlyReady && !isReadyToStart(it)) return false;
     return true;
