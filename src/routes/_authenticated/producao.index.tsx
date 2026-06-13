@@ -284,6 +284,7 @@ function ProducaoPage() {
             operatorCode={operatorCode.trim()}
             expectedMinutes={expectedMap?.[it.order_id]?.[it.stage] ?? null}
             colis={colisByStage?.byOrder?.[it.order_id] ?? []}
+            isMultiColiOrder={(colisByStage?.multiColiOrderIds ?? []).includes(it.order_id)}
             onColiAction={(coli_stage_id, event) =>
               coliMutation.mutate({ order_coli_stage_id: coli_stage_id, event })
             }
@@ -295,7 +296,7 @@ function ProducaoPage() {
   );
 }
 
-function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinutes, colis, onColiAction, coliPending }: {
+function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinutes, colis, isMultiColiOrder, onColiAction, coliPending }: {
   item: ProductionStageOrder;
   canAct: boolean;
   onAction: (event: "iniciar"|"pausar"|"retomar"|"finalizar") => void;
@@ -303,6 +304,7 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
   operatorCode: string;
   expectedMinutes: number | null;
   colis: ColiStageItem[];
+  isMultiColiOrder: boolean;
   onColiAction: (coli_stage_id: string, event: "iniciar"|"pausar"|"retomar"|"finalizar") => void;
   coliPending: boolean;
 }) {
@@ -354,10 +356,12 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
   const blocked = item.status === "bloqueada";
   const paused = item.is_paused;
   const isUpholstery = item.stage === "estofagem";
-  // Quando há mais do que 1 coli, a operação faz-se ao nível do coli
-  // (cada um tem o seu Iniciar/Pausar/Finalizar). Encomendas de 1 coli
-  // ("Produto completo") continuam a comportar-se como antes.
-  const operateByColis = colis.length > 1;
+  // A decisão de "vista por coli" depende do TOTAL de order_colis da
+  // encomenda (rota multi-coli), NÃO do número de colis presentes nesta
+  // etapa — caso contrário, ao finalizar todos menos um, o cartão
+  // colapsaria para a vista antiga ao nível da encomenda.
+  // Encomendas de 1 coli ("Produto completo") continuam na vista antiga.
+  const operateByColis = isMultiColiOrder;
   const convergenceReady = item.lines
     ? !!(item.lines.tecido?.ready && item.lines.estrutura?.ready)
     : true;
