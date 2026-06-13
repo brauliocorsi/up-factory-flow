@@ -106,6 +106,7 @@ function ProducaoPage() {
 
   const [onlyReady, setOnlyReady] = useState<boolean>(true);
   const [onlyMine, setOnlyMine] = useState<boolean>(true);
+  const [searchQuery, setSearchQuery] = useState<string>("");
   const [operatorCode, setOperatorCode] = useState<string>(() =>
     (typeof window !== "undefined" && sessionStorage.getItem("op_code")) || ""
   );
