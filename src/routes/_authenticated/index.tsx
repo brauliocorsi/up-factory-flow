@@ -1,11 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useSuspenseQuery, queryOptions } from "@tanstack/react-query";
-import { Suspense } from "react";
+import { useSuspenseQuery, queryOptions, useQuery } from "@tanstack/react-query";
+import { Suspense, useState } from "react";
 import { getDashboardData } from "@/lib/orders.functions";
 import { StatCards } from "@/components/app/StatCards";
 import { KanbanBoard } from "@/components/kanban/KanbanBoard";
 import { MobileStageView } from "@/components/kanban/MobileStageView";
 import { useRealtimeOrders } from "@/hooks/useRealtimeOrders";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { OrdersListView } from "@/components/dashboard/OrdersListView";
+import { OperatorsActiveView } from "@/components/dashboard/OperatorsActiveView";
+import { OperatorsEfficiencyView } from "@/components/dashboard/OperatorsEfficiencyView";
+import { ProductionKpisBar } from "@/components/dashboard/ProductionKpisBar";
 
 const dashboardQuery = queryOptions({
   queryKey: ["dashboard"],
@@ -28,6 +33,7 @@ function DashboardPage() {
 function Dashboard() {
   const { data } = useSuspenseQuery(dashboardQuery);
   useRealtimeOrders([["dashboard"], ["orders"]]);
+  const [tab, setTab] = useState("kanban");
   return (
     <div>
       <div className="px-4 pt-4 md:pt-6">
@@ -35,9 +41,29 @@ function Dashboard() {
         <p className="text-sm text-muted-foreground">Vista em tempo real das etapas de produção</p>
       </div>
       <StatCards stats={data.stats} />
-      <div className="mt-6">
-        <div className="hidden md:block"><KanbanBoard data={data} /></div>
-        <div className="md:hidden"><MobileStageView data={data} /></div>
+      <ProductionKpisBar />
+      <div className="mt-4 px-4">
+        <Tabs value={tab} onValueChange={setTab} className="w-full">
+          <TabsList className="flex flex-wrap h-auto">
+            <TabsTrigger value="kanban">Kanban</TabsTrigger>
+            <TabsTrigger value="lista">Lista</TabsTrigger>
+            <TabsTrigger value="operadores">Operadores</TabsTrigger>
+            <TabsTrigger value="eficiencia">Eficiência</TabsTrigger>
+          </TabsList>
+          <TabsContent value="kanban" className="mt-4">
+            <div className="hidden md:block -mx-4"><KanbanBoard data={data} /></div>
+            <div className="md:hidden -mx-4"><MobileStageView data={data} /></div>
+          </TabsContent>
+          <TabsContent value="lista" className="mt-4">
+            <OrdersListView data={data} />
+          </TabsContent>
+          <TabsContent value="operadores" className="mt-4">
+            <OperatorsActiveView />
+          </TabsContent>
+          <TabsContent value="eficiencia" className="mt-4">
+            <OperatorsEfficiencyView />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
