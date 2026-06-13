@@ -2,7 +2,7 @@ import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   LayoutGrid, ListOrdered, LogOut, Factory, Upload, Library, Boxes, HardHat,
   Settings, Wrench, PackageCheck, ClipboardCheck, Clock, Barcode, ChevronDown,
-  Menu, Shield, Package, Truck,
+  Menu, Shield, Package, Truck, BarChart3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -57,6 +57,7 @@ const groups: NavGroup[] = [
     icon: Shield,
     items: [
       { to: "/admin/catalogo", label: "Catálogo", icon: Library },
+      { to: "/admin/relatorios", label: "Relatórios", icon: BarChart3 },
       { to: "/admin/rotas-colis", label: "Rotas Colis", icon: Truck },
       { to: "/admin/qualidade", label: "Qualidade", icon: ClipboardCheck },
       { to: "/admin/sla", label: "SLA", icon: Clock },
