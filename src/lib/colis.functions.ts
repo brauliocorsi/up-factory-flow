@@ -3,6 +3,12 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { STAGES, type Stage } from "@/lib/production.functions";
 
+// Ordem canónica das etapas (igual à função SQL stage_order_index).
+const STAGE_ORDER: Record<Stage, number> = {
+  estrutura: 1, corte: 2, costura: 3, branco: 4,
+  estofagem: 5, qualidade: 6, embalagem: 7, picagem: 8,
+};
+
 /**
  * Colis (Parte 2) — operação por coli na produção.
  *
@@ -46,6 +52,7 @@ export const getColisByStage = createServerFn({ method: "GET" })
   )
   .handler(async ({ data, context }) => {
     const sb = context.supabase as any;
+    // 1) Etapas desta aba ainda não concluídas.
     const { data: rows, error } = await sb
       .from("order_coli_stages")
       .select(
@@ -58,7 +65,38 @@ export const getColisByStage = createServerFn({ method: "GET" })
       .neq("status", "concluida");
     if (error) throw new Error(error.message);
 
-    const items: ColiStageItem[] = (rows ?? []).map((r: any) => ({
+    // 2) Como create_order_colis cria TODAS as etapas da rota em 'pendente'
+    //    de uma só vez, é preciso filtrar: só mostrar o coli na aba <stage>
+    //    se <stage> for a PRIMEIRA etapa ainda não concluída da rota desse coli.
+    //    (i.e. todas as etapas anteriores da rota têm de estar 'concluida').
+    const coliIds = Array.from(new Set((rows ?? []).map((r: any) => r.order_coli_id)));
+    const currentStageByColi = new Map<string, Stage>();
+    if (coliIds.length > 0) {
+      const { data: allStages, error: eS } = await sb
+        .from("order_coli_stages")
+        .select("order_coli_id, stage, status")
+        .in("order_coli_id", coliIds);
+      if (eS) throw new Error(eS.message);
+      const byColi = new Map<string, { stage: Stage; status: string }[]>();
+      for (const r of (allStages ?? []) as any[]) {
+        const arr = byColi.get(r.order_coli_id) ?? [];
+        arr.push({ stage: r.stage, status: r.status });
+        byColi.set(r.order_coli_id, arr);
+      }
+      for (const [cid, arr] of byColi) {
+        const sorted = arr
+          .slice()
+          .sort((a, b) => (STAGE_ORDER[a.stage] ?? 99) - (STAGE_ORDER[b.stage] ?? 99));
+        const current = sorted.find((s) => s.status !== "concluida");
+        if (current) currentStageByColi.set(cid, current.stage);
+      }
+    }
+
+    const filtered = (rows ?? []).filter(
+      (r: any) => currentStageByColi.get(r.order_coli_id) === data.stage,
+    );
+
+    const items: ColiStageItem[] = filtered.map((r: any) => ({
       id: r.id,
       order_id: r.order_id,
       order_coli_id: r.order_coli_id,
