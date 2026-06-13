@@ -245,29 +245,42 @@ function ProducaoPage() {
         </div>
       </div>
 
-      {/* Filtros */}
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          onClick={() => setOnlyReady((v) => !v)}
-          className={`text-xs font-medium px-2.5 py-1.5 rounded-md border transition ${
-            onlyReady ? "bg-emerald-600 text-white border-emerald-600" : "bg-card hover:bg-accent"
-          }`}
-        >
-          {onlyReady ? "✓ " : ""}Só prontas para iniciar
-        </button>
-        <button
-          onClick={() => setOnlyMine((v) => !v)}
-          className={`text-xs font-medium px-2.5 py-1.5 rounded-md border transition ${
-            onlyMine ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-accent"
-          }`}
-        >
-          {onlyMine ? "✓ " : ""}Só as minhas etapas
-        </button>
-        {hiddenCount > 0 && (
-          <span className="text-[11px] text-muted-foreground">
-            {hiddenCount} ocultas pelos filtros
-          </span>
-        )}
+      {/* Filtros e Pesquisa */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card p-3 rounded-lg border">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setOnlyReady((v) => !v)}
+            className={`text-xs font-medium px-2.5 py-1.5 rounded-md border transition ${
+              onlyReady ? "bg-emerald-600 text-white border-emerald-600" : "bg-card hover:bg-accent"
+            }`}
+          >
+            {onlyReady ? "✓ " : ""}Só prontas para iniciar
+          </button>
+          <button
+            onClick={() => setOnlyMine((v) => !v)}
+            className={`text-xs font-medium px-2.5 py-1.5 rounded-md border transition ${
+              onlyMine ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-accent"
+            }`}
+          >
+            {onlyMine ? "✓ " : ""}Só as minhas etapas
+          </button>
+          {hiddenCount > 0 && (
+            <span className="text-[11px] text-muted-foreground">
+              {hiddenCount} ocultas pelos filtros
+            </span>
+          )}
+        </div>
+
+        <div className="relative w-full sm:w-64">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Procurar nº encomenda..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-8 text-sm h-9"
+          />
+        </div>
       </div>
 
       {/* Lista */}
