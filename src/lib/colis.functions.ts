@@ -132,6 +132,14 @@ export const getColisByStage = createServerFn({ method: "GET" })
     const coliIds = Array.from(new Set((rows ?? []).map((r: any) => r.order_coli_id)));
     const currentStageByColi = new Map<string, Stage>();
     if (coliIds.length > 0) {
+      const routeOrderByColi = await loadRouteStageOrder(
+        sb,
+        (rows ?? []).map((r: any) => ({
+          order_coli_id: r.order_coli_id,
+          order_id: r.order_id,
+          coli_number: r.order_colis?.coli_number ?? 0,
+        })),
+      );
       const { data: allStages, error: eS } = await sb
         .from("order_coli_stages")
         .select("order_coli_id, stage, status")
@@ -144,9 +152,10 @@ export const getColisByStage = createServerFn({ method: "GET" })
         byColi.set(r.order_coli_id, arr);
       }
       for (const [cid, arr] of byColi) {
+        const routeOrder = routeOrderByColi.get(cid);
         const sorted = arr
           .slice()
-          .sort((a, b) => (STAGE_ORDER[a.stage] ?? 99) - (STAGE_ORDER[b.stage] ?? 99));
+          .sort((a, b) => routeRank(a.stage, routeOrder) - routeRank(b.stage, routeOrder));
         const current = sorted.find((s) => s.status !== "concluida");
         if (current) currentStageByColi.set(cid, current.stage);
       }
