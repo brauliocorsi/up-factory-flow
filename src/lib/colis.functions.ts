@@ -62,10 +62,10 @@ async function loadRouteStageOrder(sb: any, colis: ColiRouteInfo[]) {
     ? await sb.from("models").select("id, category_id").in("id", modelIds)
     : { data: [] };
   const categoryIds = Array.from(new Set(((models ?? []) as any[]).map((m) => m.category_id).filter(Boolean))) as string[];
-  const { data: categories } = categoryIds.length > 0
+  const { data: categoryRows } = categoryIds.length > 0
     ? await sb.from("ref_categories").select("id, code").in("id", categoryIds)
     : { data: [] };
-  const categoryById = new Map(((categories ?? []) as any[]).map((c) => [c.id, c.code]));
+  const categoryById = new Map(((categoryRows ?? []) as any[]).map((c) => [c.id, c.code]));
   const categoryByModelId = new Map(((models ?? []) as any[]).map((m) => [m.id, categoryById.get(m.category_id) ?? null]));
 
   for (const o of (orders ?? []) as any[]) {
@@ -75,14 +75,14 @@ async function loadRouteStageOrder(sb: any, colis: ColiRouteInfo[]) {
     });
   }
 
-  const categories = Array.from(new Set(Array.from(orderKeys.values()).map((k) => k.category_code).filter(Boolean))) as string[];
+  const routeCategories = Array.from(new Set(Array.from(orderKeys.values()).map((k) => k.category_code).filter(Boolean))) as string[];
   const structures = Array.from(new Set(Array.from(orderKeys.values()).map((k) => k.structure_code).filter(Boolean))) as string[];
-  if (categories.length === 0 || structures.length === 0) return new Map<string, Map<Stage, number>>();
+  if (routeCategories.length === 0 || structures.length === 0) return new Map<string, Map<Stage, number>>();
 
   const { data: routes } = await sb
     .from("structure_coli_routes")
     .select("id, category_code, structure_code, coli_number, structure_coli_stages(stage, included, sort_order)")
-    .in("category_code", categories)
+    .in("category_code", routeCategories)
     .in("structure_code", structures);
 
   const routeStages = new Map<string, Map<Stage, number>>();
