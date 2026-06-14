@@ -116,7 +116,7 @@ function routeRank(stage: Stage, routeOrder?: Map<Stage, number>) {
 }
 
 /** Lista os colis em curso/pendentes numa etapa, agrupados por encomenda. */
-export const getColisByStage = createServerFn({ method: "GET" })
+export const getColisByStage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z.object({ stage: z.enum(STAGES) }).parse(d),
