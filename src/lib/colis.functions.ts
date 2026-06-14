@@ -67,11 +67,20 @@ async function loadRouteStageOrder(sb: any, colis: ColiRouteInfo[]) {
     : { data: [] };
   const categoryById = new Map(((categoryRows ?? []) as any[]).map((c) => [c.id, c.code]));
   const categoryByModelId = new Map(((models ?? []) as any[]).map((m) => [m.id, categoryById.get(m.category_id) ?? null]));
+  const rawStructures = Array.from(new Set(((orders ?? []) as any[]).map((o) => o.structure_type).filter(Boolean))) as string[];
+  const { data: structureRows } = rawStructures.length > 0
+    ? await sb.from("ref_structures").select("code, name").or(rawStructures.map((v) => `code.eq.${v},name.eq.${v}`).join(","))
+    : { data: [] };
+  const structureCodeByValue = new Map<string, string>();
+  for (const s of (structureRows ?? []) as any[]) {
+    structureCodeByValue.set(s.code, s.code);
+    structureCodeByValue.set(s.name, s.code);
+  }
 
   for (const o of (orders ?? []) as any[]) {
     orderKeys.set(o.id, {
       category_code: categoryByModelId.get(o.model_id) ?? null,
-      structure_code: o.structure_type ?? null,
+      structure_code: structureCodeByValue.get(o.structure_type) ?? o.structure_type ?? null,
     });
   }
 
