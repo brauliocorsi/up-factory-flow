@@ -270,7 +270,10 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* Bottom nav (mobile) — 4 atalhos + Menu */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
-        <div className={`grid grid-cols-${Math.min(visibleMobileQuick.length + 1, 5)}`}>
+        <div
+          className="grid"
+          style={{ gridTemplateColumns: `repeat(${Math.min(visibleMobileQuick.length + 1, 5)}, minmax(0, 1fr))` }}
+        >
           {visibleMobileQuick.map((n) => {
             const active = isActive(pathname, n.to);
             const Icon = n.icon;
