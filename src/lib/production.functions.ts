@@ -28,6 +28,7 @@ export type ProductionStageOrder = {
   productive_seconds: number;
   paused_seconds: number;
   operator_code: string | null;
+  coli_count?: number;
   lines?: ConvergenceLines;
   is_rework?: boolean;
   rework_seconds?: number;
@@ -61,6 +62,7 @@ export const getProductionData = createServerFn({ method: "GET" })
     // estado das duas linhas paralelas (Tecido + Estrutura).
     const orderIds = Array.from(new Set(((data ?? []) as any[]).map((r) => r.production_orders.id)));
     const linesByOrder = new Map<string, ConvergenceLines>();
+    const coliCountByOrder = new Map<string, number>();
     if (orderIds.length > 0) {
       const { data: allStages } = await (supabase as any)
         .from("order_stages")
@@ -74,6 +76,14 @@ export const getProductionData = createServerFn({ method: "GET" })
       }
       for (const [oid, st] of stagesByOrder) {
         linesByOrder.set(oid, computeLines(st));
+      }
+
+      const { data: colisRows } = await (supabase as any)
+        .from("order_colis")
+        .select("order_id")
+        .in("order_id", orderIds);
+      for (const c of (colisRows ?? []) as any[]) {
+        coliCountByOrder.set(c.order_id, (coliCountByOrder.get(c.order_id) ?? 0) + 1);
       }
     }
 
@@ -115,6 +125,7 @@ export const getProductionData = createServerFn({ method: "GET" })
         productive_seconds: row.productive_seconds ?? 0,
         paused_seconds: row.paused_seconds ?? 0,
         operator_code: row.operators?.code ?? null,
+        coli_count: coliCountByOrder.get(o.id) ?? 0,
         lines: linesByOrder.get(o.id),
         is_rework: Boolean(row.is_rework),
         rework_seconds: row.rework_seconds ?? 0,
