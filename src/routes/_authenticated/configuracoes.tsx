@@ -9,12 +9,17 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from "@/components/ui/dialog";
+import { KeyRound, ShieldCheck } from "lucide-react";
 import { STAGE_LABELS } from "@/lib/format";
 import {
   getAppSettings, updateAppSettings,
   listOperatorsWithStages, setOperatorStages, upsertOperator,
   STAGES, type Stage,
 } from "@/lib/production.functions";
+import { setOperatorPin } from "@/lib/operatorAuth.functions";
 
 export const Route = createFileRoute("/_authenticated/configuracoes")({
   component: ConfigPage,
@@ -41,6 +46,16 @@ function ConfigPage() {
     mutationFn: (vars: { operator_id: string; stages: Stage[] }) => setStagesFn({ data: vars }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["operators-stages"] }); toast.success("Etapas guardadas"); },
     onError: (e: any) => toast.error(e?.message ?? "Erro"),
+  });
+
+  const setPinFn = useServerFn(setOperatorPin);
+  const setPin = useMutation({
+    mutationFn: (vars: { operator_id: string; pin: string }) => setPinFn({ data: vars }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["operators-stages"] });
+      toast.success("PIN definido. O operador já pode entrar.");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Erro ao definir PIN"),
   });
 
   const [newCode, setNewCode] = useState("");
@@ -97,6 +112,8 @@ function ConfigPage() {
               op={op}
               onSave={(stages) => saveStages.mutate({ operator_id: op.id, stages })}
               saving={saveStages.isPending}
+              onSetPin={(pin) => setPin.mutate({ operator_id: op.id, pin })}
+              settingPin={setPin.isPending}
             />
           ))}
         </div>
@@ -124,13 +141,25 @@ function ModeOption({ title, description, checked, onSelect }: {
   );
 }
 
-function OperatorRow({ op, onSave, saving }: {
-  op: { id: string; code: string; name: string; active: boolean; stages: Stage[] };
+function OperatorRow({ op, onSave, saving, onSetPin, settingPin }: {
+  op: { id: string; code: string; name: string; active: boolean; user_id: string | null; stages: Stage[] };
   onSave: (stages: Stage[]) => void;
   saving: boolean;
+  onSetPin: (pin: string) => void;
+  settingPin: boolean;
 }) {
   const [stages, setStages] = useState<Stage[]>(op.stages);
   const dirty = stages.slice().sort().join(",") !== op.stages.slice().sort().join(",");
+  const [pinOpen, setPinOpen] = useState(false);
+  const [pin, setPin] = useState("");
+
+  function submitPin() {
+    if (!/^\d{6}$/.test(pin)) { toast.error("PIN deve ter 6 dígitos"); return; }
+    onSetPin(pin);
+    setPin("");
+    setPinOpen(false);
+  }
+
   function toggle(s: Stage) {
     setStages((prev) => prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]);
   }
@@ -141,8 +170,19 @@ function OperatorRow({ op, onSave, saving }: {
           <span className="font-mono text-sm font-bold mr-2">{op.code}</span>
           <span className="font-medium">{op.name}</span>
           {!op.active && <Badge variant="secondary" className="ml-2">Inativo</Badge>}
+          {op.user_id && (
+            <Badge variant="outline" className="ml-2 gap-1">
+              <ShieldCheck className="size-3" /> Login ativo
+            </Badge>
+          )}
         </div>
-        <Button size="sm" disabled={!dirty || saving} onClick={() => onSave(stages)}>Guardar</Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={() => setPinOpen(true)} disabled={settingPin}>
+            <KeyRound className="size-3.5 mr-1" />
+            {op.user_id ? "Repor PIN" : "Criar login"}
+          </Button>
+          <Button size="sm" disabled={!dirty || saving} onClick={() => onSave(stages)}>Guardar</Button>
+        </div>
       </div>
       <div className="flex gap-1.5 flex-wrap">
         {STAGES.map((s) => {
@@ -158,6 +198,39 @@ function OperatorRow({ op, onSave, saving }: {
           );
         })}
       </div>
+
+      <Dialog open={pinOpen} onOpenChange={setPinOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{op.user_id ? "Repor PIN" : "Criar login"} — {op.name}</DialogTitle>
+            <DialogDescription>
+              Define um PIN de 6 dígitos. O operador entra na app com o seu código
+              ({op.code}) e este PIN.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor={`pin-${op.id}`}>PIN (6 dígitos)</Label>
+            <Input
+              id={`pin-${op.id}`}
+              type="password"
+              inputMode="numeric"
+              pattern="[0-9]{6}"
+              maxLength={6}
+              value={pin}
+              onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              placeholder="••••••"
+              className="text-2xl h-12 font-mono tracking-[0.5em] text-center"
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setPin(""); setPinOpen(false); }}>Cancelar</Button>
+            <Button onClick={submitPin} disabled={settingPin || pin.length !== 6}>
+              {settingPin ? "A guardar…" : "Guardar PIN"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

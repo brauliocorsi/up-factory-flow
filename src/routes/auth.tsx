@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Factory } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/auth")({
@@ -19,10 +20,29 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
+  const [tab, setTab] = useState<"operador" | "admin">("operador");
+
+  // --- Operador ---
+  const [code, setCode] = useState("");
+  const [pin, setPin] = useState("");
+  const [opLoading, setOpLoading] = useState(false);
+  async function onOperatorSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!/^\d{6}$/.test(pin)) { toast.error("PIN deve ter 6 dígitos"); return; }
+    if (!code.trim()) { toast.error("Indica o código"); return; }
+    setOpLoading(true);
+    const email = `op-${code.trim().toLowerCase()}@upmoveis.local`;
+    const { error } = await supabase.auth.signInWithPassword({ email, password: pin });
+    setOpLoading(false);
+    if (error) { toast.error("Código ou PIN inválido"); return; }
+    toast.success("Sessão iniciada");
+    navigate({ to: "/producao", replace: true });
+  }
+
+  // --- Admin ---
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -44,22 +64,64 @@ function AuthPage() {
           <CardDescription>Inicie sessão para aceder ao chão de fábrica</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={onSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" inputMode="email" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Palavra-passe</Label>
-              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
-            </div>
-            <Button type="submit" className="w-full h-11" disabled={loading}>
-              {loading ? "A entrar…" : "Entrar"}
-            </Button>
-            <p className="text-xs text-muted-foreground text-center">
-              Sem acesso? Contacte o administrador.
-            </p>
-          </form>
+          <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
+            <TabsList className="grid w-full grid-cols-2 mb-4">
+              <TabsTrigger value="operador">Operador</TabsTrigger>
+              <TabsTrigger value="admin">Admin</TabsTrigger>
+            </TabsList>
+            <TabsContent value="operador">
+              <form onSubmit={onOperatorSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="op-code">Código</Label>
+                  <Input
+                    id="op-code"
+                    value={code}
+                    onChange={(e) => setCode(e.target.value)}
+                    required
+                    autoFocus
+                    placeholder="Ex: 01"
+                    className="text-xl h-12 font-mono uppercase tracking-widest text-center"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="op-pin">PIN (6 dígitos)</Label>
+                  <Input
+                    id="op-pin"
+                    type="password"
+                    inputMode="numeric"
+                    pattern="[0-9]{6}"
+                    maxLength={6}
+                    value={pin}
+                    onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    required
+                    placeholder="••••••"
+                    className="text-2xl h-12 font-mono tracking-[0.5em] text-center"
+                  />
+                </div>
+                <Button type="submit" className="w-full h-11" disabled={opLoading}>
+                  {opLoading ? "A entrar…" : "Entrar"}
+                </Button>
+              </form>
+            </TabsContent>
+            <TabsContent value="admin">
+              <form onSubmit={onSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" inputMode="email" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Palavra-passe</Label>
+                  <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
+                </div>
+                <Button type="submit" className="w-full h-11" disabled={loading}>
+                  {loading ? "A entrar…" : "Entrar"}
+                </Button>
+              </form>
+            </TabsContent>
+          </Tabs>
+          <p className="text-xs text-muted-foreground text-center mt-4">
+            Sem acesso? Contacte o administrador.
+          </p>
         </CardContent>
       </Card>
     </div>

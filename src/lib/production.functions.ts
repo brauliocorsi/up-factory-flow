@@ -191,6 +191,7 @@ export type OperatorWithStages = {
   code: string;
   name: string;
   active: boolean;
+  user_id: string | null;
   stages: Stage[];
 };
 
@@ -199,7 +200,7 @@ export const listOperatorsWithStages = createServerFn({ method: "GET" })
   .handler(async ({ context }): Promise<OperatorWithStages[]> => {
     const { data: ops, error } = await context.supabase
       .from("operators")
-      .select("id, code, name, active")
+      .select("id, code, name, active, user_id")
       .order("code");
     if (error) throw new Error(error.message);
     const { data: links, error: e2 } = await (context.supabase as any)

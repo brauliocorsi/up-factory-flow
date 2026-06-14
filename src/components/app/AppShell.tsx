@@ -13,6 +13,7 @@ import {
   DropdownMenuLabel, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { useMySession } from "@/hooks/useMySession";
 
 /**
  * Estrutura agrupada da navegação.
@@ -90,6 +91,31 @@ export function AppShell({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { role, operator } = useMySession();
+  const isOperator = role === "operador";
+
+  // Filtragem por role: operador só vê Produção/Picagem/Retrabalho.
+  const visiblePrimary = isOperator ? [] : primary;
+  const visibleGroups = isOperator
+    ? groups
+        .filter((g) => g.label === "Produção")
+        .map((g) => ({
+          ...g,
+          items: g.items.filter((i) =>
+            ["/producao", "/picagem", "/retrabalho"].some(
+              (p) => i.to === p || i.to.startsWith(p + "/"),
+            ),
+          ),
+        }))
+    : groups;
+  const visibleMobileQuick = isOperator
+    ? mobileQuick.filter((n) =>
+        ["/producao", "/picagem", "/retrabalho"].some(
+          (p) => n.to === p || n.to.startsWith(p + "/"),
+        ),
+      )
+    : mobileQuick;
+  const homeLink = isOperator ? "/producao" : "/";
 
   async function signOut() {
     await queryClient.cancelQueries();
@@ -103,19 +129,21 @@ export function AppShell({ children }: { children: ReactNode }) {
       {/* Top bar */}
       <header className="sticky top-0 z-30 border-b bg-card/80 backdrop-blur supports-[backdrop-filter]:bg-card/60">
         <div className="flex h-14 items-center px-3 sm:px-4 gap-2 sm:gap-3">
-          <Link to="/" className="flex items-center gap-2 shrink-0">
+          <Link to={homeLink} className="flex items-center gap-2 shrink-0">
             <div className="size-8 rounded-md bg-primary text-primary-foreground grid place-items-center shadow-sm">
               <Factory className="size-5" />
             </div>
             <div className="leading-tight hidden xs:block sm:block">
               <div className="text-sm font-bold">UP Produção</div>
-              <div className="text-[10px] text-muted-foreground hidden sm:block">UP Móveis</div>
+              <div className="text-[10px] text-muted-foreground hidden sm:block">
+                {isOperator && operator ? operator.name : "UP Móveis"}
+              </div>
             </div>
           </Link>
 
           {/* Desktop nav: item solto + dropdowns por grupo */}
           <nav className="hidden md:flex items-center gap-1 ml-4">
-            {primary.map((n) => {
+            {visiblePrimary.map((n) => {
               const active = isActive(pathname, n.to);
               return (
                 <Link
@@ -129,7 +157,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 </Link>
               );
             })}
-            {groups.map((g) => {
+            {visibleGroups.map((g) => {
               const active = groupActive(pathname, g);
               return (
                 <DropdownMenu key={g.label}>
@@ -194,19 +222,20 @@ export function AppShell({ children }: { children: ReactNode }) {
                 </SheetHeader>
 
                 <div className="flex-1 overflow-y-auto p-3 space-y-5">
-                  {/* Atalhos principais */}
-                  <div>
-                    <div className="px-2 pb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                      Principal
+                  {visiblePrimary.length > 0 && (
+                    <div>
+                      <div className="px-2 pb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        Principal
+                      </div>
+                      <div className="space-y-0.5">
+                        {visiblePrimary.map((n) => (
+                          <MobileLink key={n.to} item={n} pathname={pathname} onNavigate={() => setMobileOpen(false)} />
+                        ))}
+                      </div>
                     </div>
-                    <div className="space-y-0.5">
-                      {primary.map((n) => (
-                        <MobileLink key={n.to} item={n} pathname={pathname} onNavigate={() => setMobileOpen(false)} />
-                      ))}
-                    </div>
-                  </div>
+                  )}
 
-                  {groups.map((g) => (
+                  {visibleGroups.map((g) => (
                     <div key={g.label}>
                       <div className="px-2 pb-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                         {g.label}
@@ -241,8 +270,11 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       {/* Bottom nav (mobile) — 4 atalhos + Menu */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
-        <div className="grid grid-cols-5">
-          {mobileQuick.map((n) => {
+        <div
+          className="grid"
+          style={{ gridTemplateColumns: `repeat(${Math.min(visibleMobileQuick.length + 1, 5)}, minmax(0, 1fr))` }}
+        >
+          {visibleMobileQuick.map((n) => {
             const active = isActive(pathname, n.to);
             const Icon = n.icon;
             return (

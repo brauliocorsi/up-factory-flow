@@ -312,6 +312,7 @@ export type Database = {
           id: string
           name: string
           role: string | null
+          user_id: string | null
         }
         Insert: {
           active?: boolean
@@ -320,6 +321,7 @@ export type Database = {
           id?: string
           name: string
           role?: string | null
+          user_id?: string | null
         }
         Update: {
           active?: boolean
@@ -328,6 +330,7 @@ export type Database = {
           id?: string
           name?: string
           role?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -1641,6 +1644,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_operator_only: { Args: { _user_id: string }; Returns: boolean }
       preview_cancel_order: { Args: { _order_id: string }; Returns: Json }
       record_coli_stage_event: {
         Args: {
