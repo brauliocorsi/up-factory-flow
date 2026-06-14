@@ -44,6 +44,66 @@ export type ColiSummary = {
   pending_stages: Stage[];
 };
 
+type ColiRouteInfo = { order_coli_id: string; order_id: string; coli_number: number };
+
+function nestedCategoryCode(models: any): string | null {
+  const model = Array.isArray(models) ? models[0] : models;
+  const category = Array.isArray(model?.ref_categories) ? model.ref_categories[0] : model?.ref_categories;
+  return category?.code ?? null;
+}
+
+async function loadRouteStageOrder(sb: any, colis: ColiRouteInfo[]) {
+  const uniqueColis = Array.from(new Map(colis.map((c) => [c.order_coli_id, c])).values());
+  const orderIds = Array.from(new Set(uniqueColis.map((c) => c.order_id)));
+  const orderKeys = new Map<string, { category_code: string | null; structure_code: string | null }>();
+  if (orderIds.length === 0) return new Map<string, Map<Stage, number>>();
+
+  const { data: orders } = await sb
+    .from("production_orders")
+    .select("id, structure_type, models(ref_categories(code))")
+    .in("id", orderIds);
+
+  for (const o of (orders ?? []) as any[]) {
+    orderKeys.set(o.id, {
+      category_code: nestedCategoryCode(o.models),
+      structure_code: o.structure_type ?? null,
+    });
+  }
+
+  const categories = Array.from(new Set(Array.from(orderKeys.values()).map((k) => k.category_code).filter(Boolean))) as string[];
+  const structures = Array.from(new Set(Array.from(orderKeys.values()).map((k) => k.structure_code).filter(Boolean))) as string[];
+  if (categories.length === 0 || structures.length === 0) return new Map<string, Map<Stage, number>>();
+
+  const { data: routes } = await sb
+    .from("structure_coli_routes")
+    .select("id, category_code, structure_code, coli_number, structure_coli_stages(stage, included, sort_order)")
+    .in("category_code", categories)
+    .in("structure_code", structures);
+
+  const routeStages = new Map<string, Map<Stage, number>>();
+  for (const r of (routes ?? []) as any[]) {
+    const stages = new Map<Stage, number>();
+    for (const s of (r.structure_coli_stages ?? []) as any[]) {
+      if (s.included) stages.set(s.stage as Stage, Number(s.sort_order ?? 0));
+    }
+    routeStages.set(`${r.category_code}|${r.structure_code}|${r.coli_number}`, stages);
+  }
+
+  const byColi = new Map<string, Map<Stage, number>>();
+  for (const c of uniqueColis) {
+    const key = orderKeys.get(c.order_id);
+    const route = key ? routeStages.get(`${key.category_code}|${key.structure_code}|${c.coli_number}`) : null;
+    if (route) byColi.set(c.order_coli_id, route);
+  }
+  return byColi;
+}
+
+function routeRank(stage: Stage, routeOrder?: Map<Stage, number>) {
+  const configured = routeOrder?.get(stage);
+  const fallback = STAGE_ORDER[stage] ?? 99;
+  return configured == null ? 1000 + fallback : configured * 100 + fallback;
+}
+
 /** Lista os colis em curso/pendentes numa etapa, agrupados por encomenda. */
 export const getColisByStage = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
