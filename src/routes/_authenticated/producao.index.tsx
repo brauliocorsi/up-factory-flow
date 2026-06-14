@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation, useQueries } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -62,17 +62,40 @@ function ProducaoPage() {
   const fetchColis = useServerFn(getColisByStage);
   const recordColiFn = useServerFn(recordColiStageEvent);
 
+  const colisQueries = useQueries({
+    queries: STAGES.map((stage) => ({
+      queryKey: ["production-colis", stage],
+      queryFn: () => fetchColis({ data: { stage } }),
+      refetchInterval: 30000,
+    })),
+  });
+  const colisByStageMap = Object.fromEntries(
+    STAGES.map((stage, index) => [stage, colisQueries[index]?.data]),
+  ) as Partial<Record<Stage, { byOrder: Record<string, ColiStageItem[]>; multiColiOrderIds: string[] }>>;
+
   // Lista de (order_id, stage) visíveis em todas as etapas para resolver SLA em lote
-  const orderStagePairs = useMemo(() => {
+  const visibleItemsByStage = useMemo(() => {
+    const out = Object.fromEntries(STAGES.map((s) => [s, []])) as unknown as Record<Stage, ProductionStageOrder[]>;
     if (!data) return [] as { order_id: string; stage: Stage }[];
+    for (const s of STAGES) {
+      const activeColiOrderIds = new Set(Object.keys(colisByStageMap[s]?.byOrder ?? {}));
+      for (const it of data.byStage[s] ?? []) {
+        if ((it.coli_count ?? 0) > 1 && !activeColiOrderIds.has(it.order_id)) continue;
+        out[s].push(it);
+      }
+    }
+    return out;
+  }, [data, colisByStageMap]);
+
+  const orderStagePairs = useMemo(() => {
     const out: { order_id: string; stage: Stage }[] = [];
     for (const s of STAGES) {
-      for (const it of data.byStage[s] ?? []) {
+      for (const it of visibleItemsByStage[s] ?? []) {
         out.push({ order_id: it.order_id, stage: it.stage });
       }
     }
     return out;
-  }, [data]);
+  }, [visibleItemsByStage]);
 
   const { data: expectedMap } = useQuery({
     queryKey: ["production-sla", orderStagePairs.length, orderStagePairs.map((p) => `${p.order_id}|${p.stage}`).join(",")],
@@ -80,16 +103,10 @@ function ProducaoPage() {
     enabled: orderStagePairs.length > 0,
   });
 
-  useRealtimeOrders([["production"]]);
+  useRealtimeOrders([["production"], ...STAGES.map((s) => ["production-colis", s])]);
 
   const [activeStage, setActiveStage] = useState<Stage>("estofagem");
-
-  // Colis por etapa ativa (agrupados por encomenda)
-  const { data: colisByStage } = useQuery({
-    queryKey: ["production-colis", activeStage],
-    queryFn: () => fetchColis({ data: { stage: activeStage } }),
-    refetchInterval: 30000,
-  });
+  const colisByStage = colisByStageMap[activeStage];
 
   const coliMutation = useMutation({
     mutationFn: (vars: { order_coli_stage_id: string; event: "iniciar"|"pausar"|"retomar"|"finalizar" }) => {
@@ -99,7 +116,7 @@ function ProducaoPage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["production"] });
-      qc.invalidateQueries({ queryKey: ["production-colis", activeStage] });
+      STAGES.forEach((stage) => qc.invalidateQueries({ queryKey: ["production-colis", stage] }));
     },
     onError: (e: any) => toast.error(e?.message ?? "Erro ao registar"),
   });
