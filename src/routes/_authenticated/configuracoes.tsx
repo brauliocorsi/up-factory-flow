@@ -141,7 +141,6 @@ function ModeOption({ title, description, checked, onSelect }: {
   );
 }
 
-function OperatorRow({ op, onSave, saving }: {
 function OperatorRow({ op, onSave, saving, onSetPin, settingPin }: {
   op: { id: string; code: string; name: string; active: boolean; user_id: string | null; stages: Stage[] };
   onSave: (stages: Stage[]) => void;
