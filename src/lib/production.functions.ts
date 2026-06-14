@@ -54,7 +54,6 @@ export const getProductionData = createServerFn({ method: "GET" })
       .from("order_stages")
       .select("id, stage, status, started_at, productive_seconds, paused_seconds, is_paused, is_rework, rework_seconds, rework_count, production_orders!inner(id, order_number, product_description, observation, status), operators(code)")
       .neq("production_orders.status", "cancelada")
-      .neq("status", "concluida")
       .order("started_at", { ascending: true, nullsFirst: false });
     if (error) throw new Error(error.message);
 
@@ -112,6 +111,8 @@ export const getProductionData = createServerFn({ method: "GET" })
 
     for (const row of (data ?? []) as any[]) {
       const o = row.production_orders;
+      const coliCount = coliCountByOrder.get(o.id) ?? 0;
+      if (row.status === "concluida" && coliCount <= 1) continue;
       byStage[row.stage as Stage].push({
         id: row.id,
         order_id: o.id,
@@ -125,7 +126,7 @@ export const getProductionData = createServerFn({ method: "GET" })
         productive_seconds: row.productive_seconds ?? 0,
         paused_seconds: row.paused_seconds ?? 0,
         operator_code: row.operators?.code ?? null,
-        coli_count: coliCountByOrder.get(o.id) ?? 0,
+        coli_count: coliCount,
         lines: linesByOrder.get(o.id),
         is_rework: Boolean(row.is_rework),
         rework_seconds: row.rework_seconds ?? 0,
