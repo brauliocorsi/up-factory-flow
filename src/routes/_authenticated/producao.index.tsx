@@ -402,7 +402,7 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
     ? !!(item.lines.tecido?.ready && item.lines.estrutura?.ready)
     : true;
   const showConvergence = item.lines && (
-    isUpholstery || ["corte","costura","estrutura","branco"].includes(item.stage)
+    !operateByColis && (isUpholstery || ["corte","costura","estrutura","branco"].includes(item.stage))
   );
 
   return (
