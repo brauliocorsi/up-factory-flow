@@ -23,6 +23,7 @@ import { getExpectedForOrders } from "@/lib/sla.functions";
 import {
   getColisByStage, recordColiStageEvent, type ColiStageItem,
 } from "@/lib/colis.functions";
+import { useMySession } from "@/hooks/useMySession";
 
 export const Route = createFileRoute("/_authenticated/producao/")({
   component: ProducaoPage,
@@ -54,6 +55,7 @@ function ProducaoPage() {
   const fetchSettings = useServerFn(getAppSettings);
   const fetchOps = useServerFn(listOperatorsWithStages);
   const recordFn = useServerFn(recordStageEvent);
+  const { operator: sessionOperator } = useMySession();
 
   const { data } = useQuery({ queryKey: ["production"], queryFn: () => fetchData(), refetchInterval: 30000 });
   const { data: settings } = useQuery({ queryKey: ["app-settings"], queryFn: () => fetchSettings() });
@@ -127,6 +129,13 @@ function ProducaoPage() {
   const [operatorCode, setOperatorCode] = useState<string>(() =>
     (typeof window !== "undefined" && sessionStorage.getItem("op_code")) || ""
   );
+  // Reconhecimento automático: se o utilizador autenticado é um operador
+  // ligado, usa o seu código automaticamente (sobrepõe sessionStorage).
+  useEffect(() => {
+    if (sessionOperator?.code) {
+      setOperatorCode(sessionOperator.code);
+    }
+  }, [sessionOperator?.code]);
   const operatorCodeRef = useRef<string>(operatorCode);
   useEffect(() => { operatorCodeRef.current = operatorCode; }, [operatorCode]);
   // Tick para atualizar contadores em tempo real
