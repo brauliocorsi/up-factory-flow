@@ -170,6 +170,10 @@ function ProducaoPage() {
   }
 
   const isReadyToStart = (it: ProductionStageOrder) => {
+    if ((it.coli_count ?? 0) > 1) {
+      const activeColis = colisByStageMap[it.stage]?.byOrder?.[it.order_id] ?? [];
+      return activeColis.some((c) => c.status !== "em_curso");
+    }
     if (it.status === "bloqueada") return false;
     if (it.status === "em_curso") return false;
     if (it.stage === "estofagem" && it.lines) {
