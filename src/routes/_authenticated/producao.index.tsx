@@ -214,7 +214,9 @@ function ProducaoPage() {
           <div className="flex items-center gap-2 bg-primary/10 text-primary rounded-md px-3 py-1.5">
             <UserCircle2 className="size-4" />
             <span className="text-sm font-medium">{currentOp.name} ({currentOp.code})</span>
-            <Button variant="ghost" size="sm" onClick={clearCode}>Trocar</Button>
+            {!sessionOperator && (
+              <Button variant="ghost" size="sm" onClick={clearCode}>Trocar</Button>
+            )}
           </div>
           ) : null}
         </div>
