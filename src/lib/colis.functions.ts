@@ -46,12 +46,6 @@ export type ColiSummary = {
 
 type ColiRouteInfo = { order_coli_id: string; order_id: string; coli_number: number };
 
-function nestedCategoryCode(models: any): string | null {
-  const model = Array.isArray(models) ? models[0] : models;
-  const category = Array.isArray(model?.ref_categories) ? model.ref_categories[0] : model?.ref_categories;
-  return category?.code ?? null;
-}
-
 async function loadRouteStageOrder(sb: any, colis: ColiRouteInfo[]) {
   const uniqueColis = Array.from(new Map(colis.map((c) => [c.order_coli_id, c])).values());
   const orderIds = Array.from(new Set(uniqueColis.map((c) => c.order_id)));
@@ -60,12 +54,23 @@ async function loadRouteStageOrder(sb: any, colis: ColiRouteInfo[]) {
 
   const { data: orders } = await sb
     .from("production_orders")
-    .select("id, structure_type, models(ref_categories(code))")
+    .select("id, structure_type, model_id")
     .in("id", orderIds);
+
+  const modelIds = Array.from(new Set(((orders ?? []) as any[]).map((o) => o.model_id).filter(Boolean))) as string[];
+  const { data: models } = modelIds.length > 0
+    ? await sb.from("models").select("id, category_id").in("id", modelIds)
+    : { data: [] };
+  const categoryIds = Array.from(new Set(((models ?? []) as any[]).map((m) => m.category_id).filter(Boolean))) as string[];
+  const { data: categories } = categoryIds.length > 0
+    ? await sb.from("ref_categories").select("id, code").in("id", categoryIds)
+    : { data: [] };
+  const categoryById = new Map(((categories ?? []) as any[]).map((c) => [c.id, c.code]));
+  const categoryByModelId = new Map(((models ?? []) as any[]).map((m) => [m.id, categoryById.get(m.category_id) ?? null]));
 
   for (const o of (orders ?? []) as any[]) {
     orderKeys.set(o.id, {
-      category_code: nestedCategoryCode(o.models),
+      category_code: categoryByModelId.get(o.model_id) ?? null,
       structure_code: o.structure_type ?? null,
     });
   }
