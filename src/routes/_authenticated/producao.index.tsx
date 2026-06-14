@@ -76,7 +76,7 @@ function ProducaoPage() {
   // Lista de (order_id, stage) visíveis em todas as etapas para resolver SLA em lote
   const visibleItemsByStage = useMemo(() => {
     const out = Object.fromEntries(STAGES.map((s) => [s, []])) as unknown as Record<Stage, ProductionStageOrder[]>;
-    if (!data) return [] as { order_id: string; stage: Stage }[];
+    if (!data) return out;
     for (const s of STAGES) {
       const activeColiOrderIds = new Set(Object.keys(colisByStageMap[s]?.byOrder ?? {}));
       for (const it of data.byStage[s] ?? []) {
@@ -177,7 +177,7 @@ function ProducaoPage() {
     }
     return true;
   };
-  const allItems = data?.byStage[activeStage] ?? [];
+  const allItems = visibleItemsByStage[activeStage] ?? [];
   const items = allItems.filter((it) => {
     if (searchQuery.trim() && !it.order_number.toLowerCase().includes(searchQuery.toLowerCase().trim())) return false;
     if (onlyMine && !canActOnStage(it.stage)) return false;
@@ -242,7 +242,7 @@ function ProducaoPage() {
       <div className="overflow-x-auto -mx-4 px-4">
         <div className="flex gap-1 min-w-max">
           {STAGES.map((s) => {
-            const count = data?.byStage[s]?.length ?? 0;
+            const count = visibleItemsByStage[s]?.length ?? 0;
             const linked = canActOnStage(s);
             const isActive = s === activeStage;
             return (
