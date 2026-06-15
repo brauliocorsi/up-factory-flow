@@ -250,6 +250,21 @@ export const upsertOperator = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const sb = context.supabase as any;
     if (data.id) {
+      // Se o código mudou e o operador tem login, atualizar o email sintético no Auth
+      const { data: existing } = await sb
+        .from("operators")
+        .select("code, user_id")
+        .eq("id", data.id)
+        .maybeSingle();
+      if (existing?.user_id && existing.code !== data.code) {
+        const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const newEmail = `op-${data.code.trim().toLowerCase()}@upmoveis.local`;
+        const { error: authErr } = await supabaseAdmin.auth.admin.updateUserById(
+          existing.user_id,
+          { email: newEmail, email_confirm: true }
+        );
+        if (authErr) throw new Error(`Falha a atualizar email do login: ${authErr.message}`);
+      }
       const { error } = await sb.from("operators").update({
         code: data.code, name: data.name, active: data.active ?? true,
       }).eq("id", data.id);
@@ -261,6 +276,45 @@ export const upsertOperator = createServerFn({ method: "POST" })
     }).select("id").single();
     if (error) throw new Error(error.message);
     return { id: inserted.id };
+  });
+
+export const deleteOperator = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    // Apenas admins podem eliminar
+    const { data: isAdmin, error: roleErr } = await (context.supabase as any)
+      .rpc("has_role", { _user_id: context.userId, _role: "admin" });
+    if (roleErr) throw new Error(roleErr.message);
+    if (!isAdmin) throw new Error("Apenas admins podem eliminar operadores");
+
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: op } = await (supabaseAdmin as any)
+      .from("operators").select("id, user_id").eq("id", data.id).maybeSingle();
+    if (!op) throw new Error("Operador não encontrado");
+
+    // 1) Apagar ligações de etapas
+    await (supabaseAdmin as any).from("operator_stages").delete().eq("operator_id", data.id);
+
+    // 2) Tentar apagar o operador (pode falhar se houver histórico com FK NOT NULL)
+    const { error: delErr } = await (supabaseAdmin as any)
+      .from("operators").delete().eq("id", data.id);
+    if (delErr) {
+      // Fallback: soft-delete
+      await (supabaseAdmin as any).from("operators").update({ active: false }).eq("id", data.id);
+      throw new Error(
+        "Operador tem histórico associado e não pode ser eliminado. Foi marcado como inativo."
+      );
+    }
+
+    // 3) Limpar role + auth user se existir
+    if (op.user_id) {
+      await (supabaseAdmin as any).from("user_roles").delete().eq("user_id", op.user_id);
+      try {
+        await supabaseAdmin.auth.admin.deleteUser(op.user_id);
+      } catch { /* não bloquear */ }
+    }
+    return { ok: true };
   });
 
 export const getStageDetail = createServerFn({ method: "GET" })
