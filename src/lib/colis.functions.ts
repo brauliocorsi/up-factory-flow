@@ -46,7 +46,11 @@ export type ColiSummary = {
 
 type ColiRouteInfo = { order_coli_id: string; order_id: string; coli_number: number };
 
-async function loadRouteStageOrder(sb: any, colis: ColiRouteInfo[]) {
+async function loadRouteStageOrder(_sb: any, colis: ColiRouteInfo[]) {
+  // Use admin client: route/catalog lookup tables are blocked for operator-only users
+  // by RESTRICTIVE RLS. Auth is already enforced by requireSupabaseAuth on the caller.
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const sb: any = supabaseAdmin;
   const uniqueColis = Array.from(new Map(colis.map((c) => [c.order_coli_id, c])).values());
   const orderIds = Array.from(new Set(uniqueColis.map((c) => c.order_id)));
   const orderKeys = new Map<string, { category_code: string | null; structure_code: string | null }>();
