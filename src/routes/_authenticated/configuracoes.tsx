@@ -12,11 +12,12 @@ import { Badge } from "@/components/ui/badge";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
-import { KeyRound, ShieldCheck } from "lucide-react";
+import { KeyRound, ShieldCheck, Pencil, Trash2 } from "lucide-react";
 import { STAGE_LABELS } from "@/lib/format";
 import {
   getAppSettings, updateAppSettings,
   listOperatorsWithStages, setOperatorStages, upsertOperator,
+  deleteOperator,
   STAGES, type Stage,
 } from "@/lib/production.functions";
 import { setOperatorPin } from "@/lib/operatorAuth.functions";
@@ -32,6 +33,7 @@ function ConfigPage() {
   const updateSettingsFn = useServerFn(updateAppSettings);
   const setStagesFn = useServerFn(setOperatorStages);
   const upsertOpFn = useServerFn(upsertOperator);
+  const deleteOpFn = useServerFn(deleteOperator);
 
   const { data: settings } = useQuery({ queryKey: ["app-settings"], queryFn: () => fetchSettings() });
   const { data: operators } = useQuery({ queryKey: ["operators-stages"], queryFn: () => fetchOps() });
@@ -56,6 +58,19 @@ function ConfigPage() {
       toast.success("PIN definido. O operador já pode entrar.");
     },
     onError: (e: any) => toast.error(e?.message ?? "Erro ao definir PIN"),
+  });
+
+  const editOp = useMutation({
+    mutationFn: (vars: { id: string; code: string; name: string; active: boolean }) =>
+      upsertOpFn({ data: vars }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["operators-stages"] }); toast.success("Operador atualizado"); },
+    onError: (e: any) => toast.error(e?.message ?? "Erro"),
+  });
+
+  const removeOp = useMutation({
+    mutationFn: (id: string) => deleteOpFn({ data: { id } }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["operators-stages"] }); toast.success("Operador eliminado"); },
+    onError: (e: any) => toast.error(e?.message ?? "Erro"),
   });
 
   const [newCode, setNewCode] = useState("");
@@ -114,6 +129,10 @@ function ConfigPage() {
               saving={saveStages.isPending}
               onSetPin={(pin) => setPin.mutate({ operator_id: op.id, pin })}
               settingPin={setPin.isPending}
+              onEdit={(v) => editOp.mutate({ id: op.id, ...v })}
+              editing={editOp.isPending}
+              onDelete={() => removeOp.mutate(op.id)}
+              deleting={removeOp.isPending}
             />
           ))}
         </div>
@@ -141,17 +160,36 @@ function ModeOption({ title, description, checked, onSelect }: {
   );
 }
 
-function OperatorRow({ op, onSave, saving, onSetPin, settingPin }: {
+function OperatorRow({ op, onSave, saving, onSetPin, settingPin, onEdit, editing, onDelete, deleting }: {
   op: { id: string; code: string; name: string; active: boolean; user_id: string | null; stages: Stage[] };
   onSave: (stages: Stage[]) => void;
   saving: boolean;
   onSetPin: (pin: string) => void;
   settingPin: boolean;
+  onEdit: (v: { code: string; name: string; active: boolean }) => void;
+  editing: boolean;
+  onDelete: () => void;
+  deleting: boolean;
 }) {
   const [stages, setStages] = useState<Stage[]>(op.stages);
   const dirty = stages.slice().sort().join(",") !== op.stages.slice().sort().join(",");
   const [pinOpen, setPinOpen] = useState(false);
   const [pin, setPin] = useState("");
+  const [editOpen, setEditOpen] = useState(false);
+  const [eCode, setECode] = useState(op.code);
+  const [eName, setEName] = useState(op.name);
+  const [eActive, setEActive] = useState(op.active);
+  const [confirmDel, setConfirmDel] = useState(false);
+
+  function openEdit() {
+    setECode(op.code); setEName(op.name); setEActive(op.active);
+    setEditOpen(true);
+  }
+  function submitEdit() {
+    if (!eCode.trim() || !eName.trim()) { toast.error("Código e nome obrigatórios"); return; }
+    onEdit({ code: eCode.trim(), name: eName.trim(), active: eActive });
+    setEditOpen(false);
+  }
 
   function submitPin() {
     if (!/^\d{6}$/.test(pin)) { toast.error("PIN deve ter 6 dígitos"); return; }
@@ -177,9 +215,15 @@ function OperatorRow({ op, onSave, saving, onSetPin, settingPin }: {
           )}
         </div>
         <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={openEdit} disabled={editing}>
+            <Pencil className="size-3.5 mr-1" /> Editar
+          </Button>
           <Button size="sm" variant="outline" onClick={() => setPinOpen(true)} disabled={settingPin}>
             <KeyRound className="size-3.5 mr-1" />
             {op.user_id ? "Repor PIN" : "Criar login"}
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => setConfirmDel(true)} disabled={deleting} className="text-destructive hover:text-destructive">
+            <Trash2 className="size-3.5" />
           </Button>
           <Button size="sm" disabled={!dirty || saving} onClick={() => onSave(stages)}>Guardar</Button>
         </div>
@@ -227,6 +271,55 @@ function OperatorRow({ op, onSave, saving, onSetPin, settingPin }: {
             <Button variant="outline" onClick={() => { setPin(""); setPinOpen(false); }}>Cancelar</Button>
             <Button onClick={submitPin} disabled={settingPin || pin.length !== 6}>
               {settingPin ? "A guardar…" : "Guardar PIN"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar operador</DialogTitle>
+            <DialogDescription>
+              Alterar código, nome ou estado. Se o operador tiver login, o código
+              é atualizado automaticamente no acesso.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs">Código</Label>
+              <Input value={eCode} onChange={(e) => setECode(e.target.value)} maxLength={16} />
+            </div>
+            <div>
+              <Label className="text-xs">Nome</Label>
+              <Input value={eName} onChange={(e) => setEName(e.target.value)} maxLength={120} />
+            </div>
+            <div className="flex items-center gap-2 pt-1">
+              <Switch checked={eActive} onCheckedChange={setEActive} />
+              <span className="text-sm">{eActive ? "Ativo" : "Inativo"}</span>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)}>Cancelar</Button>
+            <Button onClick={submitEdit} disabled={editing}>{editing ? "A guardar…" : "Guardar"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={confirmDel} onOpenChange={setConfirmDel}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Eliminar operador?</DialogTitle>
+            <DialogDescription>
+              Vai eliminar <b>{op.code} — {op.name}</b> e o seu acesso. Se houver
+              histórico de produção associado, o operador será apenas marcado
+              como inativo.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDel(false)}>Cancelar</Button>
+            <Button variant="destructive" disabled={deleting} onClick={() => { onDelete(); setConfirmDel(false); }}>
+              {deleting ? "A eliminar…" : "Eliminar"}
             </Button>
           </DialogFooter>
         </DialogContent>
