@@ -656,6 +656,10 @@ export type Database = {
           order_number: string
           priority: number
           product_description: string
+          reserved_cover_id: string | null
+          reserved_cover_state: string | null
+          reserved_shell_id: string | null
+          reserved_shell_state: string | null
           status: Database["public"]["Enums"]["order_status"]
           stock_item_id: string | null
           stock_item_type: string | null
@@ -681,6 +685,10 @@ export type Database = {
           order_number: string
           priority?: number
           product_description: string
+          reserved_cover_id?: string | null
+          reserved_cover_state?: string | null
+          reserved_shell_id?: string | null
+          reserved_shell_state?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           stock_item_id?: string | null
           stock_item_type?: string | null
@@ -706,6 +714,10 @@ export type Database = {
           order_number?: string
           priority?: number
           product_description?: string
+          reserved_cover_id?: string | null
+          reserved_cover_state?: string | null
+          reserved_shell_id?: string | null
+          reserved_shell_state?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           stock_item_id?: string | null
           stock_item_type?: string | null
@@ -718,6 +730,20 @@ export type Database = {
             columns: ["model_id"]
             isOneToOne: false
             referencedRelation: "models"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_orders_reserved_cover_id_fkey"
+            columns: ["reserved_cover_id"]
+            isOneToOne: false
+            referencedRelation: "covers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_orders_reserved_shell_id_fkey"
+            columns: ["reserved_shell_id"]
+            isOneToOne: false
+            referencedRelation: "shells"
             referencedColumns: ["id"]
           },
         ]
