@@ -23,7 +23,7 @@ export function QualityCheckDialog({
   orderId, orderStageId, orderNumber, productDescription, operatorCode,
 }: {
   orderId: string;
-  orderStageId: string;
+  orderStageId?: string | null;
   orderNumber: string;
   productDescription: string;
   operatorCode: string;
@@ -84,7 +84,8 @@ export function QualityCheckDialog({
         operator_code: operatorCode,
         result,
         notes: notes.trim() || null,
-        order_stage_id: result === "aprovado" ? orderStageId : null,
+        order_stage_id:
+          result === "aprovado" && orderStageId ? orderStageId : null,
         items: items.map((it) => ({
           template_item_id: it.template_item_id,
           label: it.label,
