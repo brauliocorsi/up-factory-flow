@@ -52,9 +52,9 @@ function CascosPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading && <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-6">A carregar…</TableCell></TableRow>}
+            {isLoading && <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-6">A carregar…</TableCell></TableRow>}
             {!isLoading && rows.length === 0 && (
-              <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-6">Sem cascos registados</TableCell></TableRow>
+              <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-6">Sem cascos registados</TableCell></TableRow>
             )}
             {rows.map((r: any) => {
               const available = Number(r.quantity) - Number(r.reserved ?? 0);
@@ -102,6 +102,7 @@ function UpsertShell({ editing, onDone }: { editing?: any; onDone: () => void })
     quantity: editing?.quantity ?? 0,
     min_quantity: editing?.min_quantity ?? 0,
     location: editing?.location ?? "",
+    state: (editing?.state ?? "branco") as "casco" | "branco",
   });
   const mut = useMutation({
     mutationFn: () => upsertShell({ data: { id: editing?.id, ...f, quantity: Number(f.quantity), min_quantity: Number(f.min_quantity) } as any }),
@@ -123,6 +124,16 @@ function UpsertShell({ editing, onDone }: { editing?: any; onDone: () => void })
           <Field label="Localização"><Input value={f.location} onChange={(e) => setF({ ...f, location: e.target.value })} placeholder="A1-03" className="h-11" /></Field>
           <Field label="Quantidade"><Input type="number" min={0} value={f.quantity} onChange={(e) => setF({ ...f, quantity: Number(e.target.value) })} className="h-11" /></Field>
           <Field label="Mínimo"><Input type="number" min={0} value={f.min_quantity} onChange={(e) => setF({ ...f, min_quantity: Number(e.target.value) })} className="h-11" /></Field>
+          <Field label="Estado" cls="col-span-2">
+            <select
+              value={f.state}
+              onChange={(e) => setF({ ...f, state: e.target.value as "casco" | "branco" })}
+              className="w-full h-11 border rounded-md px-3 bg-background"
+            >
+              <option value="branco">Branco (estrutura + branco prontos — salta Estrutura e Branco)</option>
+              <option value="casco">Casco (só estrutura nua — salta só Estrutura)</option>
+            </select>
+          </Field>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
