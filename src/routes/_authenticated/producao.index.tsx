@@ -8,17 +8,19 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Lock, Play, Pause, Check, RotateCcw, Clock, UserCircle2, AlertTriangle, Boxes, Wrench, Search } from "lucide-react";
+import { Lock, Play, Pause, Check, RotateCcw, Clock, UserCircle2, AlertTriangle, Boxes, Wrench, Search, ClipboardCheck, CheckCircle2, XCircle } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { STAGE_LABELS } from "@/lib/format";
 import {
   getProductionData, recordStageEvent, getAppSettings,
-  listOperatorsWithStages, STAGES, type ProductionStageOrder, type Stage,
+  listOperatorsWithStages, STAGES, VISIBLE_STAGES, type ProductionStageOrder, type Stage,
 } from "@/lib/production.functions";
 import { ConvergenceStatus } from "@/components/kanban/ConvergenceStatus";
 import { useRealtimeOrders } from "@/hooks/useRealtimeOrders";
 import { ReworkDialog } from "@/components/rework/ReworkDialog";
 import { QualityCheckDialog } from "@/components/quality/QualityCheckDialog";
+import { PrintLabelButton } from "@/components/labels/PrintLabelButton";
+import { listQualityChecks } from "@/lib/quality.functions";
 import { getExpectedForOrders } from "@/lib/sla.functions";
 import {
   getColisByStage, recordColiStageEvent, type ColiStageItem,
@@ -65,21 +67,21 @@ function ProducaoPage() {
   const recordColiFn = useServerFn(recordColiStageEvent);
 
   const colisQueries = useQueries({
-    queries: STAGES.map((stage) => ({
+    queries: VISIBLE_STAGES.map((stage) => ({
       queryKey: ["production-colis", stage],
       queryFn: () => fetchColis({ data: { stage } }),
       refetchInterval: 30000,
     })),
   });
   const colisByStageMap = Object.fromEntries(
-    STAGES.map((stage, index) => [stage, colisQueries[index]?.data]),
+    VISIBLE_STAGES.map((stage, index) => [stage, colisQueries[index]?.data]),
   ) as Partial<Record<Stage, { byOrder: Record<string, ColiStageItem[]>; multiColiOrderIds: string[] }>>;
 
   // Lista de (order_id, stage) visíveis em todas as etapas para resolver SLA em lote
   const visibleItemsByStage = useMemo(() => {
-    const out = Object.fromEntries(STAGES.map((s) => [s, []])) as unknown as Record<Stage, ProductionStageOrder[]>;
+    const out = Object.fromEntries(VISIBLE_STAGES.map((s) => [s, []])) as unknown as Record<Stage, ProductionStageOrder[]>;
     if (!data) return out;
-    for (const s of STAGES) {
+    for (const s of VISIBLE_STAGES) {
       const activeColiOrderIds = new Set(Object.keys(colisByStageMap[s]?.byOrder ?? {}));
       for (const it of data.byStage[s] ?? []) {
         if ((it.coli_count ?? 0) > 1 && !activeColiOrderIds.has(it.order_id)) continue;
@@ -91,7 +93,7 @@ function ProducaoPage() {
 
   const orderStagePairs = useMemo(() => {
     const out: { order_id: string; stage: Stage }[] = [];
-    for (const s of STAGES) {
+    for (const s of VISIBLE_STAGES) {
       for (const it of visibleItemsByStage[s] ?? []) {
         out.push({ order_id: it.order_id, stage: it.stage });
       }
@@ -105,7 +107,7 @@ function ProducaoPage() {
     enabled: orderStagePairs.length > 0,
   });
 
-  useRealtimeOrders([["production"], ...STAGES.map((s) => ["production-colis", s])]);
+  useRealtimeOrders([["production"], ...VISIBLE_STAGES.map((s) => ["production-colis", s])]);
 
   const [activeStage, setActiveStage] = useState<Stage>("estofagem");
   const colisByStage = colisByStageMap[activeStage];
@@ -118,7 +120,7 @@ function ProducaoPage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["production"] });
-      STAGES.forEach((stage) => qc.invalidateQueries({ queryKey: ["production-colis", stage] }));
+      VISIBLE_STAGES.forEach((stage) => qc.invalidateQueries({ queryKey: ["production-colis", stage] }));
     },
     onError: (e: any) => toast.error(e?.message ?? "Erro ao registar"),
   });
@@ -179,6 +181,9 @@ function ProducaoPage() {
   }
 
   const isReadyToStart = (it: ProductionStageOrder) => {
+    // Qualidade não tem iniciar/pausar/finalizar — está sempre "pronta"
+    // para receber o formulário enquanto não estiver concluída.
+    if (it.stage === "qualidade") return it.status !== "concluida";
     if ((it.coli_count ?? 0) > 1) {
       const activeColis = colisByStageMap[it.stage]?.byOrder?.[it.order_id] ?? [];
       return activeColis.some((c) => c.status !== "em_curso");
@@ -256,7 +261,7 @@ function ProducaoPage() {
       {/* Tabs de etapas */}
       <div className="overflow-x-auto -mx-4 px-4">
         <div className="flex gap-1 min-w-max">
-          {STAGES.map((s) => {
+          {VISIBLE_STAGES.map((s) => {
             const count = visibleItemsByStage[s]?.length ?? 0;
             const linked = canActOnStage(s);
             const isActive = s === activeStage;
