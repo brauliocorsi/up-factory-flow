@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useSearch } from "@tanstack/react-router";
 import type { ReactElement } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -14,6 +14,7 @@ import { ProductionLabel, LabelPrintStyles } from "@/components/labels/Productio
 
 const searchSchema = z.object({
   ids: z.string().optional(), // comma-separated uuids
+  autoprint: z.union([z.literal("1"), z.literal("0")]).optional(),
 });
 
 export const Route = createFileRoute("/_authenticated/etiquetas/imprimir")({
@@ -22,7 +23,7 @@ export const Route = createFileRoute("/_authenticated/etiquetas/imprimir")({
 });
 
 function ImprimirPage() {
-  const { ids } = useSearch({ from: "/_authenticated/etiquetas/imprimir" });
+  const { ids, autoprint } = useSearch({ from: "/_authenticated/etiquetas/imprimir" });
   const idList = (ids ?? "").split(",").map((s: string) => s.trim()).filter(Boolean);
   const [copies, setCopies] = useState(1);
 
@@ -33,6 +34,18 @@ function ImprimirPage() {
   });
 
   const rows: LabelRow[] = data ?? [];
+  const printedRef = useRef(false);
+  useEffect(() => {
+    if (autoprint !== "1") return;
+    if (printedRef.current) return;
+    if (isLoading || !rows.length) return;
+    printedRef.current = true;
+    // Pequeno atraso para garantir que os SVGs dos códigos de barras renderizam.
+    const t = setTimeout(() => {
+      try { window.print(); } catch { /* noop */ }
+    }, 400);
+    return () => clearTimeout(t);
+  }, [autoprint, isLoading, rows.length]);
   const missing = rows.filter((r) => r.packages.length === 0).map((r) => r.order.order_number);
 
   const totalLabels = rows.reduce(
