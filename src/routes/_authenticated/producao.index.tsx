@@ -408,6 +408,8 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
   const blocked = item.status === "bloqueada";
   const paused = item.is_paused;
   const isUpholstery = item.stage === "estofagem";
+  const isQuality = item.stage === "qualidade";
+  const isPacking = item.stage === "embalagem";
   // A decisão de "vista por coli" depende do TOTAL de order_colis da
   // encomenda (rota multi-coli), NÃO do número de colis presentes nesta
   // etapa — caso contrário, ao finalizar todos menos um, o cartão
@@ -473,12 +475,23 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
             </div>
           )}
           <div className="flex items-center gap-3 text-xs text-muted-foreground mt-2">
-            <span className="inline-flex items-center gap-1"><Clock className="size-3" />Produtivo: <strong className="text-foreground">{fmtTime(liveSeconds)}</strong></span>
-            {item.paused_seconds > 0 && <span>Pausa: {fmtTime(item.paused_seconds)}</span>}
-            {(item.rework_seconds ?? 0) > 0 && <span className="text-orange-700">Retrabalho: {fmtTime(item.rework_seconds ?? 0)}</span>}
+            {isQuality ? (
+              <span className="inline-flex items-center gap-1">
+                <ClipboardCheck className="size-3" /> Conferência sem cronómetro
+              </span>
+            ) : (
+              <>
+                <span className="inline-flex items-center gap-1"><Clock className="size-3" />Produtivo: <strong className="text-foreground">{fmtTime(liveSeconds)}</strong></span>
+                {item.paused_seconds > 0 && <span>Pausa: {fmtTime(item.paused_seconds)}</span>}
+                {(item.rework_seconds ?? 0) > 0 && <span className="text-orange-700">Retrabalho: {fmtTime(item.rework_seconds ?? 0)}</span>}
+              </>
+            )}
           </div>
-          {expectedMinutes != null && expectedMinutes > 0 && (
+          {!isQuality && expectedMinutes != null && expectedMinutes > 0 && (
             <SlaBar productiveSeconds={liveSeconds} expectedMinutes={expectedMinutes} />
+          )}
+          {isPacking && (
+            <LastQualityCheckSummary orderId={item.order_id} />
           )}
         </div>
       </div>
@@ -491,34 +504,34 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
           </div>
         ) : (
           <>
-            {!operateByColis && item.status !== "em_curso" && !blocked && (!isUpholstery || convergenceReady) && (
+            {!isQuality && !operateByColis && item.status !== "em_curso" && !blocked && (!isUpholstery || convergenceReady) && (
               <Button size="lg" disabled={pending} onClick={() => onAction("iniciar")} className="gap-2">
                 <Play className="size-4" /> Iniciar
               </Button>
             )}
-            {!operateByColis && isUpholstery && !convergenceReady && item.status !== "em_curso" && (
+            {!isQuality && !operateByColis && isUpholstery && !convergenceReady && item.status !== "em_curso" && (
               <div className="text-xs text-muted-foreground flex items-center gap-1">
                 <Lock className="size-3" /> Aguarda {!item.lines?.tecido?.ready ? "Costura" : ""}
                 {!item.lines?.tecido?.ready && !item.lines?.estrutura?.ready ? " + " : ""}
                 {!item.lines?.estrutura?.ready ? "Branco" : ""}
               </div>
             )}
-            {!operateByColis && running && (
+            {!isQuality && !operateByColis && running && (
               <Button size="lg" variant="outline" disabled={pending} onClick={() => onAction("pausar")} className="gap-2">
                 <Pause className="size-4" /> Pausar
               </Button>
             )}
-            {!operateByColis && paused && (
+            {!isQuality && !operateByColis && paused && (
               <Button size="lg" variant="outline" disabled={pending} onClick={() => onAction("retomar")} className="gap-2">
                 <RotateCcw className="size-4" /> Retomar
               </Button>
             )}
-            {!operateByColis && item.status === "em_curso" && (
+            {!isQuality && !operateByColis && item.status === "em_curso" && (
               <Button size="lg" variant="default" disabled={pending} onClick={() => onAction("finalizar")} className="gap-2 bg-emerald-600 hover:bg-emerald-700">
                 <Check className="size-4" /> Finalizar
               </Button>
             )}
-            {!operateByColis && blocked && (
+            {!isQuality && !operateByColis && blocked && (
               <div className="text-xs text-destructive flex items-center gap-1">
                 <AlertTriangle className="size-3" /> Aguarda etapas anteriores
               </div>
@@ -531,14 +544,17 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
                 operatorCode={operatorCode}
               />
             )}
-            {item.stage === "qualidade" && (
+            {(isQuality || isPacking) && (
               <QualityCheckDialog
                 orderId={item.order_id}
-                orderStageId={item.id}
+                orderStageId={isQuality ? item.id : ""}
                 orderNumber={item.order_number}
                 productDescription={item.product_description}
                 operatorCode={operatorCode}
               />
+            )}
+            {isPacking && (
+              <PrintLabelButton orderId={item.order_id} label="Etiquetar" />
             )}
           </>
         )}
