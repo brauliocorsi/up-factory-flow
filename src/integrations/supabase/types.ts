@@ -48,6 +48,7 @@ export type Database = {
           name: string
           quantity: number
           reserved: number
+          state: string
           structure_code: string | null
           updated_at: string
         }
@@ -66,6 +67,7 @@ export type Database = {
           name: string
           quantity?: number
           reserved?: number
+          state?: string
           structure_code?: string | null
           updated_at?: string
         }
@@ -84,6 +86,7 @@ export type Database = {
           name?: string
           quantity?: number
           reserved?: number
+          state?: string
           structure_code?: string | null
           updated_at?: string
         }
@@ -1286,6 +1289,7 @@ export type Database = {
           name: string
           quantity: number
           reserved: number
+          state: string
           structure_code: string | null
           updated_at: string
         }
@@ -1300,6 +1304,7 @@ export type Database = {
           name: string
           quantity?: number
           reserved?: number
+          state?: string
           structure_code?: string | null
           updated_at?: string
         }
@@ -1314,6 +1319,7 @@ export type Database = {
           name?: string
           quantity?: number
           reserved?: number
+          state?: string
           structure_code?: string | null
           updated_at?: string
         }
@@ -1613,6 +1619,35 @@ export type Database = {
           name: string
           quantity: number
           reserved: number
+          state: string
+          structure_code: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "covers"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      find_matching_cover_state: {
+        Args: { _order_id: string; _state: string }
+        Returns: {
+          active: boolean
+          code: string
+          color_code: string | null
+          created_at: string
+          fabric_ref_code: string | null
+          fabric_type_code: string | null
+          id: string
+          location: string | null
+          measure_code: string | null
+          min_quantity: number
+          model_code: string | null
+          name: string
+          quantity: number
+          reserved: number
+          state: string
           structure_code: string | null
           updated_at: string
         }
