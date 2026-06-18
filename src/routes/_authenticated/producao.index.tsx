@@ -676,3 +676,62 @@ function SlaBar({ productiveSeconds, expectedMinutes }: { productiveSeconds: num
     </div>
   );
 }
+
+/**
+ * Resumo da última conferência de qualidade desta encomenda, mostrado
+ * dentro do cartão de Embalagem para que o operador veja o que ficou
+ * conferido (OK/NOK) e eventuais notas antes de fechar o pacote.
+ */
+function LastQualityCheckSummary({ orderId }: { orderId: string }) {
+  const fetchFn = useServerFn(listQualityChecks);
+  const { data, isLoading } = useQuery({
+    queryKey: ["quality-checks", orderId],
+    queryFn: () => fetchFn({ data: { order_id: orderId, limit: 1 } }),
+  });
+  if (isLoading) return null;
+  const last = (data ?? [])[0];
+  if (!last) {
+    return (
+      <div className="mt-2 text-[11px] inline-flex items-center gap-1 rounded-md border border-dashed px-2 py-1 text-muted-foreground">
+        <ClipboardCheck className="size-3" /> Sem conferência de qualidade registada
+      </div>
+    );
+  }
+  const approved = last.result === "aprovado";
+  return (
+    <div className={`mt-2 rounded-md border px-2 py-1.5 text-[11px] ${
+      approved ? "border-emerald-300 bg-emerald-50" : "border-red-300 bg-red-50"
+    }`}>
+      <div className="flex items-center gap-1.5 font-semibold">
+        {approved ? (
+          <CheckCircle2 className="size-3.5 text-emerald-600" />
+        ) : (
+          <XCircle className="size-3.5 text-red-600" />
+        )}
+        Qualidade {approved ? "aprovada" : "reprovada"}
+        {last.operator_code && (
+          <span className="font-normal text-muted-foreground">· Op {last.operator_code}</span>
+        )}
+      </div>
+      {last.items?.length > 0 && (
+        <div className="mt-1 flex flex-wrap gap-1">
+          {last.items.map((it) => (
+            <span
+              key={it.id}
+              className={`inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 ${
+                it.status === "ok"
+                  ? "bg-emerald-100 text-emerald-800"
+                  : "bg-red-100 text-red-800"
+              }`}
+            >
+              {it.status === "ok" ? "✓" : "✗"} {it.label}
+            </span>
+          ))}
+        </div>
+      )}
+      {last.notes && (
+        <div className="mt-1 italic text-muted-foreground">{last.notes}</div>
+      )}
+    </div>
+  );
+}
