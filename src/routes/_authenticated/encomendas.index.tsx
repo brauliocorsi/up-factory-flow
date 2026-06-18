@@ -11,10 +11,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { STAGE_LABELS, ORDER_STATUS_LABELS, formatDatePT } from "@/lib/format";
-import { Search, Plus, Upload, Printer, XCircle } from "lucide-react";
+import { Search, Plus, Upload, Printer, XCircle, ClipboardCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
 import { useRealtimeOrders } from "@/hooks/useRealtimeOrders";
+import { QualityCheckDialog } from "@/components/quality/QualityCheckDialog";
+import { useMySession } from "@/hooks/useMySession";
 
 export const Route = createFileRoute("/_authenticated/encomendas/")({
   component: EncomendasPage,
@@ -23,6 +25,8 @@ export const Route = createFileRoute("/_authenticated/encomendas/")({
 function EncomendasPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { operator } = useMySession();
+  const opCode = operator?.code ?? "";
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<string>("all");
   const [modelId, setModelId] = useState<string>("all");
@@ -177,6 +181,12 @@ function EncomendasPage() {
                     <Button size="sm" variant="ghost" className="gap-1 h-8" onClick={() => printOne(o.id)}>
                       <Printer className="size-3" /> Etiqueta
                     </Button>
+                    <QualityCheckDialog
+                      orderId={o.id}
+                      orderNumber={o.order_number}
+                      productDescription={o.product_description}
+                      operatorCode={opCode}
+                    />
                     {o.status !== "cancelada" && (
                       <Button size="sm" variant="ghost" className="gap-1 h-8 text-destructive" onClick={() => openCancel(o.id, o.order_number)}>
                         <XCircle className="size-3" /> Cancelar
