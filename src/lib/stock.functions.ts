@@ -13,6 +13,7 @@ const shellSchema = z.object({
   min_quantity: z.number().int().min(0).optional(),
   location: z.string().trim().max(120).nullable().optional(),
   active: z.boolean().optional(),
+  state: z.enum(["casco", "branco"]).optional(),
 });
 
 export const listShells = createServerFn({ method: "GET" })
@@ -66,6 +67,7 @@ const coverSchema = z.object({
   min_quantity: z.number().int().min(0).optional(),
   location: z.string().trim().max(120).nullable().optional(),
   active: z.boolean().optional(),
+  state: z.enum(["cortada", "pronta"]).optional(),
 });
 
 export const listCovers = createServerFn({ method: "GET" })
