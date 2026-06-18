@@ -47,6 +47,7 @@ function CapasPage() {
               <TableHead>Medida</TableHead>
               <TableHead>Tecido</TableHead>
               <TableHead>Cor</TableHead>
+              <TableHead>Estado</TableHead>
               <TableHead className="text-right">Disponível</TableHead>
               <TableHead className="text-right">Reservado</TableHead>
               <TableHead className="text-right">Mínimo</TableHead>
@@ -55,9 +56,9 @@ function CapasPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading && <TableRow><TableCell colSpan={11} className="text-center text-muted-foreground py-6">A carregar…</TableCell></TableRow>}
+            {isLoading && <TableRow><TableCell colSpan={12} className="text-center text-muted-foreground py-6">A carregar…</TableCell></TableRow>}
             {!isLoading && rows.length === 0 && (
-              <TableRow><TableCell colSpan={11} className="text-center text-muted-foreground py-6">Sem capas registadas</TableCell></TableRow>
+              <TableRow><TableCell colSpan={12} className="text-center text-muted-foreground py-6">Sem capas registadas</TableCell></TableRow>
             )}
             {rows.map((r: any) => {
               const available = Number(r.quantity) - Number(r.reserved ?? 0);
@@ -70,6 +71,11 @@ function CapasPage() {
                   <TableCell className="font-mono text-xs">{r.measure_code ?? "—"}</TableCell>
                   <TableCell className="font-mono text-xs">{[r.fabric_type_code, r.fabric_ref_code].filter(Boolean).join("·") || "—"}</TableCell>
                   <TableCell className="font-mono text-xs">{r.color_code ?? "—"}</TableCell>
+                  <TableCell className="text-xs">
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${r.state === 'pronta' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300'}`}>
+                      {r.state === 'pronta' ? 'Pronta' : 'Cortada'}
+                    </span>
+                  </TableCell>
                   <TableCell className={`text-right font-semibold ${low ? "text-destructive" : ""}`}>{available}</TableCell>
                   <TableCell className="text-right text-muted-foreground">{r.reserved}</TableCell>
                   <TableCell className="text-right text-muted-foreground">{r.min_quantity}</TableCell>
@@ -107,6 +113,7 @@ function UpsertCover({ editing, onDone }: { editing?: any; onDone: () => void })
     quantity: editing?.quantity ?? 0,
     min_quantity: editing?.min_quantity ?? 0,
     location: editing?.location ?? "",
+    state: (editing?.state ?? "pronta") as "cortada" | "pronta",
   });
 
   const autoName = useMemo(() => {
@@ -145,6 +152,16 @@ function UpsertCover({ editing, onDone }: { editing?: any; onDone: () => void })
           <FieldL label="Quantidade"><Input type="number" min={0} value={f.quantity} onChange={(e) => setF({ ...f, quantity: Number(e.target.value) })} className="h-11" /></FieldL>
           <FieldL label="Mínimo"><Input type="number" min={0} value={f.min_quantity} onChange={(e) => setF({ ...f, min_quantity: Number(e.target.value) })} className="h-11" /></FieldL>
           <FieldL label="Localização"><Input value={f.location} onChange={(e) => setF({ ...f, location: e.target.value })} className="h-11" /></FieldL>
+          <FieldL label="Estado" cls="md:col-span-3">
+            <select
+              value={f.state}
+              onChange={(e) => setF({ ...f, state: e.target.value as "cortada" | "pronta" })}
+              className="w-full h-11 border rounded-md px-3 bg-background"
+            >
+              <option value="pronta">Pronta (cortada + cosida — salta Corte e Costura)</option>
+              <option value="cortada">Cortada (só falta coser — salta só Corte)</option>
+            </select>
+          </FieldL>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
