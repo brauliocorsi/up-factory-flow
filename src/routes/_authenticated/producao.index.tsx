@@ -8,17 +8,19 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Lock, Play, Pause, Check, RotateCcw, Clock, UserCircle2, AlertTriangle, Boxes, Wrench, Search } from "lucide-react";
+import { Lock, Play, Pause, Check, RotateCcw, Clock, UserCircle2, AlertTriangle, Boxes, Wrench, Search, ClipboardCheck, CheckCircle2, XCircle } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { STAGE_LABELS } from "@/lib/format";
 import {
   getProductionData, recordStageEvent, getAppSettings,
-  listOperatorsWithStages, STAGES, type ProductionStageOrder, type Stage,
+  listOperatorsWithStages, STAGES, VISIBLE_STAGES, type ProductionStageOrder, type Stage,
 } from "@/lib/production.functions";
 import { ConvergenceStatus } from "@/components/kanban/ConvergenceStatus";
 import { useRealtimeOrders } from "@/hooks/useRealtimeOrders";
 import { ReworkDialog } from "@/components/rework/ReworkDialog";
 import { QualityCheckDialog } from "@/components/quality/QualityCheckDialog";
+import { PrintLabelButton } from "@/components/labels/PrintLabelButton";
+import { listQualityChecks } from "@/lib/quality.functions";
 import { getExpectedForOrders } from "@/lib/sla.functions";
 import {
   getColisByStage, recordColiStageEvent, type ColiStageItem,
@@ -65,21 +67,21 @@ function ProducaoPage() {
   const recordColiFn = useServerFn(recordColiStageEvent);
 
   const colisQueries = useQueries({
-    queries: STAGES.map((stage) => ({
+    queries: VISIBLE_STAGES.map((stage) => ({
       queryKey: ["production-colis", stage],
       queryFn: () => fetchColis({ data: { stage } }),
       refetchInterval: 30000,
     })),
   });
   const colisByStageMap = Object.fromEntries(
-    STAGES.map((stage, index) => [stage, colisQueries[index]?.data]),
+    VISIBLE_STAGES.map((stage, index) => [stage, colisQueries[index]?.data]),
   ) as Partial<Record<Stage, { byOrder: Record<string, ColiStageItem[]>; multiColiOrderIds: string[] }>>;
 
   // Lista de (order_id, stage) visíveis em todas as etapas para resolver SLA em lote
   const visibleItemsByStage = useMemo(() => {
-    const out = Object.fromEntries(STAGES.map((s) => [s, []])) as unknown as Record<Stage, ProductionStageOrder[]>;
+    const out = Object.fromEntries(VISIBLE_STAGES.map((s) => [s, []])) as unknown as Record<Stage, ProductionStageOrder[]>;
     if (!data) return out;
-    for (const s of STAGES) {
+    for (const s of VISIBLE_STAGES) {
       const activeColiOrderIds = new Set(Object.keys(colisByStageMap[s]?.byOrder ?? {}));
       for (const it of data.byStage[s] ?? []) {
         if ((it.coli_count ?? 0) > 1 && !activeColiOrderIds.has(it.order_id)) continue;
@@ -91,7 +93,7 @@ function ProducaoPage() {
 
   const orderStagePairs = useMemo(() => {
     const out: { order_id: string; stage: Stage }[] = [];
-    for (const s of STAGES) {
+    for (const s of VISIBLE_STAGES) {
       for (const it of visibleItemsByStage[s] ?? []) {
         out.push({ order_id: it.order_id, stage: it.stage });
       }
@@ -105,7 +107,7 @@ function ProducaoPage() {
     enabled: orderStagePairs.length > 0,
   });
 
-  useRealtimeOrders([["production"], ...STAGES.map((s) => ["production-colis", s])]);
+  useRealtimeOrders([["production"], ...VISIBLE_STAGES.map((s) => ["production-colis", s])]);
 
   const [activeStage, setActiveStage] = useState<Stage>("estofagem");
   const colisByStage = colisByStageMap[activeStage];
@@ -118,7 +120,7 @@ function ProducaoPage() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["production"] });
-      STAGES.forEach((stage) => qc.invalidateQueries({ queryKey: ["production-colis", stage] }));
+      VISIBLE_STAGES.forEach((stage) => qc.invalidateQueries({ queryKey: ["production-colis", stage] }));
     },
     onError: (e: any) => toast.error(e?.message ?? "Erro ao registar"),
   });
@@ -179,6 +181,9 @@ function ProducaoPage() {
   }
 
   const isReadyToStart = (it: ProductionStageOrder) => {
+    // Qualidade não tem iniciar/pausar/finalizar — está sempre "pronta"
+    // para receber o formulário enquanto não estiver concluída.
+    if (it.stage === "qualidade") return it.status !== "concluida";
     if ((it.coli_count ?? 0) > 1) {
       const activeColis = colisByStageMap[it.stage]?.byOrder?.[it.order_id] ?? [];
       return activeColis.some((c) => c.status !== "em_curso");
@@ -256,7 +261,7 @@ function ProducaoPage() {
       {/* Tabs de etapas */}
       <div className="overflow-x-auto -mx-4 px-4">
         <div className="flex gap-1 min-w-max">
-          {STAGES.map((s) => {
+          {VISIBLE_STAGES.map((s) => {
             const count = visibleItemsByStage[s]?.length ?? 0;
             const linked = canActOnStage(s);
             const isActive = s === activeStage;
@@ -403,6 +408,8 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
   const blocked = item.status === "bloqueada";
   const paused = item.is_paused;
   const isUpholstery = item.stage === "estofagem";
+  const isQuality = item.stage === "qualidade";
+  const isPacking = item.stage === "embalagem";
   // A decisão de "vista por coli" depende do TOTAL de order_colis da
   // encomenda (rota multi-coli), NÃO do número de colis presentes nesta
   // etapa — caso contrário, ao finalizar todos menos um, o cartão
@@ -468,12 +475,23 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
             </div>
           )}
           <div className="flex items-center gap-3 text-xs text-muted-foreground mt-2">
-            <span className="inline-flex items-center gap-1"><Clock className="size-3" />Produtivo: <strong className="text-foreground">{fmtTime(liveSeconds)}</strong></span>
-            {item.paused_seconds > 0 && <span>Pausa: {fmtTime(item.paused_seconds)}</span>}
-            {(item.rework_seconds ?? 0) > 0 && <span className="text-orange-700">Retrabalho: {fmtTime(item.rework_seconds ?? 0)}</span>}
+            {isQuality ? (
+              <span className="inline-flex items-center gap-1">
+                <ClipboardCheck className="size-3" /> Conferência sem cronómetro
+              </span>
+            ) : (
+              <>
+                <span className="inline-flex items-center gap-1"><Clock className="size-3" />Produtivo: <strong className="text-foreground">{fmtTime(liveSeconds)}</strong></span>
+                {item.paused_seconds > 0 && <span>Pausa: {fmtTime(item.paused_seconds)}</span>}
+                {(item.rework_seconds ?? 0) > 0 && <span className="text-orange-700">Retrabalho: {fmtTime(item.rework_seconds ?? 0)}</span>}
+              </>
+            )}
           </div>
-          {expectedMinutes != null && expectedMinutes > 0 && (
+          {!isQuality && expectedMinutes != null && expectedMinutes > 0 && (
             <SlaBar productiveSeconds={liveSeconds} expectedMinutes={expectedMinutes} />
+          )}
+          {isPacking && (
+            <LastQualityCheckSummary orderId={item.order_id} />
           )}
         </div>
       </div>
@@ -486,34 +504,34 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
           </div>
         ) : (
           <>
-            {!operateByColis && item.status !== "em_curso" && !blocked && (!isUpholstery || convergenceReady) && (
+            {!isQuality && !operateByColis && item.status !== "em_curso" && !blocked && (!isUpholstery || convergenceReady) && (
               <Button size="lg" disabled={pending} onClick={() => onAction("iniciar")} className="gap-2">
                 <Play className="size-4" /> Iniciar
               </Button>
             )}
-            {!operateByColis && isUpholstery && !convergenceReady && item.status !== "em_curso" && (
+            {!isQuality && !operateByColis && isUpholstery && !convergenceReady && item.status !== "em_curso" && (
               <div className="text-xs text-muted-foreground flex items-center gap-1">
                 <Lock className="size-3" /> Aguarda {!item.lines?.tecido?.ready ? "Costura" : ""}
                 {!item.lines?.tecido?.ready && !item.lines?.estrutura?.ready ? " + " : ""}
                 {!item.lines?.estrutura?.ready ? "Branco" : ""}
               </div>
             )}
-            {!operateByColis && running && (
+            {!isQuality && !operateByColis && running && (
               <Button size="lg" variant="outline" disabled={pending} onClick={() => onAction("pausar")} className="gap-2">
                 <Pause className="size-4" /> Pausar
               </Button>
             )}
-            {!operateByColis && paused && (
+            {!isQuality && !operateByColis && paused && (
               <Button size="lg" variant="outline" disabled={pending} onClick={() => onAction("retomar")} className="gap-2">
                 <RotateCcw className="size-4" /> Retomar
               </Button>
             )}
-            {!operateByColis && item.status === "em_curso" && (
+            {!isQuality && !operateByColis && item.status === "em_curso" && (
               <Button size="lg" variant="default" disabled={pending} onClick={() => onAction("finalizar")} className="gap-2 bg-emerald-600 hover:bg-emerald-700">
                 <Check className="size-4" /> Finalizar
               </Button>
             )}
-            {!operateByColis && blocked && (
+            {!isQuality && !operateByColis && blocked && (
               <div className="text-xs text-destructive flex items-center gap-1">
                 <AlertTriangle className="size-3" /> Aguarda etapas anteriores
               </div>
@@ -526,14 +544,17 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
                 operatorCode={operatorCode}
               />
             )}
-            {item.stage === "qualidade" && (
+            {(isQuality || isPacking) && (
               <QualityCheckDialog
                 orderId={item.order_id}
-                orderStageId={item.id}
+                orderStageId={isQuality ? item.id : ""}
                 orderNumber={item.order_number}
                 productDescription={item.product_description}
                 operatorCode={operatorCode}
               />
+            )}
+            {isPacking && (
+              <PrintLabelButton orderId={item.order_id} label="Etiquetar" />
             )}
           </>
         )}
@@ -652,6 +673,65 @@ function SlaBar({ productiveSeconds, expectedMinutes }: { productiveSeconds: num
       <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
         <div className={`h-full ${color} transition-all`} style={{ width: `${exceeded ? 100 : pct}%` }} />
       </div>
+    </div>
+  );
+}
+
+/**
+ * Resumo da última conferência de qualidade desta encomenda, mostrado
+ * dentro do cartão de Embalagem para que o operador veja o que ficou
+ * conferido (OK/NOK) e eventuais notas antes de fechar o pacote.
+ */
+function LastQualityCheckSummary({ orderId }: { orderId: string }) {
+  const fetchFn = useServerFn(listQualityChecks);
+  const { data, isLoading } = useQuery({
+    queryKey: ["quality-checks", orderId],
+    queryFn: () => fetchFn({ data: { order_id: orderId, limit: 1 } }),
+  });
+  if (isLoading) return null;
+  const last = (data ?? [])[0];
+  if (!last) {
+    return (
+      <div className="mt-2 text-[11px] inline-flex items-center gap-1 rounded-md border border-dashed px-2 py-1 text-muted-foreground">
+        <ClipboardCheck className="size-3" /> Sem conferência de qualidade registada
+      </div>
+    );
+  }
+  const approved = last.result === "aprovado";
+  return (
+    <div className={`mt-2 rounded-md border px-2 py-1.5 text-[11px] ${
+      approved ? "border-emerald-300 bg-emerald-50" : "border-red-300 bg-red-50"
+    }`}>
+      <div className="flex items-center gap-1.5 font-semibold">
+        {approved ? (
+          <CheckCircle2 className="size-3.5 text-emerald-600" />
+        ) : (
+          <XCircle className="size-3.5 text-red-600" />
+        )}
+        Qualidade {approved ? "aprovada" : "reprovada"}
+        {last.operator_code && (
+          <span className="font-normal text-muted-foreground">· Op {last.operator_code}</span>
+        )}
+      </div>
+      {last.items?.length > 0 && (
+        <div className="mt-1 flex flex-wrap gap-1">
+          {last.items.map((it) => (
+            <span
+              key={it.id}
+              className={`inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 ${
+                it.status === "ok"
+                  ? "bg-emerald-100 text-emerald-800"
+                  : "bg-red-100 text-red-800"
+              }`}
+            >
+              {it.status === "ok" ? "✓" : "✗"} {it.label}
+            </span>
+          ))}
+        </div>
+      )}
+      {last.notes && (
+        <div className="mt-1 italic text-muted-foreground">{last.notes}</div>
+      )}
     </div>
   );
 }

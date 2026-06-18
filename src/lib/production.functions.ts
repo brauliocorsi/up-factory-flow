@@ -15,6 +15,16 @@ export const STAGES = [
 ] as const;
 export type Stage = typeof STAGES[number];
 
+/**
+ * Etapas visíveis no quadro de produção em /producao.
+ * - "picagem" foi movida para a página dedicada /picagem.
+ * - "qualidade" continua visível mas o cartão mostra apenas o formulário
+ *   de conferência (não regista tempo nem tem iniciar/pausar/finalizar).
+ */
+export const VISIBLE_STAGES = [
+  "estrutura","corte","costura","branco","estofagem","qualidade","embalagem"
+] as const satisfies readonly Stage[];
+
 export type ProductionStageOrder = {
   id: string;                    // order_stages.id
   order_id: string;

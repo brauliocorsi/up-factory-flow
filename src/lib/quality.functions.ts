@@ -203,6 +203,23 @@ export const submitQualityCheck = createServerFn({ method: "POST" })
     if (iErr) throw new Error(iErr.message);
 
     if (data.result === "aprovado" && data.order_stage_id) {
+      // Qualidade não regista tempo: iniciar e finalizar imediatamente
+      // através de record_stage_event apenas para satisfazer a constraint
+      // "Não se pode finalizar uma etapa que não foi iniciada".
+      try {
+        const { data: stg } = await sb.from("order_stages")
+          .select("started_at, status")
+          .eq("id", data.order_stage_id).maybeSingle();
+        if (stg && !stg.started_at && stg.status !== "concluida") {
+          await sb.rpc("record_stage_event", {
+            _order_stage_id: data.order_stage_id,
+            _operator_code: op.code,
+            _event: "iniciar",
+          });
+        }
+      } catch {
+        /* não bloquear o submit do formulário */
+      }
       const { error: rpcErr } = await sb.rpc("record_stage_event", {
         _order_stage_id: data.order_stage_id,
         _operator_code: op.code,
