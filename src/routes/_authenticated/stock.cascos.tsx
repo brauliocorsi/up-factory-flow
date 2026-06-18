@@ -43,6 +43,7 @@ function CascosPage() {
               <TableHead>Nome</TableHead>
               <TableHead>Estrutura</TableHead>
               <TableHead>Categoria</TableHead>
+              <TableHead>Estado</TableHead>
               <TableHead className="text-right">Disponível</TableHead>
               <TableHead className="text-right">Reservado</TableHead>
               <TableHead className="text-right">Mínimo</TableHead>
@@ -64,6 +65,11 @@ function CascosPage() {
                   <TableCell>{r.name}</TableCell>
                   <TableCell className="font-mono text-xs">{r.structure_code ?? "—"}</TableCell>
                   <TableCell className="font-mono text-xs">{r.category_code ?? "—"}</TableCell>
+                  <TableCell className="text-xs">
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${r.state === 'branco' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300'}`}>
+                      {r.state === 'branco' ? 'Branco' : 'Casco'}
+                    </span>
+                  </TableCell>
                   <TableCell className={`text-right font-semibold ${low ? "text-destructive" : ""}`}>{available}</TableCell>
                   <TableCell className="text-right text-muted-foreground">{r.reserved}</TableCell>
                   <TableCell className="text-right text-muted-foreground">{r.min_quantity}</TableCell>
