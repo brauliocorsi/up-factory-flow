@@ -1793,8 +1793,13 @@ export type Database = {
       try_reserve_for_order: { Args: { _order_id: string }; Returns: Json }
     }
     Enums: {
-      app_role: "admin" | "operador" | "escritorio"
-      order_status: "pendente" | "em_producao" | "concluida" | "cancelada"
+      app_role: "admin" | "operador" | "escritorio" | "picador"
+      order_status:
+        | "pendente"
+        | "em_producao"
+        | "concluida"
+        | "cancelada"
+        | "em_armazem"
       production_stage:
         | "estrutura"
         | "corte"
@@ -1932,8 +1937,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "operador", "escritorio"],
-      order_status: ["pendente", "em_producao", "concluida", "cancelada"],
+      app_role: ["admin", "operador", "escritorio", "picador"],
+      order_status: [
+        "pendente",
+        "em_producao",
+        "concluida",
+        "cancelada",
+        "em_armazem",
+      ],
       production_stage: [
         "estrutura",
         "corte",
