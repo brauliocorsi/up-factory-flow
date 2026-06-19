@@ -1426,6 +1426,36 @@ export type Database = {
         }
         Relationships: []
       }
+      stage_sla_model: {
+        Row: {
+          category_code: string
+          created_at: string
+          expected_minutes: number
+          id: string
+          model_code: string
+          stage: Database["public"]["Enums"]["production_stage"]
+          updated_at: string
+        }
+        Insert: {
+          category_code: string
+          created_at?: string
+          expected_minutes: number
+          id?: string
+          model_code: string
+          stage: Database["public"]["Enums"]["production_stage"]
+          updated_at?: string
+        }
+        Update: {
+          category_code?: string
+          created_at?: string
+          expected_minutes?: number
+          id?: string
+          model_code?: string
+          stage?: Database["public"]["Enums"]["production_stage"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       stage_sla_product: {
         Row: {
           category_code: string

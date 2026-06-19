@@ -16,6 +16,7 @@ import { getCatalogs } from "@/lib/catalog.functions";
 import {
   STAGES, listCategorySla, upsertCategorySla,
   listProductSla, upsertProductSla, type Stage,
+  listModelSla, upsertModelSla, type ModelSla,
 } from "@/lib/sla.functions";
 
 export const Route = createFileRoute("/_authenticated/admin/sla")({
@@ -35,6 +36,7 @@ function SlaPage() {
   const { data: catalogs } = useQuery({ queryKey: ["catalogs"], queryFn: () => getCatalogs() });
   const { data: catSla = [] } = useQuery({ queryKey: ["sla-cat"], queryFn: () => listCategorySla() });
   const { data: prodSla = [] } = useQuery({ queryKey: ["sla-prod"], queryFn: () => listProductSla() });
+  const { data: modelSla = [] } = useQuery({ queryKey: ["sla-model"], queryFn: () => listModelSla() });
 
   const categories = (catalogs?.categories ?? []) as { code: string; name: string }[];
   const models = (catalogs?.models ?? []) as { code: string; name: string; category_id: string | null }[];
@@ -60,12 +62,28 @@ function SlaPage() {
     onError: (e: any) => toast.error(e?.message ?? "Erro a guardar"),
   });
 
+  const modelSlaMutation = useMutation({
+    mutationFn: (v: { category_code: string; model_code: string; stage: Stage; expected_minutes: number | null }) =>
+      upsertModelSla({ data: v }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["sla-model"] });
+      toast.success("Padrão do modelo guardado");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Erro a guardar"),
+  });
+
   // Mapa rápido categoria+etapa -> minutos
   const catMap = useMemo(() => {
     const m = new Map<string, number>();
     for (const r of catSla) m.set(`${r.category_code}|${r.stage}`, r.expected_minutes);
     return m;
   }, [catSla]);
+
+  const modelMap = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const r of modelSla) m.set(`${r.category_code}|${r.model_code}|${r.stage}`, r.expected_minutes);
+    return m;
+  }, [modelSla]);
 
   function downloadTemplate() {
     const headers = [
@@ -98,8 +116,13 @@ function SlaPage() {
       <Tabs defaultValue="categoria">
         <TabsList>
           <TabsTrigger value="categoria">Padrão por categoria</TabsTrigger>
+          <TabsTrigger value="modelo">Padrão por modelo</TabsTrigger>
           <TabsTrigger value="produto">Override por produto</TabsTrigger>
         </TabsList>
+
+        <div className="mt-3 text-xs text-muted-foreground">
+          Hierarquia (do mais específico ao geral): <b>produto</b> (exceção) → <b>modelo</b> (padrão) → <b>categoria</b> (geral).
+        </div>
 
         <TabsContent value="categoria" className="space-y-3 mt-3">
           {categories.length === 0 && (
@@ -129,6 +152,16 @@ function SlaPage() {
           ))}
         </TabsContent>
 
+        <TabsContent value="modelo" className="space-y-3 mt-3">
+          <ModelSlaSection
+            categories={categories}
+            models={models}
+            catMap={catMap}
+            modelSla={modelSla}
+            onSave={(v) => modelSlaMutation.mutate(v)}
+          />
+        </TabsContent>
+
         <TabsContent value="produto" className="space-y-3 mt-3">
           <ProductOverrideSection
             categories={categories}
@@ -136,6 +169,7 @@ function SlaPage() {
             structures={structures}
             measures={measures}
             catMap={catMap}
+            modelMap={modelMap}
             prodSla={prodSla}
             onSave={(v) => prodSlaMutation.mutate(v)}
           />
@@ -177,13 +211,14 @@ function SlaCell({ label, initial, onSave }: { label: string; initial?: number; 
 }
 
 function ProductOverrideSection({
-  categories, models, structures, measures, catMap, prodSla, onSave,
+  categories, models, structures, measures, catMap, modelMap, prodSla, onSave,
 }: {
   categories: { code: string; name: string }[];
   models: { code: string; name: string; category_id: string | null }[];
   structures: { code: string; name: string }[];
   measures: { code: string; name: string }[];
   catMap: Map<string, number>;
+  modelMap: Map<string, number>;
   prodSla: Array<{ category_code: string; model_code: string; structure_code: string; measure_code: string; stage: Stage; expected_minutes: number }>;
   onSave: (v: any) => void;
 }) {
@@ -247,7 +282,11 @@ function ProductOverrideSection({
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {STAGES.map((s) => {
             const ov = overridesMap.get(`${cat}|${model}|${struct}|${meas}|${s}`);
-            const fallback = catMap.get(`${cat}|${s}`);
+            const modelVal = modelMap.get(`${cat}|${model}|${s}`);
+            const catVal = catMap.get(`${cat}|${s}`);
+            const fallback = modelVal ?? catVal;
+            const fallbackSource: "modelo" | "categoria" | null =
+              modelVal != null ? "modelo" : catVal != null ? "categoria" : null;
             return (
               <div key={s} className="space-y-1">
                 <Label className="text-xs flex items-center justify-between">
@@ -255,7 +294,7 @@ function ProductOverrideSection({
                   {ov != null ? (
                     <Badge variant="default" className="text-[10px]">override</Badge>
                   ) : fallback != null ? (
-                    <Badge variant="secondary" className="text-[10px]">padrão {fallback}m</Badge>
+                    <Badge variant="secondary" className="text-[10px]">{fallbackSource} {fallback}m</Badge>
                   ) : (
                     <Badge variant="outline" className="text-[10px]">sem SLA</Badge>
                   )}
@@ -309,5 +348,83 @@ function OverrideCell({ initial, fallback, onSave }: { initial?: number; fallbac
         </Button>
       )}
     </div>
+  );
+}
+
+function ModelSlaSection({
+  categories, models, catMap, modelSla, onSave,
+}: {
+  categories: { code: string; name: string }[];
+  models: { code: string; name: string; category_id: string | null }[];
+  catMap: Map<string, number>;
+  modelSla: ModelSla[];
+  onSave: (v: { category_code: string; model_code: string; stage: Stage; expected_minutes: number | null }) => void;
+}) {
+  const [cat, setCat] = useState<string>("");
+  const [model, setModel] = useState<string>("");
+
+  const modelMap = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const r of modelSla) m.set(`${r.category_code}|${r.model_code}|${r.stage}`, r.expected_minutes);
+    return m;
+  }, [modelSla]);
+
+  const ready = cat && model;
+
+  return (
+    <Card className="p-4 space-y-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div>
+          <Label className="text-xs">Categoria</Label>
+          <Select value={cat} onValueChange={(v) => { setCat(v); setModel(""); }}>
+            <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+            <SelectContent>
+              {categories.map((c) => <SelectItem key={c.code} value={c.code}>{c.name} ({c.code})</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label className="text-xs">Modelo</Label>
+          <Select value={model} onValueChange={setModel}>
+            <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+            <SelectContent>
+              {models.map((m) => <SelectItem key={m.code} value={m.code}>{m.name} ({m.code})</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {!ready ? (
+        <p className="text-sm text-muted-foreground">Escolhe categoria e modelo para definir o padrão do modelo (aplica-se a todas as estruturas e medidas).</p>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {STAGES.map((s) => {
+            const current = modelMap.get(`${cat}|${model}|${s}`);
+            const fallback = catMap.get(`${cat}|${s}`);
+            return (
+              <div key={s} className="space-y-1">
+                <Label className="text-xs flex items-center justify-between">
+                  <span>{STAGE_LABELS[s]}</span>
+                  {current != null ? (
+                    <Badge variant="default" className="text-[10px]">modelo</Badge>
+                  ) : fallback != null ? (
+                    <Badge variant="secondary" className="text-[10px]">categoria {fallback}m</Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-[10px]">sem SLA</Badge>
+                  )}
+                </Label>
+                <OverrideCell
+                  initial={current}
+                  fallback={fallback}
+                  onSave={(v) => onSave({
+                    category_code: cat, model_code: model, stage: s, expected_minutes: v,
+                  })}
+                />
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </Card>
   );
 }
