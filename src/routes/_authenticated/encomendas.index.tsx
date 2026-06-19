@@ -168,7 +168,16 @@ function EncomendasPage() {
                       aria-label={`Selecionar ${o.order_number}`}
                     />
                   </TableCell>
-                  <TableCell className="font-mono text-xs">{o.order_number}</TableCell>
+                  <TableCell className="font-mono text-xs">
+                    {o.customer_order ? (
+                      <>
+                        <div className="font-bold">{o.customer_order}</div>
+                        <div className="text-[10px] text-muted-foreground">{o.order_number}</div>
+                      </>
+                    ) : (
+                      o.order_number
+                    )}
+                  </TableCell>
                   <TableCell>{o.product_description}</TableCell>
                   <TableCell>{o.model_name ?? "—"}</TableCell>
                   <TableCell>{o.measure ?? "—"}</TableCell>
@@ -215,7 +224,9 @@ function EncomendasPage() {
               />
               <div className="flex-1 min-w-0 space-y-1">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="font-mono text-xs font-bold text-muted-foreground">{o.order_number}</span>
+                  <span className="font-mono text-xs font-bold text-muted-foreground">
+                    {o.customer_order ? `${o.customer_order} · ${o.order_number}` : o.order_number}
+                  </span>
                   <Badge variant="secondary">{ORDER_STATUS_LABELS[o.status]}</Badge>
                 </div>
                 <div className="text-sm font-medium">{o.product_description}</div>
