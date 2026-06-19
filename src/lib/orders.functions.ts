@@ -101,11 +101,12 @@ const listOrdersSchema = z.object({
 export type OrderListItem = {
   id: string;
   order_number: string;
+  customer_order: string | null;
   product_description: string;
   model_name: string | null;
   measure: string | null;
   fabric_type: string | null;
-  entry_date: string;
+  entry_date: string | null;
   due_date: string | null;
   status: string;
   current_stage: string;
@@ -118,9 +119,12 @@ export const listOrders = createServerFn({ method: "POST" })
     const { supabase } = context;
     let q = supabase
       .from("production_orders")
-      .select("id, order_number, product_description, measure, fabric_type, entry_date, due_date, status, models(name), order_stages(stage, status)")
-      .order("entry_date", { ascending: false });
-    if (data.search) q = q.ilike("order_number", `%${data.search}%`);
+      .select("id, order_number, customer_order, product_description, measure, fabric_type, entry_date, due_date, status, models(name), order_stages(stage, status)")
+      .order("entry_date", { ascending: false, nullsFirst: false });
+    if (data.search) {
+      const s = data.search.replace(/[%,]/g, "");
+      q = q.or(`order_number.ilike.%${s}%,customer_order.ilike.%${s}%`);
+    }
     if (data.status) q = q.eq("status", data.status as any);
     if (data.modelId) q = q.eq("model_id", data.modelId);
     const { data: rows, error } = await q;
@@ -129,7 +133,8 @@ export const listOrders = createServerFn({ method: "POST" })
       const stages: any[] = o.order_stages ?? [];
       const current = STAGES.map((name) => stages.find((s) => s.stage === name && s.status !== "concluida")).find(Boolean) ?? { stage: "picagem" };
       return {
-        id: o.id, order_number: o.order_number, product_description: o.product_description,
+        id: o.id, order_number: o.order_number, customer_order: o.customer_order ?? null,
+        product_description: o.product_description,
         model_name: o.models?.name ?? null, measure: o.measure, fabric_type: o.fabric_type,
         entry_date: o.entry_date, due_date: o.due_date, status: o.status,
         current_stage: current.stage,
@@ -149,6 +154,7 @@ export const listModels = createServerFn({ method: "GET" })
 
 const orderInputSchema = z.object({
   order_number: z.string().trim().min(1).max(64),
+  customer_order: z.string().trim().max(64).nullable().optional(),
   product_description: z.string().trim().min(1).max(500),
   model_id: z.string().uuid().nullable().optional(),
   measure: z.string().trim().max(120).nullable().optional(),
