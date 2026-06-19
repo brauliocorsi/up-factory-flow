@@ -26,6 +26,8 @@ import { Route as AuthenticatedStockCascosRouteImport } from './routes/_authenti
 import { Route as AuthenticatedStockCapasRouteImport } from './routes/_authenticated/stock.capas'
 import { Route as AuthenticatedProdutosReceitasRouteImport } from './routes/_authenticated/produtos.receitas'
 import { Route as AuthenticatedProducaoCascosRouteImport } from './routes/_authenticated/producao.cascos'
+import { Route as AuthenticatedPicagemHistoricoRouteImport } from './routes/_authenticated/picagem.historico'
+import { Route as AuthenticatedPicagemConsultaRouteImport } from './routes/_authenticated/picagem.consulta'
 import { Route as AuthenticatedEtiquetasImprimirRouteImport } from './routes/_authenticated/etiquetas.imprimir'
 import { Route as AuthenticatedEncomendasNovaRouteImport } from './routes/_authenticated/encomendas.nova'
 import { Route as AuthenticatedAdminSlaRouteImport } from './routes/_authenticated/admin.sla'
@@ -129,6 +131,18 @@ const AuthenticatedProducaoCascosRoute =
     path: '/producao/cascos',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedPicagemHistoricoRoute =
+  AuthenticatedPicagemHistoricoRouteImport.update({
+    id: '/historico',
+    path: '/historico',
+    getParentRoute: () => AuthenticatedPicagemRoute,
+  } as any)
+const AuthenticatedPicagemConsultaRoute =
+  AuthenticatedPicagemConsultaRouteImport.update({
+    id: '/consulta',
+    path: '/consulta',
+    getParentRoute: () => AuthenticatedPicagemRoute,
+  } as any)
 const AuthenticatedEtiquetasImprimirRoute =
   AuthenticatedEtiquetasImprimirRouteImport.update({
     id: '/etiquetas/imprimir',
@@ -187,7 +201,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/importar': typeof AuthenticatedImportarRoute
-  '/picagem': typeof AuthenticatedPicagemRoute
+  '/picagem': typeof AuthenticatedPicagemRouteWithChildren
   '/retrabalho': typeof AuthenticatedRetrabalhoRoute
   '/admin/catalogo': typeof AuthenticatedAdminCatalogoRoute
   '/admin/colis': typeof AuthenticatedAdminColisRoute
@@ -197,6 +211,8 @@ export interface FileRoutesByFullPath {
   '/admin/sla': typeof AuthenticatedAdminSlaRoute
   '/encomendas/nova': typeof AuthenticatedEncomendasNovaRoute
   '/etiquetas/imprimir': typeof AuthenticatedEtiquetasImprimirRoute
+  '/picagem/consulta': typeof AuthenticatedPicagemConsultaRoute
+  '/picagem/historico': typeof AuthenticatedPicagemHistoricoRoute
   '/producao/cascos': typeof AuthenticatedProducaoCascosRoute
   '/produtos/receitas': typeof AuthenticatedProdutosReceitasRoute
   '/stock/capas': typeof AuthenticatedStockCapasRoute
@@ -213,7 +229,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/importar': typeof AuthenticatedImportarRoute
-  '/picagem': typeof AuthenticatedPicagemRoute
+  '/picagem': typeof AuthenticatedPicagemRouteWithChildren
   '/retrabalho': typeof AuthenticatedRetrabalhoRoute
   '/': typeof AuthenticatedIndexRoute
   '/admin/catalogo': typeof AuthenticatedAdminCatalogoRoute
@@ -224,6 +240,8 @@ export interface FileRoutesByTo {
   '/admin/sla': typeof AuthenticatedAdminSlaRoute
   '/encomendas/nova': typeof AuthenticatedEncomendasNovaRoute
   '/etiquetas/imprimir': typeof AuthenticatedEtiquetasImprimirRoute
+  '/picagem/consulta': typeof AuthenticatedPicagemConsultaRoute
+  '/picagem/historico': typeof AuthenticatedPicagemHistoricoRoute
   '/producao/cascos': typeof AuthenticatedProducaoCascosRoute
   '/produtos/receitas': typeof AuthenticatedProdutosReceitasRoute
   '/stock/capas': typeof AuthenticatedStockCapasRoute
@@ -242,7 +260,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/_authenticated/importar': typeof AuthenticatedImportarRoute
-  '/_authenticated/picagem': typeof AuthenticatedPicagemRoute
+  '/_authenticated/picagem': typeof AuthenticatedPicagemRouteWithChildren
   '/_authenticated/retrabalho': typeof AuthenticatedRetrabalhoRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/admin/catalogo': typeof AuthenticatedAdminCatalogoRoute
@@ -253,6 +271,8 @@ export interface FileRoutesById {
   '/_authenticated/admin/sla': typeof AuthenticatedAdminSlaRoute
   '/_authenticated/encomendas/nova': typeof AuthenticatedEncomendasNovaRoute
   '/_authenticated/etiquetas/imprimir': typeof AuthenticatedEtiquetasImprimirRoute
+  '/_authenticated/picagem/consulta': typeof AuthenticatedPicagemConsultaRoute
+  '/_authenticated/picagem/historico': typeof AuthenticatedPicagemHistoricoRoute
   '/_authenticated/producao/cascos': typeof AuthenticatedProducaoCascosRoute
   '/_authenticated/produtos/receitas': typeof AuthenticatedProdutosReceitasRoute
   '/_authenticated/stock/capas': typeof AuthenticatedStockCapasRoute
@@ -282,6 +302,8 @@ export interface FileRouteTypes {
     | '/admin/sla'
     | '/encomendas/nova'
     | '/etiquetas/imprimir'
+    | '/picagem/consulta'
+    | '/picagem/historico'
     | '/producao/cascos'
     | '/produtos/receitas'
     | '/stock/capas'
@@ -309,6 +331,8 @@ export interface FileRouteTypes {
     | '/admin/sla'
     | '/encomendas/nova'
     | '/etiquetas/imprimir'
+    | '/picagem/consulta'
+    | '/picagem/historico'
     | '/producao/cascos'
     | '/produtos/receitas'
     | '/stock/capas'
@@ -337,6 +361,8 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/sla'
     | '/_authenticated/encomendas/nova'
     | '/_authenticated/etiquetas/imprimir'
+    | '/_authenticated/picagem/consulta'
+    | '/_authenticated/picagem/historico'
     | '/_authenticated/producao/cascos'
     | '/_authenticated/produtos/receitas'
     | '/_authenticated/stock/capas'
@@ -476,6 +502,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProducaoCascosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/picagem/historico': {
+      id: '/_authenticated/picagem/historico'
+      path: '/historico'
+      fullPath: '/picagem/historico'
+      preLoaderRoute: typeof AuthenticatedPicagemHistoricoRouteImport
+      parentRoute: typeof AuthenticatedPicagemRoute
+    }
+    '/_authenticated/picagem/consulta': {
+      id: '/_authenticated/picagem/consulta'
+      path: '/consulta'
+      fullPath: '/picagem/consulta'
+      preLoaderRoute: typeof AuthenticatedPicagemConsultaRouteImport
+      parentRoute: typeof AuthenticatedPicagemRoute
+    }
     '/_authenticated/etiquetas/imprimir': {
       id: '/_authenticated/etiquetas/imprimir'
       path: '/etiquetas/imprimir'
@@ -542,10 +582,23 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedPicagemRouteChildren {
+  AuthenticatedPicagemConsultaRoute: typeof AuthenticatedPicagemConsultaRoute
+  AuthenticatedPicagemHistoricoRoute: typeof AuthenticatedPicagemHistoricoRoute
+}
+
+const AuthenticatedPicagemRouteChildren: AuthenticatedPicagemRouteChildren = {
+  AuthenticatedPicagemConsultaRoute: AuthenticatedPicagemConsultaRoute,
+  AuthenticatedPicagemHistoricoRoute: AuthenticatedPicagemHistoricoRoute,
+}
+
+const AuthenticatedPicagemRouteWithChildren =
+  AuthenticatedPicagemRoute._addFileChildren(AuthenticatedPicagemRouteChildren)
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
   AuthenticatedImportarRoute: typeof AuthenticatedImportarRoute
-  AuthenticatedPicagemRoute: typeof AuthenticatedPicagemRoute
+  AuthenticatedPicagemRoute: typeof AuthenticatedPicagemRouteWithChildren
   AuthenticatedRetrabalhoRoute: typeof AuthenticatedRetrabalhoRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedAdminCatalogoRoute: typeof AuthenticatedAdminCatalogoRoute
@@ -572,7 +625,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
   AuthenticatedImportarRoute: AuthenticatedImportarRoute,
-  AuthenticatedPicagemRoute: AuthenticatedPicagemRoute,
+  AuthenticatedPicagemRoute: AuthenticatedPicagemRouteWithChildren,
   AuthenticatedRetrabalhoRoute: AuthenticatedRetrabalhoRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedAdminCatalogoRoute: AuthenticatedAdminCatalogoRoute,

@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 
 export type MySession = {
   user_id: string;
-  role: "admin" | "operador" | null;
+  role: "admin" | "operador" | "picador" | null;
   operator: { id: string; code: string; name: string; active: boolean } | null;
 };
 

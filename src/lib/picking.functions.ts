@@ -25,6 +25,95 @@ export type PickingOrder = {
   packages: PickingColi[];
 };
 
+// List orders eligible for picking (embalagem concluida, picagem nao concluida)
+export const listPickingQueue = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase } = context;
+    const { data: stages, error } = await supabase
+      .from("order_stages")
+      .select("id, order_id, stage, status, production_orders!inner(id, order_number, product_description, structure_type, measure, color, status)")
+      .eq("stage", "picagem")
+      .neq("status", "concluida");
+    if (error) throw new Error(error.message);
+    const rows = (stages ?? []) as any[];
+    const orderIds = rows.map((s) => s.order_id);
+    if (orderIds.length === 0) return [] as Array<{ order_id: string; order_number: string; product_description: string; structure_type: string|null; measure: string|null; color: string|null; coli_total: number; coli_picked: number; }>;
+    const { data: emb } = await supabase
+      .from("order_stages")
+      .select("order_id, status")
+      .eq("stage", "embalagem")
+      .in("order_id", orderIds);
+    const embMap = new Map((emb ?? []).map((e: any) => [e.order_id, e.status]));
+    // colis totals
+    const { data: colis } = await supabase
+      .from("order_colis")
+      .select("id, order_id")
+      .in("order_id", orderIds);
+    const totals = new Map<string, number>();
+
+    for (const c of (colis ?? []) as any[]) {
+      totals.set(c.order_id, (totals.get(c.order_id) ?? 0) + 1);
+
+    }
+    // picked = coli_stages picagem concluidas
+    const picked = new Map<string, number>();
+    const { data: cs } = await supabase
+      .from("order_coli_stages")
+      .select("order_id")
+      .in("order_id", orderIds)
+      .eq("stage", "picagem")
+      .eq("status", "concluida");
+    for (const r of (cs ?? []) as any[]) {
+      picked.set(r.order_id, (picked.get(r.order_id) ?? 0) + 1);
+    }
+    return rows
+      .filter((s) => embMap.get(s.order_id) === "concluida" && (totals.get(s.order_id) ?? 0) > 0 && s.production_orders.status !== "cancelada")
+      .map((s) => ({
+        order_id: s.order_id,
+        order_number: s.production_orders.order_number,
+        product_description: s.production_orders.product_description,
+        structure_type: s.production_orders.structure_type,
+        measure: s.production_orders.measure,
+        color: s.production_orders.color,
+        coli_total: totals.get(s.order_id) ?? 0,
+        coli_picked: picked.get(s.order_id) ?? 0,
+      }));
+  });
+
+// History of what I picked
+export const listMyPickedOrders = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ limit: z.number().int().min(1).max(500).optional() }).parse(d ?? {}))
+  .handler(async ({ data, context }) => {
+    const { data: res, error } = await context.supabase.rpc("list_my_picked_orders", { _limit: data.limit ?? 100 });
+    if (error) throw new Error(error.message);
+    return (res ?? []) as Array<{
+      order_id: string; order_number: string; product_description: string;
+      structure_type: string|null; measure: string|null; color: string|null;
+      finished_at: string|null; coli_count: number; operator_code: string|null; operator_name: string|null;
+    }>;
+  });
+
+// Safe order progress (Camada C) — no recipe, stock, costs
+export const getOrderProgress = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ order_number: z.string().trim().min(1) }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: res, error } = await context.supabase.rpc("get_order_progress", { _order_number: data.order_number });
+    if (error) throw new Error(error.message);
+    return res as {
+      order_number: string;
+      product_description: string;
+      structure_type: string|null;
+      measure: string|null;
+      color: string|null;
+      status: string;
+      current_stage: { stage: string; status: string } | null;
+      stages: Array<{ stage: string; status: string; started_at: string|null; finished_at: string|null; order_idx: number }>;
+    };
+  });
+
 // Resolve an order from scanner reading (order_number)
 export const resolveOrderForPicking = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

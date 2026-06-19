@@ -103,9 +103,10 @@ export const getMySession = createServerFn({ method: "GET" })
       .select("role")
       .eq("user_id", context.userId);
     const roleList = (roles ?? []).map((r: any) => r.role as string);
-    const role: "admin" | "operador" | null =
+    const role: "admin" | "operador" | "picador" | null =
       roleList.includes("admin") ? "admin"
       : roleList.includes("operador") ? "operador"
+      : roleList.includes("picador") ? "picador"
       : null;
 
     const { data: op } = await sb

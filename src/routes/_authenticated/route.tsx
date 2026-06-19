@@ -10,6 +10,14 @@ function isAllowedForOperator(pathname: string) {
   );
 }
 
+// Rotas permitidas ao picador (só as 3 telas de picagem).
+const PICKER_ALLOWED_PREFIXES = ["/picagem"];
+function isAllowedForPicker(pathname: string) {
+  return PICKER_ALLOWED_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(p + "/"),
+  );
+}
+
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async ({ location }) => {
@@ -24,9 +32,13 @@ export const Route = createFileRoute("/_authenticated")({
     const roleList = (roles ?? []).map((r: any) => r.role as string);
     const isAdmin = roleList.includes("admin");
     const isOperator = !isAdmin && roleList.includes("operador");
+    const isPicker = !isAdmin && !isOperator && roleList.includes("picador");
 
     if (isOperator && !isAllowedForOperator(location.pathname)) {
       throw redirect({ to: "/producao" });
+    }
+    if (isPicker && !isAllowedForPicker(location.pathname)) {
+      throw redirect({ to: "/picagem" });
     }
 
     return { user: data.user };
