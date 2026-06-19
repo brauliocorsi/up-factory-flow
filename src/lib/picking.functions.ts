@@ -6,6 +6,7 @@ export type PickingColi = {
   package_number: number;
   package_total: number;
   package_name: string;
+  expected_code: string;
 };
 
 export type PickingOrder = {
@@ -32,65 +33,59 @@ export const resolveOrderForPicking = createServerFn({ method: "POST" })
     const { supabase } = context;
     const cleanCode = data.code;
 
-    // 1. Find the production order
+    // 1. Find the production order (accept by order_number or barcode; status-agnostic)
     const { data: order, error: orderErr } = await supabase
       .from("production_orders")
-      .select("id, order_number, product_description, structure_type, measure, fabric_type, fabric_ref, color, observation, model_id")
+      .select("id, order_number, barcode, product_description, structure_type, measure, fabric_type, fabric_ref, color, observation, model_id, status")
       .or(`order_number.eq.${cleanCode},barcode.eq.${cleanCode}`)
-      .eq("status", "em_producao")
       .maybeSingle();
 
     if (orderErr) throw new Error(orderErr.message);
     if (!order) {
-      throw new Error(`Encomenda com código "${cleanCode}" não encontrada ou não está em produção.`);
+      throw new Error(`Encomenda com código "${cleanCode}" não encontrada.`);
+    }
+    if (order.status === "cancelada") {
+      throw new Error(`A encomenda "${order.order_number}" está cancelada.`);
     }
 
-    // 2. Check if the order is in the "picagem" stage
-    const { data: stage, error: stageErr } = await supabase
+    // 2. Load stages: embalagem must be concluded; picagem must NOT be concluded.
+    const { data: stages, error: stagesErr } = await supabase
       .from("order_stages")
-      .select("id, status")
+      .select("id, stage, status")
       .eq("order_id", order.id)
-      .eq("stage", "picagem")
-      .single();
+      .in("stage", ["embalagem", "picagem"]);
+    if (stagesErr) throw new Error(stagesErr.message);
 
-    if (stageErr) throw new Error(stageErr.message);
-    if (stage.status === "concluida") {
+    const embalagem = (stages ?? []).find((s) => s.stage === "embalagem");
+    const picagem = (stages ?? []).find((s) => s.stage === "picagem");
+    if (!picagem) {
+      throw new Error(`Encomenda "${order.order_number}" sem etapa de Picagem.`);
+    }
+    if (!embalagem || embalagem.status !== "concluida") {
+      throw new Error(`Encomenda ainda não foi embalada na fábrica.`);
+    }
+    if (picagem.status === "concluida") {
       throw new Error(`A encomenda "${order.order_number}" já terminou a etapa de Picagem.`);
     }
 
-    // 3. Resolve the expected packages (colis) from model_packages
-    if (!order.model_id) {
-      throw new Error(`Encomenda sem modelo atribuído.`);
+    // 3. Real colis from order_colis
+    const { data: colis, error: colisErr } = await supabase
+      .from("order_colis")
+      .select("coli_number, coli_name, coli_barcode")
+      .eq("order_id", order.id)
+      .order("coli_number", { ascending: true });
+    if (colisErr) throw new Error(colisErr.message);
+    if (!colis || colis.length === 0) {
+      throw new Error(`Encomenda sem colis gerados. Conclua a etapa de Embalagem primeiro.`);
     }
 
-    const { data: pkgs, error: pkgsErr } = await supabase
-      .from("model_packages")
-      .select("package_number, package_total, package_name, structure_type")
-      .eq("model_id", order.model_id);
-
-    if (pkgsErr) throw new Error(pkgsErr.message);
-
-    // Filter packages matching the structure_type, or generic ones
-    const candidates = pkgs ?? [];
-    const matched = candidates.filter(
-      (p) => p.structure_type && order.structure_type && p.structure_type === order.structure_type
-    );
-    const generic = candidates.filter((p) => !p.structure_type);
-    const chosen = matched.length ? matched : generic.length ? generic : candidates;
-
-    // Sort by package number
-    const sortedPackages = chosen.sort((a, b) => a.package_number - b.package_number);
-
-    // Fallback: If no packages are registered for this model/structure, assume 1 generic coli
-    const packagesList: PickingColi[] = sortedPackages.length > 0 
-      ? sortedPackages.map(p => ({
-          package_number: p.package_number,
-          package_total: p.package_total,
-          package_name: p.package_name
-        }))
-      : [{ package_number: 1, package_total: 1, package_name: "Volume Único" }];
-
-    const package_total = packagesList[0]?.package_total ?? 1;
+    const package_total = colis.length;
+    const packagesList: PickingColi[] = colis.map((c) => ({
+      package_number: c.coli_number,
+      package_total,
+      package_name: c.coli_name ?? `Coli ${c.coli_number}`,
+      expected_code: c.coli_barcode ?? (order.barcode ? `${order.barcode}-C${c.coli_number}` : ""),
+    }));
 
     return {
       id: order.id,
@@ -102,10 +97,37 @@ export const resolveOrderForPicking = createServerFn({ method: "POST" })
       fabric_ref: order.fabric_ref,
       color: order.color,
       observation: order.observation,
-      stage_id: stage.id,
-      stage_status: stage.status,
+      stage_id: picagem.id,
+      stage_status: picagem.status,
       package_total,
       packages: packagesList
+    };
+  });
+
+// Validate a scanned coli code against the real colis of an order, and mark it picked.
+// When all colis are picked, the picagem stage closes and the order goes to "em_armazem".
+export const scanPickingColi = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({
+    order_id: z.string().uuid(),
+    code: z.string().trim().min(1),
+    operator_code: z.string().trim().min(1),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { data: res, error } = await supabase.rpc("scan_picking_coli", {
+      _order_id: data.order_id,
+      _scanned_code: data.code,
+      _operator_code: data.operator_code,
+    });
+    if (error) throw new Error(error.message);
+    return res as {
+      ok: boolean;
+      coli_number: number;
+      coli_name: string;
+      done: number;
+      total: number;
+      completed: boolean;
     };
   });
 

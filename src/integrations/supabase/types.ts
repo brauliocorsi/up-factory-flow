@@ -1750,6 +1750,14 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      scan_picking_coli: {
+        Args: {
+          _operator_code: string
+          _order_id: string
+          _scanned_code: string
+        }
+        Returns: Json
+      }
       send_to_rework: {
         Args: {
           _detected_stage: Database["public"]["Enums"]["production_stage"]
@@ -1793,8 +1801,13 @@ export type Database = {
       try_reserve_for_order: { Args: { _order_id: string }; Returns: Json }
     }
     Enums: {
-      app_role: "admin" | "operador" | "escritorio"
-      order_status: "pendente" | "em_producao" | "concluida" | "cancelada"
+      app_role: "admin" | "operador" | "escritorio" | "picador"
+      order_status:
+        | "pendente"
+        | "em_producao"
+        | "concluida"
+        | "cancelada"
+        | "em_armazem"
       production_stage:
         | "estrutura"
         | "corte"
@@ -1932,8 +1945,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "operador", "escritorio"],
-      order_status: ["pendente", "em_producao", "concluida", "cancelada"],
+      app_role: ["admin", "operador", "escritorio", "picador"],
+      order_status: [
+        "pendente",
+        "em_producao",
+        "concluida",
+        "cancelada",
+        "em_armazem",
+      ],
       production_stage: [
         "estrutura",
         "corte",
