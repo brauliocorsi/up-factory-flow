@@ -42,6 +42,7 @@ const groups: NavGroup[] = [
     icon: ListOrdered,
     items: [
       { to: "/encomendas", label: "Encomendas", icon: ListOrdered },
+      { to: "/encomendas/importar-simples", label: "Importar (simples)", icon: Upload },
       { to: "/importar", label: "Importar", icon: Upload },
     ],
   },

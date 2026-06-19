@@ -100,9 +100,10 @@ export const getOrderProgress = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ order_number: z.string().trim().min(1) }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: res, error } = await context.supabase.rpc("get_order_progress", { _order_number: data.order_number });
+    const { data: res, error } = await context.supabase.rpc("get_order_progress", { _query: data.order_number });
     if (error) throw new Error(error.message);
     return res as {
+      customer_order: string;
       order_number: string;
       product_description: string;
       structure_type: string|null;
@@ -111,6 +112,17 @@ export const getOrderProgress = createServerFn({ method: "POST" })
       status: string;
       current_stage: { stage: string; status: string } | null;
       stages: Array<{ stage: string; status: string; started_at: string|null; finished_at: string|null; order_idx: number }>;
+      items: Array<{
+        order_number: string;
+        customer_order: string|null;
+        product_description: string;
+        structure_type: string|null;
+        measure: string|null;
+        color: string|null;
+        status: string;
+        current_stage: { stage: string; status: string } | null;
+        stages: Array<{ stage: string; status: string; started_at: string|null; finished_at: string|null; order_idx: number }>;
+      }>;
     };
   });
 
@@ -123,16 +135,20 @@ export const resolveOrderForPicking = createServerFn({ method: "POST" })
     const cleanCode = data.code;
 
     // 1. Find the production order (accept by order_number or barcode; status-agnostic)
-    const { data: order, error: orderErr } = await supabase
+    // Accept order_number, barcode or customer_order (nota do cliente).
+    const { data: matches, error: orderErr } = await supabase
       .from("production_orders")
-      .select("id, order_number, barcode, product_description, structure_type, measure, fabric_type, fabric_ref, color, observation, model_id, status")
-      .or(`order_number.eq.${cleanCode},barcode.eq.${cleanCode}`)
-      .maybeSingle();
+      .select("id, order_number, customer_order, barcode, product_description, structure_type, measure, fabric_type, fabric_ref, color, observation, model_id, status")
+      .or(`order_number.eq.${cleanCode},barcode.eq.${cleanCode},customer_order.eq.${cleanCode}`);
 
     if (orderErr) throw new Error(orderErr.message);
-    if (!order) {
+    if (!matches || matches.length === 0) {
       throw new Error(`Encomenda com código "${cleanCode}" não encontrada.`);
     }
+    if (matches.length > 1) {
+      throw new Error(`Nota "${cleanCode}" tem ${matches.length} artigos. Lê o código da coli ou o nº técnico do artigo.`);
+    }
+    const order = matches[0];
     if (order.status === "cancelada") {
       throw new Error(`A encomenda "${order.order_number}" está cancelada.`);
     }

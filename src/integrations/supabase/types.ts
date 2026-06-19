@@ -642,8 +642,9 @@ export type Database = {
           color: string | null
           created_at: string
           created_by: string | null
+          customer_order: string | null
           due_date: string | null
-          entry_date: string
+          entry_date: string | null
           fabric_ref: string | null
           fabric_type: string | null
           finishing: string | null
@@ -671,8 +672,9 @@ export type Database = {
           color?: string | null
           created_at?: string
           created_by?: string | null
+          customer_order?: string | null
           due_date?: string | null
-          entry_date?: string
+          entry_date?: string | null
           fabric_ref?: string | null
           fabric_type?: string | null
           finishing?: string | null
@@ -700,8 +702,9 @@ export type Database = {
           color?: string | null
           created_at?: string
           created_by?: string | null
+          customer_order?: string | null
           due_date?: string | null
-          entry_date?: string
+          entry_date?: string | null
           fabric_ref?: string | null
           fabric_type?: string | null
           finishing?: string | null
@@ -1728,7 +1731,7 @@ export type Database = {
         }
         Returns: number
       }
-      get_order_progress: { Args: { _order_number: string }; Returns: Json }
+      get_order_progress: { Args: { _query: string }; Returns: Json }
       get_order_route_keys: {
         Args: { _order_id: string }
         Returns: {

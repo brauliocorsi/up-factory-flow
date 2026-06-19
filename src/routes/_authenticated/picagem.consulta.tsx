@@ -62,11 +62,32 @@ function ConsultaPage() {
       {m.data && (
         <Card>
           <CardHeader>
-            <CardTitle className="font-mono text-2xl">{m.data.order_number}</CardTitle>
+            <CardTitle className="font-mono text-2xl">
+              {m.data.customer_order ?? m.data.order_number}
+              {m.data.items && m.data.items.length > 1 && (
+                <span className="ml-2 text-sm text-muted-foreground font-normal">· {m.data.items.length} artigo(s)</span>
+              )}
+            </CardTitle>
             <p className="text-sm">{m.data.product_description}</p>
             <p className="text-xs text-muted-foreground">{m.data.structure_type} · {m.data.measure} · {m.data.color}</p>
           </CardHeader>
           <CardContent className="space-y-4">
+            {m.data.items && m.data.items.length > 1 && (
+              <div className="space-y-1">
+                <div className="text-xs uppercase text-muted-foreground font-bold">Itens da nota</div>
+                {m.data.items.map((it) => (
+                  <div key={it.order_number} className="flex items-center gap-2 p-2 rounded border text-xs">
+                    <span className="font-mono font-semibold">{it.order_number}</span>
+                    <span className="text-muted-foreground">·</span>
+                    <span className="flex-1 truncate">{it.product_description}</span>
+                    <span className="uppercase text-muted-foreground">{it.status}</span>
+                    {it.current_stage && (
+                      <span className="text-primary font-semibold">{STAGE_LABELS[it.current_stage.stage] ?? it.current_stage.stage}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="flex items-center gap-2 p-3 rounded-md bg-accent/40">
               <span className="text-xs uppercase font-bold text-muted-foreground">Estado:</span>
               <span className="font-semibold">{m.data.status}</span>
