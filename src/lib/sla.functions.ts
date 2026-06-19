@@ -16,6 +16,13 @@ export const STAGES = [
 export type Stage = typeof STAGES[number];
 
 export type CategorySla = { category_code: string; stage: Stage; expected_minutes: number };
+export type ModelSla = {
+  id?: string;
+  category_code: string;
+  model_code: string;
+  stage: Stage;
+  expected_minutes: number;
+};
 export type ProductSla = {
   id?: string;
   category_code: string;
@@ -60,6 +67,48 @@ export const upsertCategorySla = createServerFn({ method: "POST" })
         { category_code: data.category_code, stage: data.stage, expected_minutes: data.expected_minutes },
         { onConflict: "category_code,stage" },
       );
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+// ---------- Padrão por modelo ----------
+
+export const listModelSla = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<ModelSla[]> => {
+    const { data, error } = await (context.supabase as any)
+      .from("stage_sla_model")
+      .select("id, category_code, model_code, stage, expected_minutes")
+      .order("model_code");
+    if (error) throw new Error(error.message);
+    return (data ?? []) as ModelSla[];
+  });
+
+export const upsertModelSla = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      category_code: z.string().trim().min(1),
+      model_code: z.string().trim().min(1),
+      stage: z.enum(STAGES),
+      expected_minutes: z.coerce.number().int().positive().max(100000).nullable(),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const sb = context.supabase as any;
+    const key = {
+      category_code: data.category_code,
+      model_code: data.model_code,
+      stage: data.stage,
+    };
+    if (data.expected_minutes == null) {
+      const { error } = await sb.from("stage_sla_model").delete().match(key);
+      if (error) throw new Error(error.message);
+      return { ok: true, deleted: true };
+    }
+    const { error } = await sb.from("stage_sla_model")
+      .upsert({ ...key, expected_minutes: data.expected_minutes },
+        { onConflict: "category_code,model_code,stage" });
     if (error) throw new Error(error.message);
     return { ok: true };
   });
