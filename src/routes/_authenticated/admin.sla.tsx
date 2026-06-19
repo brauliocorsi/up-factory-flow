@@ -16,6 +16,7 @@ import { getCatalogs } from "@/lib/catalog.functions";
 import {
   STAGES, listCategorySla, upsertCategorySla,
   listProductSla, upsertProductSla, type Stage,
+  listModelSla, upsertModelSla, type ModelSla,
 } from "@/lib/sla.functions";
 
 export const Route = createFileRoute("/_authenticated/admin/sla")({
@@ -35,6 +36,7 @@ function SlaPage() {
   const { data: catalogs } = useQuery({ queryKey: ["catalogs"], queryFn: () => getCatalogs() });
   const { data: catSla = [] } = useQuery({ queryKey: ["sla-cat"], queryFn: () => listCategorySla() });
   const { data: prodSla = [] } = useQuery({ queryKey: ["sla-prod"], queryFn: () => listProductSla() });
+  const { data: modelSla = [] } = useQuery({ queryKey: ["sla-model"], queryFn: () => listModelSla() });
 
   const categories = (catalogs?.categories ?? []) as { code: string; name: string }[];
   const models = (catalogs?.models ?? []) as { code: string; name: string; category_id: string | null }[];
@@ -56,6 +58,16 @@ function SlaPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["sla-prod"] });
       toast.success("Override guardado");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Erro a guardar"),
+  });
+
+  const modelSlaMutation = useMutation({
+    mutationFn: (v: { category_code: string; model_code: string; stage: Stage; expected_minutes: number | null }) =>
+      upsertModelSla({ data: v }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["sla-model"] });
+      toast.success("Padrão do modelo guardado");
     },
     onError: (e: any) => toast.error(e?.message ?? "Erro a guardar"),
   });
@@ -98,8 +110,13 @@ function SlaPage() {
       <Tabs defaultValue="categoria">
         <TabsList>
           <TabsTrigger value="categoria">Padrão por categoria</TabsTrigger>
+          <TabsTrigger value="modelo">Padrão por modelo</TabsTrigger>
           <TabsTrigger value="produto">Override por produto</TabsTrigger>
         </TabsList>
+
+        <div className="mt-3 text-xs text-muted-foreground">
+          Hierarquia (do mais específico ao geral): <b>produto</b> (exceção) → <b>modelo</b> (padrão) → <b>categoria</b> (geral).
+        </div>
 
         <TabsContent value="categoria" className="space-y-3 mt-3">
           {categories.length === 0 && (
@@ -129,6 +146,16 @@ function SlaPage() {
           ))}
         </TabsContent>
 
+        <TabsContent value="modelo" className="space-y-3 mt-3">
+          <ModelSlaSection
+            categories={categories}
+            models={models}
+            catMap={catMap}
+            modelSla={modelSla}
+            onSave={(v) => modelSlaMutation.mutate(v)}
+          />
+        </TabsContent>
+
         <TabsContent value="produto" className="space-y-3 mt-3">
           <ProductOverrideSection
             categories={categories}
@@ -136,6 +163,11 @@ function SlaPage() {
             structures={structures}
             measures={measures}
             catMap={catMap}
+            modelMap={useMemo(() => {
+              const m = new Map<string, number>();
+              for (const r of modelSla) m.set(`${r.category_code}|${r.model_code}|${r.stage}`, r.expected_minutes);
+              return m;
+            }, [modelSla])}
             prodSla={prodSla}
             onSave={(v) => prodSlaMutation.mutate(v)}
           />
