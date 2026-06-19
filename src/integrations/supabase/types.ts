@@ -996,6 +996,7 @@ export type Database = {
           active: boolean
           code: string
           created_at: string
+          directional: boolean
           id: string
           name: string
           updated_at: string
@@ -1004,6 +1005,7 @@ export type Database = {
           active?: boolean
           code: string
           created_at?: string
+          directional?: boolean
           id?: string
           name: string
           updated_at?: string
@@ -1012,6 +1014,7 @@ export type Database = {
           active?: boolean
           code?: string
           created_at?: string
+          directional?: boolean
           id?: string
           name?: string
           updated_at?: string
@@ -1658,6 +1661,10 @@ export type Database = {
         Args: { _batch_id: string; _operator_code: string }
         Returns: Json
       }
+      finalize_stage_group: {
+        Args: { _operator_code: string; _order_stage_ids: string[] }
+        Returns: Json
+      }
       find_matching_cover: {
         Args: { _order_id: string }
         Returns: {
@@ -1727,6 +1734,10 @@ export type Database = {
           category_code: string
           structure_code: string
         }[]
+      }
+      get_stage_groups: {
+        Args: { _stage: Database["public"]["Enums"]["production_stage"] }
+        Returns: Json
       }
       has_role: {
         Args: {
