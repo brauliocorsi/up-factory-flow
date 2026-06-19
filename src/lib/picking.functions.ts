@@ -58,18 +58,14 @@ export const listPickingQueue = createServerFn({ method: "GET" })
     }
     // picked = coli_stages picagem concluidas
     const picked = new Map<string, number>();
-    if (coliIds.length > 0) {
-      const { data: cs } = await supabase
-        .from("order_coli_stages")
-        .select("coli_id, status, stage")
-        .in("coli_id", coliIds)
-        .eq("stage", "picagem")
-        .eq("status", "concluida");
-      const coliToOrder = new Map((colis ?? []).map((c: any) => [c.id, c.order_id]));
-      for (const r of (cs ?? []) as any[]) {
-        const oid = coliToOrder.get(r.coli_id);
-        if (oid) picked.set(oid, (picked.get(oid) ?? 0) + 1);
-      }
+    const { data: cs } = await supabase
+      .from("order_coli_stages")
+      .select("order_id")
+      .in("order_id", orderIds)
+      .eq("stage", "picagem")
+      .eq("status", "concluida");
+    for (const r of (cs ?? []) as any[]) {
+      picked.set(r.order_id, (picked.get(r.order_id) ?? 0) + 1);
     }
     return rows
       .filter((s) => embMap.get(s.order_id) === "concluida" && (totals.get(s.order_id) ?? 0) > 0 && s.production_orders.status !== "cancelada")
