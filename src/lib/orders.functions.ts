@@ -364,3 +364,134 @@ export const cancelOrder = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return res;
   });
+
+// ---------- Fase 1: Importação simples (Excel 4 colunas → backlog) ----------
+// Recebe linhas já descodificadas no cliente (catálogo carregado lá).
+// Para cada linha, expande "quantity" em N ordens individuais com order_number
+// sequencial dentro do mesmo customer_order ({customer_order}-NN).
+// Estado: 'pendente', is_stock_production=false, sem reservas nem etapas iniciadas.
+// TODO Fase 2: o planeamento lê este backlog ('pendente'), agrupa por modelo/
+// estrutura/tecido, planeia por dia e cria ordens is_stock_production. Operador
+// pode puxar do backlog. Não implementado nesta fase.
+
+const simpleRowSchema = z.object({
+  customer_order: z.string().trim().min(1).max(64),
+  quantity: z.number().int().min(1).max(500),
+  due_date: z.string().nullable().optional(),
+  product_description: z.string().trim().min(1).max(500),
+  model_id: z.string().uuid().nullable().optional(),
+  measure: z.string().trim().max(120).nullable().optional(),
+  fabric_type: z.string().trim().max(120).nullable().optional(),
+  fabric_ref: z.string().trim().max(120).nullable().optional(),
+  color: z.string().trim().max(60).nullable().optional(),
+  structure_type: z.string().trim().max(120).nullable().optional(),
+  finishing: z.enum(["F","N"]).nullable().optional(),
+  barcode_base: z.string().trim().min(1).max(64),
+});
+
+function pad2(n: number) { return n.toString().padStart(2, "0"); }
+
+function todayPlusDays(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+export type BulkSimpleResult = {
+  created: number;
+  notes: number;
+  per_customer: Array<{ customer_order: string; created: number; first_order_number: string }>;
+};
+
+export const bulkImportSimpleOrders = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ rows: z.array(simpleRowSchema).min(1).max(2000) }).parse(d),
+  )
+  .handler(async ({ data, context }): Promise<BulkSimpleResult> => {
+    const { supabase, userId } = context;
+
+    // Agrupa por customer_order (preserva ordem de chegada).
+    const byCO = new Map<string, typeof data.rows>();
+    for (const r of data.rows) {
+      const arr = byCO.get(r.customer_order) ?? ([] as any);
+      arr.push(r);
+      byCO.set(r.customer_order, arr);
+    }
+
+    const customerOrders = Array.from(byCO.keys());
+    const defaultDue = todayPlusDays(15);
+
+    // Determina a maior sequência NN já existente por customer_order.
+    const startSeq = new Map<string, number>();
+    if (customerOrders.length) {
+      const { data: existing, error: exErr } = await supabase
+        .from("production_orders")
+        .select("order_number, customer_order")
+        .in("customer_order", customerOrders);
+      if (exErr) throw new Error(exErr.message);
+      for (const co of customerOrders) startSeq.set(co, 0);
+      for (const e of (existing ?? []) as Array<{ order_number: string; customer_order: string }>) {
+        const m = /-(\d+)$/.exec(e.order_number);
+        const n = m ? parseInt(m[1], 10) : 0;
+        if (Number.isFinite(n)) {
+          const cur = startSeq.get(e.customer_order) ?? 0;
+          if (n > cur) startSeq.set(e.customer_order, n);
+        }
+      }
+    }
+
+    // Calcula due_date por nota: mínimo entre os prazos das linhas; se nenhum, hoje+15.
+    const dueByCO = new Map<string, string>();
+    for (const [co, rows] of byCO.entries()) {
+      const dates = rows
+        .map((r) => r.due_date)
+        .filter((d): d is string => !!d && /^\d{4}-\d{2}-\d{2}$/.test(d));
+      dueByCO.set(co, dates.length ? dates.sort()[0] : defaultDue);
+    }
+
+    // Constrói as ordens a inserir.
+    const toInsert: any[] = [];
+    const perCustomer: BulkSimpleResult["per_customer"] = [];
+    for (const co of customerOrders) {
+      const rows = byCO.get(co)!;
+      let seq = startSeq.get(co) ?? 0;
+      let firstOrder = "";
+      for (const r of rows) {
+        for (let i = 0; i < r.quantity; i++) {
+          seq += 1;
+          const orderNumber = `${co}-${pad2(seq)}`;
+          if (!firstOrder) firstOrder = orderNumber;
+          toInsert.push({
+            order_number: orderNumber,
+            customer_order: co,
+            product_description: r.product_description,
+            model_id: r.model_id ?? null,
+            measure: r.measure ?? null,
+            fabric_type: r.fabric_type ?? null,
+            fabric_ref: r.fabric_ref ?? null,
+            color: r.color ?? null,
+            structure_type: r.structure_type ?? null,
+            finishing: r.finishing ?? null,
+            entry_date: null, // decidido no planeamento (Fase 2)
+            due_date: dueByCO.get(co) ?? defaultDue,
+            priority: 0,
+            status: "pendente",
+            is_stock_production: false,
+            barcode: `${r.barcode_base}-${orderNumber}`,
+            created_by: userId,
+          });
+        }
+      }
+      perCustomer.push({ customer_order: co, created: seq - (startSeq.get(co) ?? 0), first_order_number: firstOrder });
+    }
+
+    if (!toInsert.length) return { created: 0, notes: 0, per_customer: [] };
+
+    const { error, count } = await supabase
+      .from("production_orders")
+      .insert(toInsert, { count: "exact" });
+    if (error) throw new Error(error.message);
+
+    return { created: count ?? toInsert.length, notes: customerOrders.length, per_customer: perCustomer };
+  });
