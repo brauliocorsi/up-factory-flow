@@ -1750,6 +1750,14 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      scan_picking_coli: {
+        Args: {
+          _operator_code: string
+          _order_id: string
+          _scanned_code: string
+        }
+        Returns: Json
+      }
       send_to_rework: {
         Args: {
           _detected_stage: Database["public"]["Enums"]["production_stage"]
