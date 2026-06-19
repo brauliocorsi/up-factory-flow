@@ -415,7 +415,7 @@ export type Database = {
       }
       order_colis: {
         Row: {
-          coli_barcode: string | null
+          coli_barcode: string
           coli_name: string
           coli_number: number
           created_at: string
@@ -424,7 +424,7 @@ export type Database = {
           status: string
         }
         Insert: {
-          coli_barcode?: string | null
+          coli_barcode: string
           coli_name: string
           coli_number: number
           created_at?: string
@@ -433,7 +433,7 @@ export type Database = {
           status?: string
         }
         Update: {
-          coli_barcode?: string | null
+          coli_barcode?: string
           coli_name?: string
           coli_number?: number
           created_at?: string
