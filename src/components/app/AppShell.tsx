@@ -93,10 +93,23 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { role, operator } = useMySession();
   const isOperator = role === "operador";
+  const isPicker = role === "picador";
 
-  // Filtragem por role: operador só vê Produção/Picagem/Retrabalho.
-  const visiblePrimary = isOperator ? [] : primary;
-  const visibleGroups = isOperator
+  // Filtragem por role: operador só vê Produção/Picagem/Retrabalho; picador só vê Picagem.
+  const visiblePrimary = (isOperator || isPicker) ? [] : primary;
+  const visibleGroups = isPicker
+    ? groups
+        .filter((g) => g.label === "Produção")
+        .map((g) => ({
+          ...g,
+          label: "Picagem",
+          items: [
+            { to: "/picagem", label: "Picar", icon: Barcode },
+            { to: "/picagem/historico", label: "O que piquei", icon: ListOrdered },
+            { to: "/picagem/consulta", label: "Consultar", icon: ClipboardCheck },
+          ],
+        }))
+    : isOperator
     ? groups
         .filter((g) => g.label === "Produção")
         .map((g) => ({
@@ -108,14 +121,20 @@ export function AppShell({ children }: { children: ReactNode }) {
           ),
         }))
     : groups;
-  const visibleMobileQuick = isOperator
+  const visibleMobileQuick = isPicker
+    ? ([
+        { to: "/picagem", label: "Picar", icon: Barcode },
+        { to: "/picagem/historico", label: "Histórico", icon: ListOrdered },
+        { to: "/picagem/consulta", label: "Consultar", icon: ClipboardCheck },
+      ] as NavItem[])
+    : isOperator
     ? mobileQuick.filter((n) =>
         ["/producao", "/picagem", "/retrabalho"].some(
           (p) => n.to === p || n.to.startsWith(p + "/"),
         ),
       )
     : mobileQuick;
-  const homeLink = isOperator ? "/producao" : "/";
+  const homeLink = isPicker ? "/picagem" : isOperator ? "/producao" : "/";
 
   async function signOut() {
     await queryClient.cancelQueries();
