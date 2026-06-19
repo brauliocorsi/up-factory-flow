@@ -350,3 +350,81 @@ function OverrideCell({ initial, fallback, onSave }: { initial?: number; fallbac
     </div>
   );
 }
+
+function ModelSlaSection({
+  categories, models, catMap, modelSla, onSave,
+}: {
+  categories: { code: string; name: string }[];
+  models: { code: string; name: string; category_id: string | null }[];
+  catMap: Map<string, number>;
+  modelSla: ModelSla[];
+  onSave: (v: { category_code: string; model_code: string; stage: Stage; expected_minutes: number | null }) => void;
+}) {
+  const [cat, setCat] = useState<string>("");
+  const [model, setModel] = useState<string>("");
+
+  const modelMap = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const r of modelSla) m.set(`${r.category_code}|${r.model_code}|${r.stage}`, r.expected_minutes);
+    return m;
+  }, [modelSla]);
+
+  const ready = cat && model;
+
+  return (
+    <Card className="p-4 space-y-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div>
+          <Label className="text-xs">Categoria</Label>
+          <Select value={cat} onValueChange={(v) => { setCat(v); setModel(""); }}>
+            <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+            <SelectContent>
+              {categories.map((c) => <SelectItem key={c.code} value={c.code}>{c.name} ({c.code})</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label className="text-xs">Modelo</Label>
+          <Select value={model} onValueChange={setModel}>
+            <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+            <SelectContent>
+              {models.map((m) => <SelectItem key={m.code} value={m.code}>{m.name} ({m.code})</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {!ready ? (
+        <p className="text-sm text-muted-foreground">Escolhe categoria e modelo para definir o padrão do modelo (aplica-se a todas as estruturas e medidas).</p>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {STAGES.map((s) => {
+            const current = modelMap.get(`${cat}|${model}|${s}`);
+            const fallback = catMap.get(`${cat}|${s}`);
+            return (
+              <div key={s} className="space-y-1">
+                <Label className="text-xs flex items-center justify-between">
+                  <span>{STAGE_LABELS[s]}</span>
+                  {current != null ? (
+                    <Badge variant="default" className="text-[10px]">modelo</Badge>
+                  ) : fallback != null ? (
+                    <Badge variant="secondary" className="text-[10px]">categoria {fallback}m</Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-[10px]">sem SLA</Badge>
+                  )}
+                </Label>
+                <OverrideCell
+                  initial={current}
+                  fallback={fallback}
+                  onSave={(v) => onSave({
+                    category_code: cat, model_code: model, stage: s, expected_minutes: v,
+                  })}
+                />
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </Card>
+  );
+}
