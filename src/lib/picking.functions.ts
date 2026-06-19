@@ -36,38 +36,52 @@ export const listPickingQueue = createServerFn({ method: "GET" })
       .eq("stage", "picagem")
       .neq("status", "concluida");
     if (error) throw new Error(error.message);
-    const orderIds = (stages ?? []).map((s: any) => s.order_id);
+    const rows = (stages ?? []) as any[];
+    const orderIds = rows.map((s) => s.order_id);
     if (orderIds.length === 0) return [] as Array<{ order_id: string; order_number: string; product_description: string; structure_type: string|null; measure: string|null; color: string|null; coli_total: number; coli_picked: number; }>;
-    // pull all packaging stages to confirm concluida
     const { data: emb } = await supabase
       .from("order_stages")
       .select("order_id, status")
       .eq("stage", "embalagem")
       .in("order_id", orderIds);
     const embMap = new Map((emb ?? []).map((e: any) => [e.order_id, e.status]));
-    // colis counts
+    // colis totals
     const { data: colis } = await supabase
       .from("order_colis")
-      .select("order_id, picked_at")
+      .select("id, order_id")
       .in("order_id", orderIds);
-    const counts = new Map<string, { total: number; picked: number }>();
+    const totals = new Map<string, number>();
+    const coliIds: string[] = [];
     for (const c of (colis ?? []) as any[]) {
-      const e = counts.get(c.order_id) ?? { total: 0, picked: 0 };
-      e.total += 1;
-      if (c.picked_at) e.picked += 1;
-      counts.set(c.order_id, e);
+      totals.set(c.order_id, (totals.get(c.order_id) ?? 0) + 1);
+      coliIds.push(c.id);
     }
-    return (stages ?? [])
-      .filter((s: any) => embMap.get(s.order_id) === "concluida" && (counts.get(s.order_id)?.total ?? 0) > 0 && (s.production_orders.status !== "cancelada"))
-      .map((s: any) => ({
+    // picked = coli_stages picagem concluidas
+    const picked = new Map<string, number>();
+    if (coliIds.length > 0) {
+      const { data: cs } = await supabase
+        .from("order_coli_stages")
+        .select("coli_id, status, stage")
+        .in("coli_id", coliIds)
+        .eq("stage", "picagem")
+        .eq("status", "concluida");
+      const coliToOrder = new Map((colis ?? []).map((c: any) => [c.id, c.order_id]));
+      for (const r of (cs ?? []) as any[]) {
+        const oid = coliToOrder.get(r.coli_id);
+        if (oid) picked.set(oid, (picked.get(oid) ?? 0) + 1);
+      }
+    }
+    return rows
+      .filter((s) => embMap.get(s.order_id) === "concluida" && (totals.get(s.order_id) ?? 0) > 0 && s.production_orders.status !== "cancelada")
+      .map((s) => ({
         order_id: s.order_id,
         order_number: s.production_orders.order_number,
         product_description: s.production_orders.product_description,
         structure_type: s.production_orders.structure_type,
         measure: s.production_orders.measure,
         color: s.production_orders.color,
-        coli_total: counts.get(s.order_id)?.total ?? 0,
-        coli_picked: counts.get(s.order_id)?.picked ?? 0,
+        coli_total: totals.get(s.order_id) ?? 0,
+        coli_picked: picked.get(s.order_id) ?? 0,
       }));
   });
 
