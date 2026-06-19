@@ -211,13 +211,14 @@ function SlaCell({ label, initial, onSave }: { label: string; initial?: number; 
 }
 
 function ProductOverrideSection({
-  categories, models, structures, measures, catMap, prodSla, onSave,
+  categories, models, structures, measures, catMap, modelMap, prodSla, onSave,
 }: {
   categories: { code: string; name: string }[];
   models: { code: string; name: string; category_id: string | null }[];
   structures: { code: string; name: string }[];
   measures: { code: string; name: string }[];
   catMap: Map<string, number>;
+  modelMap: Map<string, number>;
   prodSla: Array<{ category_code: string; model_code: string; structure_code: string; measure_code: string; stage: Stage; expected_minutes: number }>;
   onSave: (v: any) => void;
 }) {
@@ -281,7 +282,11 @@ function ProductOverrideSection({
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {STAGES.map((s) => {
             const ov = overridesMap.get(`${cat}|${model}|${struct}|${meas}|${s}`);
-            const fallback = catMap.get(`${cat}|${s}`);
+            const modelVal = modelMap.get(`${cat}|${model}|${s}`);
+            const catVal = catMap.get(`${cat}|${s}`);
+            const fallback = modelVal ?? catVal;
+            const fallbackSource: "modelo" | "categoria" | null =
+              modelVal != null ? "modelo" : catVal != null ? "categoria" : null;
             return (
               <div key={s} className="space-y-1">
                 <Label className="text-xs flex items-center justify-between">
@@ -289,7 +294,7 @@ function ProductOverrideSection({
                   {ov != null ? (
                     <Badge variant="default" className="text-[10px]">override</Badge>
                   ) : fallback != null ? (
-                    <Badge variant="secondary" className="text-[10px]">padrão {fallback}m</Badge>
+                    <Badge variant="secondary" className="text-[10px]">{fallbackSource} {fallback}m</Badge>
                   ) : (
                     <Badge variant="outline" className="text-[10px]">sem SLA</Badge>
                   )}
