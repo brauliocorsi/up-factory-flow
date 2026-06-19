@@ -86,6 +86,13 @@ function RefTable({ kind, hint, hasCategory }: { kind: RefKind; hint: string; ha
     mutationFn: (r: RefRow) => upsertRef({ data: { kind, id: r.id, code: r.code, name: r.name, active: !r.active, category_id: r.category_id ?? null } }),
     onSuccess: refresh,
   });
+  const toggleDirectional = useMutation({
+    mutationFn: (r: RefRow) =>
+      upsertRef({ data: { kind, id: r.id, code: r.code, name: r.name, active: r.active, directional: !r.directional } }),
+    onSuccess: refresh,
+  });
+
+  const showDirectional = kind === "fabric_types";
 
   return (
     <Card className="p-4 space-y-3">
@@ -108,6 +115,7 @@ function RefTable({ kind, hint, hasCategory }: { kind: RefKind; hint: string; ha
               <TableHead className="w-24">Código</TableHead>
               <TableHead>Nome</TableHead>
               {hasCategory && <TableHead>Categoria</TableHead>}
+              {showDirectional && <TableHead className="w-32">Sentido do veio</TableHead>}
               <TableHead className="w-24">Ativo</TableHead>
               <TableHead className="w-32 text-right">Ações</TableHead>
             </TableRow>
@@ -126,6 +134,14 @@ function RefTable({ kind, hint, hasCategory }: { kind: RefKind; hint: string; ha
                     {r.category_id ? (
                       <Badge variant="secondary">{catById.get(r.category_id)?.code ?? "?"}</Badge>
                     ) : <span className="text-muted-foreground">—</span>}
+                  </TableCell>
+                )}
+                {showDirectional && (
+                  <TableCell>
+                    <Switch
+                      checked={!!r.directional}
+                      onCheckedChange={() => toggleDirectional.mutate(r)}
+                    />
                   </TableCell>
                 )}
                 <TableCell>
