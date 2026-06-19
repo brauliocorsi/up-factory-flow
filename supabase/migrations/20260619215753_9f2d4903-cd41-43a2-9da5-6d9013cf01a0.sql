@@ -1,0 +1,1 @@
+UPDATE public.user_roles SET role='picador' WHERE user_id=(SELECT user_id FROM public.operators WHERE code='08');
