@@ -27,6 +27,8 @@ export type RefRow = {
   name: string;
   active: boolean;
   category_id?: string | null;
+  /** Apenas para fabric_types: corte no sentido do veio. */
+  directional?: boolean;
 };
 
 const kindSchema = z.enum([
@@ -43,9 +45,12 @@ export const listRef = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ kind: kindSchema }).parse(d))
   .handler(async ({ data, context }): Promise<RefRow[]> => {
-    const cols = data.kind === "models"
-      ? "id, code, name, active, category_id"
-      : "id, code, name, active";
+    const cols =
+      data.kind === "models"
+        ? "id, code, name, active, category_id"
+        : data.kind === "fabric_types"
+          ? "id, code, name, active, directional"
+          : "id, code, name, active";
     const { data: rows, error } = await (context.supabase as any)
       .from(REF_TABLE[data.kind])
       .select(cols)
@@ -61,6 +66,7 @@ const upsertSchema = z.object({
   name: z.string().trim().min(1).max(120),
   active: z.boolean().optional(),
   category_id: z.string().uuid().nullable().optional(),
+  directional: z.boolean().optional(),
 });
 
 export const upsertRef = createServerFn({ method: "POST" })
@@ -70,6 +76,9 @@ export const upsertRef = createServerFn({ method: "POST" })
     const row: any = { code: data.code, name: data.name };
     if (data.active !== undefined) row.active = data.active;
     if (data.kind === "models") row.category_id = data.category_id ?? null;
+    if (data.kind === "fabric_types" && data.directional !== undefined) {
+      row.directional = data.directional;
+    }
     const table = REF_TABLE[data.kind];
     if (data.id) {
       const { error } = await context.supabase.from(table as any).update(row).eq("id", data.id);
