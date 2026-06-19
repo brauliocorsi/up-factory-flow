@@ -84,7 +84,7 @@ export const resolveOrderForPicking = createServerFn({ method: "POST" })
       package_number: c.coli_number,
       package_total,
       package_name: c.coli_name ?? `Coli ${c.coli_number}`,
-      expected_code: c.coli_barcode ?? (order.barcode ? `${order.barcode}-C${c.coli_number}` : ""),
+      expected_code: c.coli_barcode,
     }));
 
     return {
