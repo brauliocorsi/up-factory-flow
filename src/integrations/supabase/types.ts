@@ -1728,6 +1728,7 @@ export type Database = {
         }
         Returns: number
       }
+      get_order_progress: { Args: { _order_number: string }; Returns: Json }
       get_order_route_keys: {
         Args: { _order_id: string }
         Returns: {
@@ -1747,6 +1748,22 @@ export type Database = {
         Returns: boolean
       }
       is_operator_only: { Args: { _user_id: string }; Returns: boolean }
+      is_picker_only: { Args: { _user_id: string }; Returns: boolean }
+      list_my_picked_orders: {
+        Args: { _limit?: number }
+        Returns: {
+          coli_count: number
+          color: string
+          finished_at: string
+          measure: string
+          operator_code: string
+          operator_name: string
+          order_id: string
+          order_number: string
+          product_description: string
+          structure_type: string
+        }[]
+      }
       preview_cancel_order: { Args: { _order_id: string }; Returns: Json }
       record_coli_stage_event: {
         Args: {
