@@ -16,16 +16,19 @@ export type Database = {
     Tables: {
       app_settings: {
         Row: {
+          daily_minutes: number
           id: number
           identification_mode: string
           updated_at: string
         }
         Insert: {
+          daily_minutes?: number
           id?: number
           identification_mode?: string
           updated_at?: string
         }
         Update: {
+          daily_minutes?: number
           id?: number
           identification_mode?: string
           updated_at?: string
@@ -1405,6 +1408,56 @@ export type Database = {
           },
         ]
       }
+      stage_day_assignment: {
+        Row: {
+          operator_id: string
+          present: boolean
+          stage: Database["public"]["Enums"]["production_stage"]
+          updated_at: string
+          work_date: string
+        }
+        Insert: {
+          operator_id: string
+          present?: boolean
+          stage: Database["public"]["Enums"]["production_stage"]
+          updated_at?: string
+          work_date: string
+        }
+        Update: {
+          operator_id?: string
+          present?: boolean
+          stage?: Database["public"]["Enums"]["production_stage"]
+          updated_at?: string
+          work_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stage_day_assignment_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stage_lead_offsets: {
+        Row: {
+          days_before_estofo: number
+          stage: Database["public"]["Enums"]["production_stage"]
+          updated_at: string
+        }
+        Insert: {
+          days_before_estofo?: number
+          stage: Database["public"]["Enums"]["production_stage"]
+          updated_at?: string
+        }
+        Update: {
+          days_before_estofo?: number
+          stage?: Database["public"]["Enums"]["production_stage"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       stage_sla_category: {
         Row: {
           category_code: string
@@ -1658,6 +1711,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_business_days: { Args: { _d: string; _n: number }; Returns: string }
       cancel_order_with_recovery: { Args: { _order_id: string }; Returns: Json }
       create_order_colis: { Args: { _order_id: string }; Returns: Json }
       finalize_shell_batch: {
@@ -1739,9 +1793,29 @@ export type Database = {
           structure_code: string
         }[]
       }
+      get_stage_capacity_load: {
+        Args: {
+          _from: string
+          _stage: Database["public"]["Enums"]["production_stage"]
+          _to: string
+        }
+        Returns: Json
+      }
       get_stage_groups: {
         Args: { _stage: Database["public"]["Enums"]["production_stage"] }
         Returns: Json
+      }
+      get_stage_queue: {
+        Args: { _stage: Database["public"]["Enums"]["production_stage"] }
+        Returns: Json
+      }
+      get_stage_target_dates: {
+        Args: { _order_id: string }
+        Returns: {
+          stage: Database["public"]["Enums"]["production_stage"]
+          status: string
+          target_date: string
+        }[]
       }
       has_role: {
         Args: {
@@ -1767,6 +1841,7 @@ export type Database = {
           structure_type: string
         }[]
       }
+      prev_business_day: { Args: { _d: string }; Returns: string }
       preview_cancel_order: { Args: { _order_id: string }; Returns: Json }
       record_coli_stage_event: {
         Args: {

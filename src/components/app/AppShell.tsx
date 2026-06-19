@@ -2,7 +2,7 @@ import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   LayoutGrid, ListOrdered, LogOut, Factory, Upload, Library, Boxes, HardHat,
   Settings, Wrench, PackageCheck, ClipboardCheck, Clock, Barcode, ChevronDown,
-  Menu, Shield, Package, Truck, BarChart3,
+  Menu, Shield, Package, Truck, BarChart3, CalendarClock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -63,6 +63,7 @@ const groups: NavGroup[] = [
       { to: "/admin/rotas-colis", label: "Rotas Colis", icon: Truck },
       { to: "/admin/qualidade", label: "Qualidade", icon: ClipboardCheck },
       { to: "/admin/sla", label: "SLA", icon: Clock },
+      { to: "/admin/planeamento", label: "Planeamento", icon: CalendarClock },
       { to: "/configuracoes", label: "Configurações", icon: Settings },
     ],
   },

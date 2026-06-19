@@ -27,6 +27,7 @@ import {
 } from "@/lib/colis.functions";
 import { useMySession } from "@/hooks/useMySession";
 import { StageGroupView } from "@/components/production/StageGroupView";
+import { StageQueuePanel } from "@/components/planning/StageQueuePanel";
 
 export const Route = createFileRoute("/_authenticated/producao/")({
   component: ProducaoPage,
@@ -323,6 +324,7 @@ function ProducaoPage() {
 
       {/* Lista */}
       <div className="space-y-2">
+        <StageQueuePanel stage={activeStage} />
         {(activeStage === "corte" || activeStage === "estrutura") ? (
           <StageGroupView
             stage={activeStage}
