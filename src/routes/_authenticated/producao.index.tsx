@@ -26,6 +26,7 @@ import {
   getColisByStage, recordColiStageEvent, type ColiStageItem,
 } from "@/lib/colis.functions";
 import { useMySession } from "@/hooks/useMySession";
+import { StageGroupView } from "@/components/production/StageGroupView";
 
 export const Route = createFileRoute("/_authenticated/producao/")({
   component: ProducaoPage,
@@ -322,7 +323,13 @@ function ProducaoPage() {
 
       {/* Lista */}
       <div className="space-y-2">
-        {items.length === 0 ? (
+        {(activeStage === "corte" || activeStage === "estrutura") ? (
+          <StageGroupView
+            stage={activeStage}
+            canAct={canActOnStage(activeStage) && !!currentOp}
+            operatorCode={operatorCode.trim()}
+          />
+        ) : items.length === 0 ? (
           <div className="text-center text-muted-foreground py-12 border border-dashed rounded-md">
             Sem encomendas em {STAGE_LABELS[activeStage].toLowerCase()}
           </div>
