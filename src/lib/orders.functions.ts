@@ -193,6 +193,7 @@ export const createOrder = createServerFn({ method: "POST" })
 
     const row = {
       order_number: data.order_number,
+      customer_order: data.customer_order ?? null,
       product_description: data.product_description,
       model_id: data.model_id ?? null,
       measure: data.measure ?? null,
@@ -232,6 +233,7 @@ export const bulkCreateOrders = createServerFn({ method: "POST" })
     for (const r of data.rows) {
       ok.push({
         order_number: r.order_number,
+        customer_order: r.customer_order ?? null,
         product_description: r.product_description,
         model_id: r.model_id ?? null,
         measure: r.measure ?? null,
