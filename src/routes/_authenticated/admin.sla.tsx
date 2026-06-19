@@ -79,6 +79,12 @@ function SlaPage() {
     return m;
   }, [catSla]);
 
+  const modelMap = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const r of modelSla) m.set(`${r.category_code}|${r.model_code}|${r.stage}`, r.expected_minutes);
+    return m;
+  }, [modelSla]);
+
   function downloadTemplate() {
     const headers = [
       "Nº Encomenda", "Descrição", "Modelo (código)", "Estrutura (código)",
@@ -163,11 +169,7 @@ function SlaPage() {
             structures={structures}
             measures={measures}
             catMap={catMap}
-            modelMap={useMemo(() => {
-              const m = new Map<string, number>();
-              for (const r of modelSla) m.set(`${r.category_code}|${r.model_code}|${r.stage}`, r.expected_minutes);
-              return m;
-            }, [modelSla])}
+            modelMap={modelMap}
             prodSla={prodSla}
             onSave={(v) => prodSlaMutation.mutate(v)}
           />
