@@ -51,10 +51,10 @@ export const listPickingQueue = createServerFn({ method: "GET" })
       .select("id, order_id")
       .in("order_id", orderIds);
     const totals = new Map<string, number>();
-    const coliIds: string[] = [];
+
     for (const c of (colis ?? []) as any[]) {
       totals.set(c.order_id, (totals.get(c.order_id) ?? 0) + 1);
-      coliIds.push(c.id);
+
     }
     // picked = coli_stages picagem concluidas
     const picked = new Map<string, number>();
