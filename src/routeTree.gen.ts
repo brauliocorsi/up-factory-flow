@@ -35,6 +35,7 @@ import { Route as AuthenticatedAdminSlaRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedAdminRotasColisRouteImport } from './routes/_authenticated/admin.rotas-colis'
 import { Route as AuthenticatedAdminRelatoriosRouteImport } from './routes/_authenticated/admin.relatorios'
 import { Route as AuthenticatedAdminQualidadeRouteImport } from './routes/_authenticated/admin.qualidade'
+import { Route as AuthenticatedAdminPlaneamentoRouteImport } from './routes/_authenticated/admin.planeamento'
 import { Route as AuthenticatedAdminColisRouteImport } from './routes/_authenticated/admin.colis'
 import { Route as AuthenticatedAdminCatalogoRouteImport } from './routes/_authenticated/admin.catalogo'
 import { Route as AuthenticatedEncomendasIdEtiquetaRouteImport } from './routes/_authenticated/encomendas.$id.etiqueta'
@@ -185,6 +186,12 @@ const AuthenticatedAdminQualidadeRoute =
     path: '/admin/qualidade',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAdminPlaneamentoRoute =
+  AuthenticatedAdminPlaneamentoRouteImport.update({
+    id: '/admin/planeamento',
+    path: '/admin/planeamento',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAdminColisRoute = AuthenticatedAdminColisRouteImport.update({
   id: '/admin/colis',
   path: '/admin/colis',
@@ -212,6 +219,7 @@ export interface FileRoutesByFullPath {
   '/retrabalho': typeof AuthenticatedRetrabalhoRoute
   '/admin/catalogo': typeof AuthenticatedAdminCatalogoRoute
   '/admin/colis': typeof AuthenticatedAdminColisRoute
+  '/admin/planeamento': typeof AuthenticatedAdminPlaneamentoRoute
   '/admin/qualidade': typeof AuthenticatedAdminQualidadeRoute
   '/admin/relatorios': typeof AuthenticatedAdminRelatoriosRoute
   '/admin/rotas-colis': typeof AuthenticatedAdminRotasColisRoute
@@ -242,6 +250,7 @@ export interface FileRoutesByTo {
   '/': typeof AuthenticatedIndexRoute
   '/admin/catalogo': typeof AuthenticatedAdminCatalogoRoute
   '/admin/colis': typeof AuthenticatedAdminColisRoute
+  '/admin/planeamento': typeof AuthenticatedAdminPlaneamentoRoute
   '/admin/qualidade': typeof AuthenticatedAdminQualidadeRoute
   '/admin/relatorios': typeof AuthenticatedAdminRelatoriosRoute
   '/admin/rotas-colis': typeof AuthenticatedAdminRotasColisRoute
@@ -274,6 +283,7 @@ export interface FileRoutesById {
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/admin/catalogo': typeof AuthenticatedAdminCatalogoRoute
   '/_authenticated/admin/colis': typeof AuthenticatedAdminColisRoute
+  '/_authenticated/admin/planeamento': typeof AuthenticatedAdminPlaneamentoRoute
   '/_authenticated/admin/qualidade': typeof AuthenticatedAdminQualidadeRoute
   '/_authenticated/admin/relatorios': typeof AuthenticatedAdminRelatoriosRoute
   '/_authenticated/admin/rotas-colis': typeof AuthenticatedAdminRotasColisRoute
@@ -306,6 +316,7 @@ export interface FileRouteTypes {
     | '/retrabalho'
     | '/admin/catalogo'
     | '/admin/colis'
+    | '/admin/planeamento'
     | '/admin/qualidade'
     | '/admin/relatorios'
     | '/admin/rotas-colis'
@@ -336,6 +347,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin/catalogo'
     | '/admin/colis'
+    | '/admin/planeamento'
     | '/admin/qualidade'
     | '/admin/relatorios'
     | '/admin/rotas-colis'
@@ -367,6 +379,7 @@ export interface FileRouteTypes {
     | '/_authenticated/'
     | '/_authenticated/admin/catalogo'
     | '/_authenticated/admin/colis'
+    | '/_authenticated/admin/planeamento'
     | '/_authenticated/admin/qualidade'
     | '/_authenticated/admin/relatorios'
     | '/_authenticated/admin/rotas-colis'
@@ -578,6 +591,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminQualidadeRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin/planeamento': {
+      id: '/_authenticated/admin/planeamento'
+      path: '/admin/planeamento'
+      fullPath: '/admin/planeamento'
+      preLoaderRoute: typeof AuthenticatedAdminPlaneamentoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin/colis': {
       id: '/_authenticated/admin/colis'
       path: '/admin/colis'
@@ -623,6 +643,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedAdminCatalogoRoute: typeof AuthenticatedAdminCatalogoRoute
   AuthenticatedAdminColisRoute: typeof AuthenticatedAdminColisRoute
+  AuthenticatedAdminPlaneamentoRoute: typeof AuthenticatedAdminPlaneamentoRoute
   AuthenticatedAdminQualidadeRoute: typeof AuthenticatedAdminQualidadeRoute
   AuthenticatedAdminRelatoriosRoute: typeof AuthenticatedAdminRelatoriosRoute
   AuthenticatedAdminRotasColisRoute: typeof AuthenticatedAdminRotasColisRoute
@@ -651,6 +672,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedAdminCatalogoRoute: AuthenticatedAdminCatalogoRoute,
   AuthenticatedAdminColisRoute: AuthenticatedAdminColisRoute,
+  AuthenticatedAdminPlaneamentoRoute: AuthenticatedAdminPlaneamentoRoute,
   AuthenticatedAdminQualidadeRoute: AuthenticatedAdminQualidadeRoute,
   AuthenticatedAdminRelatoriosRoute: AuthenticatedAdminRelatoriosRoute,
   AuthenticatedAdminRotasColisRoute: AuthenticatedAdminRotasColisRoute,
