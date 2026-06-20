@@ -72,7 +72,7 @@ export type BacklogItem = {
 
 export type ActivationGroup = {
   kind: "corte" | "estrutura";
-  key: Record<string, unknown>;
+  key: Record<string, string | null>;
   order_ids: string[];
   count: number;
   earliest_target: string | null;
