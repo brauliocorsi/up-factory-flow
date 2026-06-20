@@ -77,6 +77,7 @@ export type ActivationGroup = {
   count: number;
   earliest_target: string | null;
   earliest_due_date: string | null;
+  urgent: boolean;
 };
 
 export type GlobalLoadCell = {
@@ -313,6 +314,20 @@ export const getActivationSuggestions = createServerFn({ method: "GET" })
     const { data, error } = await (context.supabase as any).rpc("get_activation_suggestions");
     if (error) throw new Error(error.message);
     return (data ?? []) as ActivationGroup[];
+  });
+
+export type BacklogBatchesSummary = {
+  total_groups: number;
+  total_orders_in_groups: number;
+  urgent_groups: number;
+};
+
+export const countBacklogBatches = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<BacklogBatchesSummary> => {
+    const { data, error } = await (context.supabase as any).rpc("count_backlog_batches");
+    if (error) throw new Error(error.message);
+    return (data ?? { total_groups: 0, total_orders_in_groups: 0, urgent_groups: 0 }) as BacklogBatchesSummary;
   });
 
 export const getGlobalCapacityLoad = createServerFn({ method: "POST" })

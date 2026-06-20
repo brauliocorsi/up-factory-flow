@@ -9,8 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { ChevronDown, ChevronRight, Zap } from "lucide-react";
 import { formatDatePT } from "@/lib/format";
 import {
-  getBacklog, activateOrders, type BacklogItem, type ActivateResult,
+  getBacklog, getActivationSuggestions, activateOrders,
+  type BacklogItem, type ActivateResult,
 } from "@/lib/planning.functions";
+import { Zap as ZapIcon } from "lucide-react";
 
 function statusBadge(s: BacklogItem["status"]) {
   if (s === "risco_saida") return <Badge variant="destructive">Risco saída</Badge>;
@@ -21,11 +23,27 @@ function statusBadge(s: BacklogItem["status"]) {
 export function BacklogTable() {
   const qc = useQueryClient();
   const fetchFn = useServerFn(getBacklog);
+  const fetchSug = useServerFn(getActivationSuggestions);
   const activateFn = useServerFn(activateOrders);
   const { data: items = [], isLoading } = useQuery({
     queryKey: ["backlog"],
     queryFn: () => fetchFn(),
   });
+  const { data: suggestions = [] } = useQuery({
+    queryKey: ["activation-suggestions"],
+    queryFn: () => fetchSug(),
+  });
+
+  const batchByOrder = useMemo(() => {
+    const m = new Map<string, { count: number; urgent: boolean }>();
+    for (const g of suggestions) {
+      for (const id of g.order_ids) {
+        const cur = m.get(id);
+        if (!cur || g.count > cur.count) m.set(id, { count: g.count, urgent: g.urgent });
+      }
+    }
+    return m;
+  }, [suggestions]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [lastResult, setLastResult] = useState<ActivateResult | null>(null);
   const [openFailures, setOpenFailures] = useState(false);
@@ -131,6 +149,17 @@ export function BacklogTable() {
                   <td className="p-2">
                     <div>{it.product_description ?? it.model_name ?? "—"}</div>
                     {it.color && <div className="text-xs text-muted-foreground">{it.color}</div>}
+                    {batchByOrder.has(it.order_id) && (() => {
+                      const b = batchByOrder.get(it.order_id)!;
+                      return (
+                        <Badge
+                          variant={b.urgent ? "destructive" : "secondary"}
+                          className="mt-1 gap-1 text-[10px]"
+                        >
+                          <ZapIcon className="size-3" /> Lote de {b.count}
+                        </Badge>
+                      );
+                    })()}
                   </td>
                   <td className="p-2">{it.measure ?? "—"}</td>
                   <td className="p-2 text-xs">

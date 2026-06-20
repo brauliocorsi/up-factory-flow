@@ -401,6 +401,7 @@ export type BulkSimpleResult = {
   created: number;
   notes: number;
   per_customer: Array<{ customer_order: string; created: number; first_order_number: string }>;
+  batch_hints: Array<{ kind: "corte" | "estrutura"; label: string; count: number }>;
 };
 
 export const bulkImportSimpleOrders = createServerFn({ method: "POST" })
@@ -486,12 +487,90 @@ export const bulkImportSimpleOrders = createServerFn({ method: "POST" })
       perCustomer.push({ customer_order: co, created: seq - (startSeq.get(co) ?? 0), first_order_number: firstOrder });
     }
 
-    if (!toInsert.length) return { created: 0, notes: 0, per_customer: [] };
+    if (!toInsert.length) return { created: 0, notes: 0, per_customer: [], batch_hints: [] };
 
     const { error, count } = await supabase
       .from("production_orders")
       .insert(toInsert, { count: "exact" });
     if (error) throw new Error(error.message);
 
-    return { created: count ?? toInsert.length, notes: customerOrders.length, per_customer: perCustomer };
+    // Fase C: deteção proativa de lotes (≥ 2 encomendas iguais no backlog)
+    const batch_hints = await computeBatchHints(supabase, toInsert);
+
+    return {
+      created: count ?? toInsert.length,
+      notes: customerOrders.length,
+      per_customer: perCustomer,
+      batch_hints,
+    };
   });
+
+async function computeBatchHints(
+  supabase: any,
+  inserted: Array<{
+    model_id: string | null; measure: string | null; fabric_type: string | null;
+    structure_type: string | null;
+  }>,
+): Promise<BulkSimpleResult["batch_hints"]> {
+  // Recolhe chaves de afinidade dos recém-importados
+  const corteKeys = new Set<string>();
+  const estruKeys = new Set<string>();
+  const modelIds = new Set<string>();
+  const structures = new Set<string>();
+  for (const r of inserted) {
+    if (r.model_id) {
+      corteKeys.add([r.model_id, r.measure ?? "", r.fabric_type ?? ""].join("|"));
+      modelIds.add(r.model_id);
+    }
+    if (r.structure_type) {
+      estruKeys.add([r.structure_type, r.measure ?? ""].join("|"));
+      structures.add(r.structure_type);
+    }
+  }
+  if (corteKeys.size === 0 && estruKeys.size === 0) return [];
+
+  // Lê pendentes que envolvam alguma dessas chaves; bastante seletivo
+  const filters: string[] = [];
+  if (modelIds.size > 0) filters.push(`model_id.in.(${Array.from(modelIds).join(",")})`);
+  if (structures.size > 0) {
+    const esc = Array.from(structures).map((s) => `"${s.replace(/"/g, '""')}"`).join(",");
+    filters.push(`structure_type.in.(${esc})`);
+  }
+  const { data: pend } = await supabase
+    .from("production_orders")
+    .select("model_id, measure, fabric_type, structure_type")
+    .eq("status", "pendente")
+    .or(filters.join(","));
+
+  const counts = new Map<string, { kind: "corte" | "estrutura"; label: string; count: number }>();
+  // Para lookup do nome do modelo
+  let modelNames = new Map<string, string>();
+  if (modelIds.size > 0) {
+    const { data: ms } = await supabase
+      .from("models").select("id, name").in("id", Array.from(modelIds));
+    for (const m of (ms ?? []) as any[]) modelNames.set(m.id, m.name);
+  }
+
+  for (const p of (pend ?? []) as any[]) {
+    if (p.model_id) {
+      const k = `corte|${p.model_id}|${p.measure ?? ""}|${p.fabric_type ?? ""}`;
+      if (corteKeys.has([p.model_id, p.measure ?? "", p.fabric_type ?? ""].join("|"))) {
+        const label = [modelNames.get(p.model_id) ?? "Modelo", p.measure, p.fabric_type].filter(Boolean).join(" · ");
+        const cur = counts.get(k);
+        if (cur) cur.count++; else counts.set(k, { kind: "corte", label, count: 1 });
+      }
+    }
+    if (p.structure_type) {
+      const k = `estrutura|${p.structure_type}|${p.measure ?? ""}`;
+      if (estruKeys.has([p.structure_type, p.measure ?? ""].join("|"))) {
+        const label = [p.structure_type, p.measure].filter(Boolean).join(" · ");
+        const cur = counts.get(k);
+        if (cur) cur.count++; else counts.set(k, { kind: "estrutura", label, count: 1 });
+      }
+    }
+  }
+
+  return Array.from(counts.values())
+    .filter((g) => g.count >= 2)
+    .sort((a, b) => b.count - a.count);
+}

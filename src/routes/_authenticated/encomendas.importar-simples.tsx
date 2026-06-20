@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Upload, FileSpreadsheet, Download, AlertCircle, CheckCircle2, ArrowLeft, ArrowRight } from "lucide-react";
+import { Upload, FileSpreadsheet, Download, AlertCircle, CheckCircle2, ArrowLeft, ArrowRight, Zap } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/encomendas/importar-simples")({
@@ -109,13 +109,18 @@ function ImportarSimplesPage() {
   const [rows, setRows] = useState<Record<string, any>[]>([]);
   const [mapping, setMapping] = useState<{ code?: string; qty?: string; customer_order?: string; due_date?: string }>({});
   const [decoded, setDecoded] = useState<DecodedRow[]>([]);
+  const [lastHints, setLastHints] = useState<Array<{ kind: string; label: string; count: number }>>([]);
 
   const bulk = useMutation({
     mutationFn: (payload: any) => bulkImportSimpleOrders({ data: payload }),
     onSuccess: (res: any) => {
       toast.success(`${res.created} encomenda(s) criadas em ${res.notes} nota(s) — backlog (pendentes).`);
+      setLastHints(res.batch_hints ?? []);
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
+      qc.invalidateQueries({ queryKey: ["backlog"] });
+      qc.invalidateQueries({ queryKey: ["activation-suggestions"] });
+      qc.invalidateQueries({ queryKey: ["backlog-batches-summary"] });
       reset();
     },
     onError: (e: any) => toast.error(e?.message ?? "Erro ao importar"),
@@ -276,6 +281,35 @@ function ImportarSimplesPage() {
           <Download className="size-4" /> Descarregar modelo Excel
         </Button>
       </div>
+
+      {lastHints.length > 0 && (
+        <Card className="p-3 border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700/60">
+          <div className="flex items-start gap-3">
+            <Zap className="size-5 text-amber-600 mt-0.5" />
+            <div className="flex-1 text-sm">
+              <div className="font-semibold mb-1">
+                Detetámos {lastHints.length} lote(s) possíveis no backlog
+              </div>
+              <ul className="text-xs space-y-0.5">
+                {lastHints.slice(0, 6).map((h, i) => (
+                  <li key={i}>
+                    <span className="font-medium">{h.count}×</span> {h.label}
+                    <span className="ml-1 text-muted-foreground">({h.kind})</span>
+                  </li>
+                ))}
+                {lastHints.length > 6 && <li className="text-muted-foreground">… e mais {lastHints.length - 6}</li>}
+              </ul>
+            </div>
+            <Link
+              to="/admin/planeamento"
+              className="text-sm font-medium underline whitespace-nowrap"
+              onClick={() => setLastHints([])}
+            >
+              Ver no Planeamento →
+            </Link>
+          </div>
+        </Card>
+      )}
 
       {step === 1 && (
         <Card className="p-12 border-2 border-dashed">

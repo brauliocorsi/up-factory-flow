@@ -45,18 +45,32 @@ export function ActivationSuggestions() {
 
   if (groups.length === 0) return null;
 
+  const urgent = groups.filter((g) => g.urgent);
+  const others = groups.filter((g) => !g.urgent);
+
   return (
     <Card className="p-3 space-y-2">
-      <div className="text-sm font-semibold">Sugestões para ativar</div>
+      <div className="text-sm font-semibold">
+        Sugestões para ativar
+        <span className="ml-2 text-xs font-normal text-muted-foreground">
+          {groups.length} grupo(s) {urgent.length > 0 && <>· <span className="text-red-600">{urgent.length} urgente(s)</span></>}
+        </span>
+      </div>
       <p className="text-xs text-muted-foreground">
-        Grupos com prazo da 1ª etapa dentro dos próximos 5 dias úteis. Ativar em conjunto otimiza o lote.
+        Encomendas iguais no backlog (≥ 2). Ativar em conjunto otimiza o setup. Urgentes têm a 1ª etapa nos próximos 5 dias úteis.
       </p>
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
-        {groups.map((g, i) => (
-          <div key={i} className="rounded-md border p-2 text-sm space-y-1">
+        {[...urgent, ...others].map((g, i) => (
+          <div
+            key={i}
+            className={`rounded-md border p-2 text-sm space-y-1 ${
+              g.urgent ? "border-red-400 bg-red-50/40 dark:bg-red-950/20" : ""
+            }`}
+          >
             <div className="flex items-center gap-1.5">
               {g.kind === "corte" ? <Scissors className="size-3.5" /> : <Hammer className="size-3.5" />}
               <Badge variant="outline" className="capitalize">{g.kind}</Badge>
+              {g.urgent && <Badge variant="destructive" className="text-[10px] px-1.5 py-0">urgente</Badge>}
               <span className="ml-auto text-xs text-muted-foreground tabular-nums">{g.count} pç</span>
             </div>
             <div className="text-xs">{describeKey(g)}</div>
@@ -66,12 +80,12 @@ export function ActivationSuggestions() {
             </div>
             <Button
               size="sm"
-              variant="outline"
+              variant={g.urgent ? "default" : "outline"}
               className="w-full gap-1 mt-1"
               disabled={mut.isPending}
               onClick={() => mut.mutate(g.order_ids)}
             >
-              <Zap className="size-3.5" /> Ativar grupo
+              <Zap className="size-3.5" /> Encaixar e ativar lote
             </Button>
           </div>
         ))}
