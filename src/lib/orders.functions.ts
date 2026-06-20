@@ -401,6 +401,7 @@ export type BulkSimpleResult = {
   created: number;
   notes: number;
   per_customer: Array<{ customer_order: string; created: number; first_order_number: string }>;
+  batch_hints: Array<{ kind: "corte" | "estrutura"; label: string; count: number }>;
 };
 
 export const bulkImportSimpleOrders = createServerFn({ method: "POST" })
