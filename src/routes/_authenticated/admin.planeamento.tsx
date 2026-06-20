@@ -17,6 +17,7 @@ import {
   getDailyMinutes, setDailyMinutes,
   listOperatorsByStage, setDayPresence,
   getGlobalCapacityLoad, type GlobalLoadCell,
+  countBacklogBatches,
   type Stage,
 } from "@/lib/planning.functions";
 import { BacklogTable } from "@/components/planning/BacklogTable";
@@ -53,6 +54,12 @@ function todayISO() {
 }
 
 function PlaneamentoAdminPage() {
+  const fetchBatches = useServerFn(countBacklogBatches);
+  const { data: batches } = useQuery({
+    queryKey: ["backlog-batches-summary"],
+    queryFn: () => fetchBatches(),
+    refetchInterval: 60_000,
+  });
   return (
     <div className="max-w-5xl mx-auto p-4 space-y-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -62,12 +69,27 @@ function PlaneamentoAdminPage() {
             Folgas por etapa, jornada padrão e presenças do dia.
           </p>
         </div>
-        <Link
-          to="/admin/planeamento/carga"
-          className="inline-flex items-center gap-2 rounded-md border bg-card px-3 py-1.5 text-sm font-medium hover:bg-accent"
-        >
-          <BarChart3 className="size-4" /> Ver carga vs capacidade
-        </Link>
+        <div className="flex items-center gap-2 flex-wrap">
+          {batches && batches.total_groups > 0 && (
+            <span
+              className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-medium ${
+                batches.urgent_groups > 0
+                  ? "border-red-400 bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300"
+                  : "border-amber-300 bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-200"
+              }`}
+              title={`${batches.total_orders_in_groups} encomenda(s) em ${batches.total_groups} grupo(s)`}
+            >
+              ⚡ {batches.total_groups} lote(s) potenciais
+              {batches.urgent_groups > 0 && <> · {batches.urgent_groups} urgente(s)</>}
+            </span>
+          )}
+          <Link
+            to="/admin/planeamento/carga"
+            className="inline-flex items-center gap-2 rounded-md border bg-card px-3 py-1.5 text-sm font-medium hover:bg-accent"
+          >
+            <BarChart3 className="size-4" /> Ver carga vs capacidade
+          </Link>
+        </div>
       </div>
 
       <Tabs defaultValue="backlog" className="space-y-4">
