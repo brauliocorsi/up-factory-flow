@@ -296,3 +296,51 @@ export const setDayPresence = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// ---------- Fase B: Backlog ----------
+
+export const getBacklog = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<BacklogItem[]> => {
+    const { data, error } = await (context.supabase as any).rpc("get_backlog");
+    if (error) throw new Error(error.message);
+    return (data ?? []) as BacklogItem[];
+  });
+
+export const getActivationSuggestions = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<ActivationGroup[]> => {
+    const { data, error } = await (context.supabase as any).rpc("get_activation_suggestions");
+    if (error) throw new Error(error.message);
+    return (data ?? []) as ActivationGroup[];
+  });
+
+export const getGlobalCapacityLoad = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }): Promise<GlobalLoadCell[]> => {
+    const { data: res, error } = await (context.supabase as any).rpc("get_global_capacity_load", {
+      _from: data.from, _to: data.to,
+    });
+    if (error) throw new Error(error.message);
+    return (res ?? []) as GlobalLoadCell[];
+  });
+
+export const activateOrders = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ order_ids: z.array(z.string().uuid()).min(1).max(500) }).parse(d),
+  )
+  .handler(async ({ data, context }): Promise<ActivateResult> => {
+    await assertAdminOrOffice(context);
+    const { data: res, error } = await (context.supabase as any).rpc("activate_orders", {
+      _order_ids: data.order_ids,
+    });
+    if (error) throw new Error(error.message);
+    return res as ActivateResult;
+  });
