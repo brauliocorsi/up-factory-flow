@@ -1,4 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -24,6 +25,16 @@ import { LoadCell } from "@/components/planning/LoadCell";
 import { formatDatePT } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/admin/planeamento")({
+  beforeLoad: async () => {
+    const { data } = await supabase.auth.getUser();
+    if (!data.user) throw redirect({ to: "/auth" });
+    const { data: roles } = await supabase
+      .from("user_roles").select("role").eq("user_id", data.user.id);
+    const list = (roles ?? []).map((r: any) => r.role as string);
+    if (!list.includes("admin") && !list.includes("escritorio")) {
+      throw redirect({ to: "/producao" });
+    }
+  },
   component: PlaneamentoAdminPage,
   errorComponent: ({ error, reset }) => (
     <div className="max-w-xl mx-auto p-6 text-center space-y-3">
