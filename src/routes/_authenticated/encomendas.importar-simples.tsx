@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Upload, FileSpreadsheet, Download, AlertCircle, CheckCircle2, ArrowLeft, ArrowRight } from "lucide-react";
+import { Upload, FileSpreadsheet, Download, AlertCircle, CheckCircle2, ArrowLeft, ArrowRight, Zap } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/encomendas/importar-simples")({
@@ -109,13 +109,18 @@ function ImportarSimplesPage() {
   const [rows, setRows] = useState<Record<string, any>[]>([]);
   const [mapping, setMapping] = useState<{ code?: string; qty?: string; customer_order?: string; due_date?: string }>({});
   const [decoded, setDecoded] = useState<DecodedRow[]>([]);
+  const [lastHints, setLastHints] = useState<Array<{ kind: string; label: string; count: number }>>([]);
 
   const bulk = useMutation({
     mutationFn: (payload: any) => bulkImportSimpleOrders({ data: payload }),
     onSuccess: (res: any) => {
       toast.success(`${res.created} encomenda(s) criadas em ${res.notes} nota(s) — backlog (pendentes).`);
+      setLastHints(res.batch_hints ?? []);
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
+      qc.invalidateQueries({ queryKey: ["backlog"] });
+      qc.invalidateQueries({ queryKey: ["activation-suggestions"] });
+      qc.invalidateQueries({ queryKey: ["backlog-batches-summary"] });
       reset();
     },
     onError: (e: any) => toast.error(e?.message ?? "Erro ao importar"),
