@@ -51,6 +51,52 @@ export type CapacityLoadDay = {
   includes_overdue: boolean;
 };
 
+// ---------- Fase B types ----------
+
+export type BacklogItem = {
+  order_id: string;
+  order_number: string;
+  customer_order: string | null;
+  product_description: string | null;
+  model_name: string | null;
+  measure: string | null;
+  structure_type: string | null;
+  color: string | null;
+  fabric_type: string | null;
+  fabric_ref: string | null;
+  due_date: string | null;
+  target_estrutura: string | null;
+  target_estof: string | null;
+  status: "ok" | "atrasada_folga" | "risco_saida";
+};
+
+export type ActivationGroup = {
+  kind: "corte" | "estrutura";
+  key: Record<string, string | null>;
+  order_ids: string[];
+  count: number;
+  earliest_target: string | null;
+  earliest_due_date: string | null;
+};
+
+export type GlobalLoadCell = {
+  stage: Stage;
+  date: string;
+  capacity_minutes: number;
+  load_firm_minutes: number;
+  load_shadow_minutes: number;
+  items_firm: number;
+  items_shadow: number;
+  has_unknown: boolean;
+  includes_overdue: boolean;
+};
+
+export type ActivateResult = {
+  activated: string[];
+  skipped: string[];
+  failed: { order_id: string; reason: string }[];
+};
+
 async function assertAdmin(context: any) {
   const { data, error } = await context.supabase.rpc("has_role", {
     _user_id: context.userId,
@@ -58,6 +104,17 @@ async function assertAdmin(context: any) {
   });
   if (error) throw new Error(error.message);
   if (!data) throw new Error("Acesso restrito a administradores");
+}
+
+async function assertAdminOrOffice(context: any) {
+  const sb = context.supabase;
+  const [{ data: a, error: e1 }, { data: o, error: e2 }] = await Promise.all([
+    sb.rpc("has_role", { _user_id: context.userId, _role: "admin" }),
+    sb.rpc("has_role", { _user_id: context.userId, _role: "escritorio" }),
+  ]);
+  if (e1) throw new Error(e1.message);
+  if (e2) throw new Error(e2.message);
+  if (!a && !o) throw new Error("Acesso restrito a admin/escritório");
 }
 
 // ---------- Lead offsets ----------
@@ -238,4 +295,52 @@ export const setDayPresence = createServerFn({ method: "POST" })
       );
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+// ---------- Fase B: Backlog ----------
+
+export const getBacklog = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<BacklogItem[]> => {
+    const { data, error } = await (context.supabase as any).rpc("get_backlog");
+    if (error) throw new Error(error.message);
+    return (data ?? []) as BacklogItem[];
+  });
+
+export const getActivationSuggestions = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<ActivationGroup[]> => {
+    const { data, error } = await (context.supabase as any).rpc("get_activation_suggestions");
+    if (error) throw new Error(error.message);
+    return (data ?? []) as ActivationGroup[];
+  });
+
+export const getGlobalCapacityLoad = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }): Promise<GlobalLoadCell[]> => {
+    const { data: res, error } = await (context.supabase as any).rpc("get_global_capacity_load", {
+      _from: data.from, _to: data.to,
+    });
+    if (error) throw new Error(error.message);
+    return (res ?? []) as GlobalLoadCell[];
+  });
+
+export const activateOrders = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ order_ids: z.array(z.string().uuid()).min(1).max(500) }).parse(d),
+  )
+  .handler(async ({ data, context }): Promise<ActivateResult> => {
+    await assertAdminOrOffice(context);
+    const { data: res, error } = await (context.supabase as any).rpc("activate_orders", {
+      _order_ids: data.order_ids,
+    });
+    if (error) throw new Error(error.message);
+    return res as ActivateResult;
   });

@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { z } from "zod";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -12,6 +13,7 @@ import { STAGE_LABELS, formatDatePT } from "@/lib/format";
 import { STAGES, getStageCapacityLoad, type Stage } from "@/lib/planning.functions";
 
 export const Route = createFileRoute("/_authenticated/admin/planeamento/carga")({
+  validateSearch: z.object({ stage: z.enum(STAGES).optional() }),
   component: CargaPage,
   errorComponent: ({ error, reset }) => (
     <div className="max-w-xl mx-auto p-6 text-center space-y-3">
@@ -30,7 +32,8 @@ function isoOffset(days: number) {
 }
 
 function CargaPage() {
-  const [stage, setStage] = useState<Stage>("estofagem");
+  const { stage: stageFromSearch } = Route.useSearch();
+  const [stage, setStage] = useState<Stage>(stageFromSearch ?? "estofagem");
   const [from, setFrom] = useState(isoOffset(0));
   const [to, setTo] = useState(isoOffset(14));
   const fetchFn = useServerFn(getStageCapacityLoad);

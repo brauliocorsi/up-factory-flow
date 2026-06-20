@@ -15,8 +15,13 @@ import {
   STAGES, listLeadOffsets, upsertLeadOffset,
   getDailyMinutes, setDailyMinutes,
   listOperatorsByStage, setDayPresence,
+  getGlobalCapacityLoad, type GlobalLoadCell,
   type Stage,
 } from "@/lib/planning.functions";
+import { BacklogTable } from "@/components/planning/BacklogTable";
+import { ActivationSuggestions } from "@/components/planning/ActivationSuggestions";
+import { LoadCell } from "@/components/planning/LoadCell";
+import { formatDatePT } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/admin/planeamento")({
   component: PlaneamentoAdminPage,
@@ -54,12 +59,24 @@ function PlaneamentoAdminPage() {
         </Link>
       </div>
 
-      <Tabs defaultValue="folgas" className="space-y-4">
+      <Tabs defaultValue="backlog" className="space-y-4">
         <TabsList>
+          <TabsTrigger value="backlog">Backlog</TabsTrigger>
+          <TabsTrigger value="carga">Carga global</TabsTrigger>
           <TabsTrigger value="folgas">Folgas</TabsTrigger>
           <TabsTrigger value="jornada">Jornada</TabsTrigger>
           <TabsTrigger value="presencas">Presenças do dia</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="backlog">
+          <div className="space-y-3">
+            <ActivationSuggestions />
+            <BacklogTable />
+          </div>
+        </TabsContent>
+        <TabsContent value="carga">
+          <CargaGlobalTab />
+        </TabsContent>
 
         <TabsContent value="folgas">
           <FolgasTab />
@@ -231,5 +248,129 @@ function PresencasTab() {
         })}
       </div>
     </Card>
+  );
+}
+
+// ---------- Carga global (Fase B) ----------
+
+function addBusinessDaysISO(start: Date, n: number): string {
+  const d = new Date(start);
+  let added = 0;
+  while (added < n) {
+    d.setDate(d.getDate() + 1);
+    const dow = d.getDay();
+    if (dow !== 0 && dow !== 6) added++;
+  }
+  const off = d.getTimezoneOffset();
+  return new Date(d.getTime() - off * 60_000).toISOString().slice(0, 10);
+}
+
+function CargaGlobalTab() {
+  const today = new Date();
+  const [from, setFrom] = useState(todayISO());
+  const [to, setTo] = useState(addBusinessDaysISO(today, 10));
+  const fetchFn = useServerFn(getGlobalCapacityLoad);
+  const { data = [], isLoading } = useQuery({
+    queryKey: ["global-load", from, to],
+    queryFn: () => fetchFn({ data: { from, to } }),
+    refetchInterval: 60_000,
+  });
+
+  const { days, byStage, stages, hasUnknown } = useMemo(() => {
+    const rows = data as GlobalLoadCell[];
+    const daysSet = new Set<string>();
+    const stagesSet = new Set<Stage>();
+    const map = new Map<string, GlobalLoadCell>();
+    let unknown = false;
+    for (const r of rows) {
+      daysSet.add(r.date);
+      stagesSet.add(r.stage as Stage);
+      map.set(`${r.stage}|${r.date}`, r);
+      if (r.has_unknown) unknown = true;
+    }
+    const ds = Array.from(daysSet).sort();
+    const ordered: Stage[] = STAGES.filter((s) => stagesSet.has(s));
+    return { days: ds, byStage: map, stages: ordered, hasUnknown: unknown };
+  }, [data]);
+
+  return (
+    <div className="space-y-3">
+      <Card className="p-3 flex flex-wrap items-end gap-3">
+        <div>
+          <Label className="text-xs">De</Label>
+          <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="w-40" />
+        </div>
+        <div>
+          <Label className="text-xs">Até</Label>
+          <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="w-40" />
+        </div>
+        <div className="ml-auto text-xs text-muted-foreground max-w-md">
+          <span className="inline-block size-2 rounded bg-emerald-500 mr-1 align-middle" />
+          sólido = ativado (stock reservado) ·{" "}
+          <span className="inline-block w-3 h-2 mr-1 align-middle" style={{ backgroundImage: "repeating-linear-gradient(135deg, hsl(var(--foreground)/0.45) 0 4px, transparent 4px 8px)" }} />
+          tracejado = backlog previsto ·{" "}
+          <span className="inline-block w-3 h-2 mr-1 align-middle border border-red-400 border-dashed" />
+          contorno = potencial sobrecarga
+        </div>
+      </Card>
+
+      {hasUnknown && (
+        <div className="rounded-md border border-amber-300 bg-amber-50 text-amber-900 px-3 py-2 text-sm">
+          ⚠ Alguns produtos não têm SLA cadastrado — a carga apresentada está subestimada.
+        </div>
+      )}
+
+      <Card className="p-0 overflow-x-auto">
+        {isLoading ? (
+          <div className="p-6 text-center text-sm text-muted-foreground">A calcular…</div>
+        ) : days.length === 0 || stages.length === 0 ? (
+          <div className="p-6 text-center text-sm text-muted-foreground">Sem dias úteis no intervalo.</div>
+        ) : (
+          <table className="w-full text-sm border-separate border-spacing-0">
+            <thead className="bg-muted/50 text-xs">
+              <tr>
+                <th className="text-left p-2 sticky left-0 bg-muted/50 z-10">Etapa</th>
+                {days.map((d) => (
+                  <th key={d} className="p-2 text-center min-w-[110px]">
+                    {formatDatePT(d)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {stages.map((s) => (
+                <tr key={s} className="border-t">
+                  <td className="p-2 font-medium sticky left-0 bg-card border-t">
+                    <Link
+                      to="/admin/planeamento/carga"
+                      search={{ stage: s } as any}
+                      className="hover:underline"
+                    >
+                      {STAGE_LABELS[s]}
+                    </Link>
+                  </td>
+                  {days.map((d) => {
+                    const cell = byStage.get(`${s}|${d}`);
+                    return (
+                      <td key={d} className="p-2 align-top border-t">
+                        {cell ? (
+                          <LoadCell
+                            capacity={cell.capacity_minutes}
+                            firm={cell.load_firm_minutes}
+                            shadow={cell.load_shadow_minutes}
+                            itemsFirm={cell.items_firm}
+                            itemsShadow={cell.items_shadow}
+                          />
+                        ) : null}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </Card>
+    </div>
   );
 }
