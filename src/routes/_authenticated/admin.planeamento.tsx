@@ -59,7 +59,7 @@ function PlaneamentoAdminPage() {
         </Link>
       </div>
 
-      <Tabs defaultValue="folgas" className="space-y-4">
+      <Tabs defaultValue="backlog" className="space-y-4">
         <TabsList>
           <TabsTrigger value="backlog">Backlog</TabsTrigger>
           <TabsTrigger value="carga">Carga global</TabsTrigger>
