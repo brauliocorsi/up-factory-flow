@@ -1,4 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
+import { supabase } from "@/integrations/supabase/client";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -14,6 +15,16 @@ import { STAGES, getStageCapacityLoad, type Stage } from "@/lib/planning.functio
 
 export const Route = createFileRoute("/_authenticated/admin/planeamento/carga")({
   validateSearch: z.object({ stage: z.enum(STAGES).optional() }),
+  beforeLoad: async () => {
+    const { data } = await supabase.auth.getUser();
+    if (!data.user) throw redirect({ to: "/auth" });
+    const { data: roles } = await supabase
+      .from("user_roles").select("role").eq("user_id", data.user.id);
+    const list = (roles ?? []).map((r: any) => r.role as string);
+    if (!list.includes("admin") && !list.includes("escritorio")) {
+      throw redirect({ to: "/producao" });
+    }
+  },
   component: CargaPage,
   errorComponent: ({ error, reset }) => (
     <div className="max-w-xl mx-auto p-6 text-center space-y-3">
