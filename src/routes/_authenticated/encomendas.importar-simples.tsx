@@ -282,6 +282,35 @@ function ImportarSimplesPage() {
         </Button>
       </div>
 
+      {lastHints.length > 0 && (
+        <Card className="p-3 border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700/60">
+          <div className="flex items-start gap-3">
+            <Zap className="size-5 text-amber-600 mt-0.5" />
+            <div className="flex-1 text-sm">
+              <div className="font-semibold mb-1">
+                Detetámos {lastHints.length} lote(s) possíveis no backlog
+              </div>
+              <ul className="text-xs space-y-0.5">
+                {lastHints.slice(0, 6).map((h, i) => (
+                  <li key={i}>
+                    <span className="font-medium">{h.count}×</span> {h.label}
+                    <span className="ml-1 text-muted-foreground">({h.kind})</span>
+                  </li>
+                ))}
+                {lastHints.length > 6 && <li className="text-muted-foreground">… e mais {lastHints.length - 6}</li>}
+              </ul>
+            </div>
+            <Link
+              to="/admin/planeamento"
+              className="text-sm font-medium underline whitespace-nowrap"
+              onClick={() => setLastHints([])}
+            >
+              Ver no Planeamento →
+            </Link>
+          </div>
+        </Card>
+      )}
+
       {step === 1 && (
         <Card className="p-12 border-2 border-dashed">
           <div className="flex flex-col items-center gap-3 text-center">
