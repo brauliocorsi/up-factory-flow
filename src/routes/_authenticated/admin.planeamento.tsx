@@ -15,8 +15,13 @@ import {
   STAGES, listLeadOffsets, upsertLeadOffset,
   getDailyMinutes, setDailyMinutes,
   listOperatorsByStage, setDayPresence,
+  getGlobalCapacityLoad, type GlobalLoadCell,
   type Stage,
 } from "@/lib/planning.functions";
+import { BacklogTable } from "@/components/planning/BacklogTable";
+import { ActivationSuggestions } from "@/components/planning/ActivationSuggestions";
+import { LoadCell } from "@/components/planning/LoadCell";
+import { formatDatePT } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/admin/planeamento")({
   component: PlaneamentoAdminPage,
@@ -56,10 +61,22 @@ function PlaneamentoAdminPage() {
 
       <Tabs defaultValue="folgas" className="space-y-4">
         <TabsList>
+          <TabsTrigger value="backlog">Backlog</TabsTrigger>
+          <TabsTrigger value="carga">Carga global</TabsTrigger>
           <TabsTrigger value="folgas">Folgas</TabsTrigger>
           <TabsTrigger value="jornada">Jornada</TabsTrigger>
           <TabsTrigger value="presencas">Presenças do dia</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="backlog">
+          <div className="space-y-3">
+            <ActivationSuggestions />
+            <BacklogTable />
+          </div>
+        </TabsContent>
+        <TabsContent value="carga">
+          <CargaGlobalTab />
+        </TabsContent>
 
         <TabsContent value="folgas">
           <FolgasTab />
