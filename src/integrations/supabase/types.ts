@@ -1711,6 +1711,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      activate_orders: { Args: { _order_ids: string[] }; Returns: Json }
       add_business_days: { Args: { _d: string; _n: number }; Returns: string }
       cancel_order_with_recovery: { Args: { _order_id: string }; Returns: Json }
       create_order_colis: { Args: { _order_id: string }; Returns: Json }
@@ -1778,12 +1779,18 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      get_activation_suggestions: { Args: never; Returns: Json }
+      get_backlog: { Args: never; Returns: Json }
       get_expected_minutes: {
         Args: {
           _order_id: string
           _stage: Database["public"]["Enums"]["production_stage"]
         }
         Returns: number
+      }
+      get_global_capacity_load: {
+        Args: { _from: string; _to: string }
+        Returns: Json
       }
       get_order_progress: { Args: { _query: string }; Returns: Json }
       get_order_route_keys: {
