@@ -1,98 +1,81 @@
-## Fase A — Planeamento puxado pela data de saída (revisto)
+## Fase B — Quadro do planeador (backlog, ativar em lote, carga firme + sombra) — revisto
 
-Motor de planeamento que parte do `due_date` e calcula PARA TRÁS as datas-alvo de cada etapa. Operador nunca é bloqueado — só recebe badge (verde/amarelo/vermelho). Capacidade por etapa × dia. Datas-alvo NUNCA gravadas: calculadas ao vivo.
+Apenas ADIÇÕES. Não toca em Fase A, produção, picagem, lotes, importador.
 
 ---
 
 ### 1. Base de dados (1 migração)
 
-**Tabelas novas**
+Sem tabelas novas. Apenas funções (SECURITY DEFINER, `search_path = public`):
 
-- `stage_lead_offsets(stage production_stage PK, days_before_estofo int NOT NULL DEFAULT 0)`
-  - Seed: `estrutura=2, corte=2, branco=1, costura=1, estofagem=0, qualidade=0, embalagem=0, picagem=0`.
-- `stage_day_assignment(operator_id uuid, stage production_stage, work_date date, present bool default true, PK(operator_id, stage, work_date))`.
+- `get_backlog()` returns jsonb — encomendas `status = 'pendente'` com `order_id`, `customer_order`, `order_number`, `product_description`, `model_name`, `measure`, `structure_type`, `color`, `fabric_type`, `due_date`, `target_estrutura`, `target_estof`, `status` (ok/atrasada_folga/risco_saida, mesma régua que `get_stage_target_dates`). Ordena por `due_date asc, customer_order`.
+- `get_activation_suggestions()` returns jsonb — agrupa backlog cujo `target` da 1ª etapa relevante (`estrutura` ou `corte`) `<= current_date + 5 dias úteis`. Dois eixos:
+  - corte: `model_id + measure + fabric_type`
+  - estrutura: `structure_type + measure`
+  Devolve grupos com `key`, `kind`, `order_ids[]`, `count`, `earliest_target`, `earliest_due_date`.
+- `get_global_capacity_load(_from date, _to date)` returns jsonb — para cada etapa em (`estrutura`,`corte`,`costura`,`branco`,`estofagem`,`qualidade`,`embalagem`) × cada dia útil no intervalo:
+  - `capacity_minutes` (mesma lógica que Fase A)
+  - `load_firm_minutes` — peças `production_orders.status = 'em_producao'` com `target_date == dia` **dentro de [_from,_to]**, + atrasado acumulado no dia de hoje (peças `em_producao`, `os.status <> 'concluida'`, `target_date < hoje`).
+  - `load_shadow_minutes` — peças `status = 'pendente'` com `target_date == dia` **estritamente dentro de [_from,_to]** (nada fora da janela, nada de atrasado acumulado — backlog não tem compromisso firme).
+  - `items_firm`, `items_shadow`, `has_unknown`.
+- `activate_orders(_order_ids uuid[])` returns jsonb — exige admin **ou** escritório (`has_role(auth.uid(),'admin') OR has_role(auth.uid(),'escritorio')`; senão `RAISE EXCEPTION 'forbidden'`). Para cada id `pendente`: `try_reserve_for_order(id)`; sucesso → `status='em_producao'`. Já `em_producao` → skip. Falha individual → `failed[]` com `reason`. Devolve `{ activated:[], skipped:[], failed:[{order_id,reason}] }`.
 
-**`app_settings`**: chave `planning.daily_minutes` (default `450`).
+GRANTs `EXECUTE` a `authenticated` em todas as quatro. Role check de `activate_orders` é dentro da função.
 
-**RLS/GRANT**
-- `stage_lead_offsets`: SELECT a `authenticated`; ALL apenas admin (`has_role`).
-- `stage_day_assignment`: SELECT a `authenticated`; INSERT/UPDATE/DELETE só admin.
-- GRANTs explícitos a `authenticated` + `service_role`.
-
-**Funções (SECURITY DEFINER, search_path=public)**
-
-- `add_business_days(_d date, _n int) returns date` — soma/subtrai dias úteis (seg–sex).
-- `prev_business_day(_d date) returns date` — recua até sexta se cair em sáb/dom.
-- `get_stage_target_dates(_order_id uuid) returns table(stage, target_date date, status text)`
-  - `base := prev_business_day(due_date)` (normaliza fins de semana).
-  - `target_date(etapa) := add_business_days(base, -offset)`.
-  - `target_estof := target_date('estofagem')`.
-  - **Status por etapa (régua dupla):**
-    - `risco_saida` se `current_date > target_estof` OU `current_date > due_date`.
-    - `atrasada_folga` se `current_date > target_date` da própria etapa (mas ainda `<= target_estof`).
-    - `ok` caso contrário.
-- `get_stage_queue(_stage production_stage) returns jsonb` — fila ordenada por `target_date asc`, com order_id, customer_order, product_description, target_date, due_date, status, expected_minutes. Filtra `production_orders.status IN ('pendente','em_producao')` e `order_stages.status <> 'concluida'`.
-- `get_stage_capacity_load(_stage production_stage, _from date, _to date) returns jsonb` — para cada dia:
-  - `capacity_minutes` = presentes (de `stage_day_assignment`, fallback `operator_stages`) × `daily_minutes`.
-  - `load_minutes` para `dia > current_date`: soma de `expected_minutes` cujas `target_date == dia`.
-  - `load_minutes` para `dia == current_date`: peças com `target_date == hoje` **+ todas as etapas ainda não concluídas com `target_date < hoje` (atrasado acumulado)**.
-  - `items_count`, `has_unknown` (true se alguma peça contou como 0 por SLA NULL).
-  - Documentar: "carga = planeado do dia + atrasado acumulado no dia de hoje".
-
-**Camada C**: novas funções não expõem receita/stock/custo.
+Camada C: nenhuma destas funções devolve receita/stock/custo.
 
 ---
 
-### 2. Backend (`src/lib/planning.functions.ts`)
+### 2. Backend (`src/lib/planning.functions.ts`, estender)
 
 Server fns autenticados:
-- `listLeadOffsets`, `upsertLeadOffset` (admin).
-- `getDailyMinutes`, `setDailyMinutes` (admin).
-- `getStageTargetDates({ order_id })`.
-- `getStageQueue({ stage, limit?, offset? })` — paginação.
-- `getStageCapacityLoad({ stage, from, to })`.
-- `listDayAssignments({ from, to })`, `setDayPresence({ operator_id, stage, work_date, present })` (admin).
 
-Verificação admin via `rpc('has_role', { _role: 'admin' })` nas fns admin.
+- `getBacklog()`, `getActivationSuggestions()`, `getGlobalCapacityLoad({from,to})`.
+- `activateOrders({ order_ids })` — `assertAdminOrOffice(context)` antes do RPC (defesa em profundidade; check final é no SQL).
+
+Sem alterações às fns da Fase A.
 
 ---
 
 ### 3. UI
 
-**Admin — `/admin/planeamento`** (nova rota, gate admin)
-- Aba "Folgas" — tabela editável `stage_lead_offsets`.
-- Aba "Jornada" — input `daily_minutes`.
-- Aba "Presenças do dia" — quadro etapa × operador para `work_date` selecionável.
+**Gate de acesso (firme)** — `/admin/planeamento` **inteiro** (Folgas, Jornada, Presenças, Backlog, Carga global) restrito a admin/escritório. Implementar `beforeLoad` no ficheiro de rota que verifica role via `useMySession`/RPC `has_role`; se não admin/escritório → `redirect('/')`. Mesmo gate em `/admin/planeamento/carga`. Operador continua a ver apenas a sua fila em `/producao` (Fase A).
 
-**Operador — `/producao` (extensão)**
-- Painel "Fila prioritária" por etapa: top 20 + botão "Ver todas" (paginação ou expandir). Nunca esconder trabalho.
-- `StageGroupView` (corte/estrutura): mostrar `target_date` do grupo = mínima do grupo, com badge.
-- `OrderCard`: pill com data-alvo da etapa atual + badge.
+**Aba "Backlog"**
+- Bloco "Sugestões para ativar" no topo: cards com `kind`, contagem, prazo mais próximo, badge risco, botão "Ativar grupo".
+- Tabela: checkbox + nº cliente + produto + medida + tecido + estrutura + due_date + badge status. Header com "Ativar selecionadas (N)".
+- Após `activateOrders`: toast `X ativadas, Y falhadas`; lista expansível das falhas.
+- Invalida `["backlog"]`, `["activation-suggestions"]`, `["global-load"]`, e queries Fase A relevantes.
 
-**Admin — `/admin/planeamento/carga`**
-- Selector de etapa + intervalo (próx 14 dias).
-- Tabela/gráfico dia × {capacidade, carga, %}. Verde ≤80%, amarelo 80–100, vermelho >100.
-- Banner "alguns produtos sem SLA — carga subestimada" quando `has_unknown` em qualquer dia.
-- Nota visível: "Hoje inclui trabalho atrasado por concluir".
+**Aba "Carga global"**
+- Selector de intervalo (default próximos 10 dias úteis).
+- Tabela: linhas = etapas, colunas = dias. Cada célula é um `LoadCell` com:
+  - Barra **firme** sólida (largura = firm/cap).
+  - **Sombra** tracejada sobreposta a seguir à firme (largura = shadow/cap, encavalitada quando excede cap).
+  - Cor da célula baseada em **firm/cap apenas**: verde ≤80%, amarelo 80–100, vermelho >100. **A sombra nunca dispara cor.**
+  - Quando `firm+shadow > cap` e `firm/cap ≤ 100%`: **contorno tracejado vermelho** subtil à volta da barra como aviso "potencial sobrecarga se ativares o backlog". Distinto do vermelho sólido.
+  - Texto: `firm/cap min` em destaque, `+shadow` em cinza claro.
+- Legenda fixa: "sólido = ativado (stock reservado) · tracejado = backlog previsto · contorno tracejado = potencial sobrecarga se ativares".
+- Banner `has_unknown` quando aplicável.
+- Clicar etapa → `/admin/planeamento/carga?stage=...` (Fase A; pequena extensão para ler `search` e pré-selecionar).
 
----
-
-### 4. TODOs no código
-
-- Eficiência por operador via `stage_time_logs` × SLA teórico.
-- Fase B: planner drag-and-drop.
-- Fase C: encaixe automático de lotes.
-- Feriados (tabela de exceções para `add_business_days`).
+**Componentes novos**: `src/components/planning/LoadCell.tsx`, `BacklogTable.tsx`, `ActivationSuggestions.tsx`.
 
 ---
 
-### 5. Não tocar
+### 4. TODOs
 
-Produção, convergência, picagem, lotes, importador simples, agrupamentos, Camada C.
+- Fase C: encaixe automático de encomendas novas em lotes já agendados.
+- Sombra "what-if" por grupo de sugestão (quanto absorveria se ativado).
 
-### 6. Verificação final
+---
 
-- Migração: GRANTs + RLS em ambas as tabelas novas.
-- `/admin/planeamento` só admin; `/producao` sem regressão para operador.
-- `get_stage_queue` não devolve campos sensíveis.
-- Smoke: criar encomenda com due_date numa segunda → target_date estrutura cai na quarta anterior; due_date num sábado → base vira sexta antes de recuar.
+### 5. Verificação
+
+- Migração inclui GRANTs `EXECUTE`.
+- `/admin/planeamento` e `/admin/planeamento/carga` bloqueiam operador/picador no `beforeLoad`.
+- `activate_orders` rejeita operador/picador (server-side, testar via SQL).
+- Smoke: ativar uma peça do backlog → sai da sombra e entra no firme, **soma total `firm+shadow` mantém-se constante** no dia.
+- Smoke: dia com firme baixo + sombra alta → célula **verde/amarela pela régua do firme**, sombra visível, contorno tracejado vermelho se `firm+shadow > cap`.
+- Sombra nunca conta peças com `target_date` fora de `[from,to]` nem atraso acumulado.
+- Sem regressão em Fase A / produção / picagem / lotes / importador.
