@@ -14,9 +14,15 @@ export const Route = createFileRoute("/auth")({
   validateSearch: (s: Record<string, unknown>) => ({
     next: typeof s.next === "string" ? s.next : "",
   }),
-  beforeLoad: async () => {
+  beforeLoad: async ({ search }) => {
     const { data } = await supabase.auth.getSession();
-    if (data.session) throw redirect({ to: "/" });
+    if (data.session) {
+      const next = (search as { next?: string }).next;
+      if (next && next.startsWith("/") && !next.startsWith("//")) {
+        throw redirect({ href: next });
+      }
+      throw redirect({ to: "/" });
+    }
   },
   component: AuthPage,
 });
