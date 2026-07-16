@@ -11,15 +11,34 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
-  beforeLoad: async () => {
+  validateSearch: (s: Record<string, unknown>) => ({
+    next: typeof s.next === "string" ? s.next : "",
+  }),
+  beforeLoad: async ({ search }) => {
     const { data } = await supabase.auth.getSession();
-    if (data.session) throw redirect({ to: "/" });
+    if (data.session) {
+      const next = (search as { next?: string }).next;
+      if (next && next.startsWith("/") && !next.startsWith("//")) {
+        throw redirect({ href: next });
+      }
+      throw redirect({ to: "/" });
+    }
   },
   component: AuthPage,
 });
 
 function AuthPage() {
   const navigate = useNavigate();
+  const { next } = Route.useSearch();
+  // Only accept same-origin relative paths as the return target.
+  const safeNext = next && next.startsWith("/") && !next.startsWith("//") ? next : "";
+  function goNext(fallback: string) {
+    if (safeNext) {
+      window.location.href = safeNext;
+      return;
+    }
+    navigate({ to: fallback, replace: true });
+  }
   const [tab, setTab] = useState<"operador" | "admin">("operador");
 
   // --- Operador ---
@@ -36,7 +55,7 @@ function AuthPage() {
     setOpLoading(false);
     if (error) { toast.error("Código ou PIN inválido"); return; }
     toast.success("Sessão iniciada");
-    navigate({ to: "/producao", replace: true });
+    goNext("/producao");
   }
 
   // --- Admin ---
@@ -50,7 +69,7 @@ function AuthPage() {
     setLoading(false);
     if (error) { toast.error(error.message); return; }
     toast.success("Sessão iniciada");
-    navigate({ to: "/", replace: true });
+    goNext("/");
   }
 
   return (
