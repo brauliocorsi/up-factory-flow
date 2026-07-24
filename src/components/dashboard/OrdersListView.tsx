@@ -4,26 +4,19 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { STAGE_LABELS, STAGES_ORDER, timeAgo } from "@/lib/format";
 import type { DashboardData } from "@/lib/orders.functions";
 import { AlertTriangle, Flame } from "lucide-react";
-import { useState, useMemo } from "react";
-import { Input } from "@/components/ui/input";
+import { useMemo } from "react";
 
 export function OrdersListView({ data }: { data: DashboardData }) {
-  const [q, setQ] = useState("");
   const all = useMemo(() => {
     const out: any[] = [];
     for (const s of STAGES_ORDER) for (const o of (data.byStage[s] ?? [])) out.push(o);
     return out;
   }, [data]);
 
-  const filtered = q.trim()
-    ? all.filter((o) => o.order_number.toLowerCase().includes(q.toLowerCase().trim()))
-    : all;
+  const filtered = all;
 
   return (
     <Card className="p-2">
-      <div className="p-2">
-        <Input placeholder="Procurar por nº encomenda..." value={q} onChange={(e) => setQ(e.target.value)} className="max-w-sm" />
-      </div>
       <div className="overflow-x-auto">
         <Table>
           <TableHeader>
