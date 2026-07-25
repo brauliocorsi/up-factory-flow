@@ -975,6 +975,7 @@ export type Database = {
           active: boolean
           code: string
           created_at: string
+          fabric_type_id: string | null
           id: string
           name: string
           updated_at: string
@@ -983,6 +984,7 @@ export type Database = {
           active?: boolean
           code: string
           created_at?: string
+          fabric_type_id?: string | null
           id?: string
           name: string
           updated_at?: string
@@ -991,11 +993,20 @@ export type Database = {
           active?: boolean
           code?: string
           created_at?: string
+          fabric_type_id?: string | null
           id?: string
           name?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ref_fabric_refs_fabric_type_id_fkey"
+            columns: ["fabric_type_id"]
+            isOneToOne: false
+            referencedRelation: "ref_fabric_types"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ref_fabric_types: {
         Row: {

@@ -1,34 +1,32 @@
 ## Objetivo
-Adicionar barra de pesquisa e filtros globais no dashboard (`/`), aplicados às vistas **Kanban**, **Lista** e **Mobile**.
-
-## Filtros
-- **Pesquisa** por nº encomenda (também aceita `customer_order`) e descrição do produto
-- **Modelo** (dropdown, ex.: cama Alice, Luxúria…) — reutiliza `listModels()`
-- **Tecido** (dropdown) — carregado via `ref_fabric_types` já existente
-- **Medida** (dropdown) — carregado via `ref_measures`
-- **Etapa atual** (dropdown com as 8 etapas)
-
-Todos combináveis, com botão "Limpar".
+Permitir vincular cada **Referência de Tecido** (ex.: OPERA) a um **Tipo de Tecido** (ex.: Aveludado). O vínculo aparece:
+- Na tab "Refs. Tecido" do catálogo (coluna + edição).
+- No formulário de **Nova encomenda** — ao escolher um Tipo de Tecido, o dropdown de Ref. Tecido filtra automaticamente para as refs compatíveis (mais as sem tipo definido).
 
 ## Alterações
 
-### `src/lib/orders.functions.ts`
-- `DashboardOrder`: adicionar `measure: string | null`, `fabric_type: string | null`, `customer_order: string | null`.
-- `getDashboardData`: incluir `measure, fabric_type, customer_order` no `.select(...)` e no card devolvido.
+### 1) Migração — `ref_fabric_refs.fabric_type_id`
+- `ALTER TABLE ref_fabric_refs ADD COLUMN fabric_type_id uuid REFERENCES ref_fabric_types(id) ON DELETE SET NULL`.
+- Index em `fabric_type_id`.
+- Sem impacto em RLS/GRANT (mantém as existentes).
 
-### `src/routes/_authenticated/index.tsx`
-- Adicionar componente `<DashboardFilters>` acima das Tabs, com estado local `{ q, modelId, fabric, measure, stage }`.
-- Carregar opções de filtros em paralelo com `useQuery` (`listModels`, `listRefTypes('fabric_types')`, `listRefTypes('measures')`) — usar helpers já existentes em `catalog.functions.ts` (verifico e reutilizo, senão adiciono um endpoint mínimo).
-- Aplicar `filterOrders(data, filters)` — função pura que devolve `DashboardData` filtrado (mantém `byStage` e recalcula subset). Passar o resultado para `KanbanBoard`, `MobileStageView` e `OrdersListView`.
-- Quando `stage` está definido, esvaziar as outras colunas para o Kanban mostrar só uma; na Lista/Mobile filtra as linhas.
+### 2) `src/lib/catalog.functions.ts`
+- `RefRow`: adicionar `fabric_type_id?: string | null`.
+- `listRef` (kind `fabric_refs`): selecionar `id, code, name, active, fabric_type_id`.
+- `upsertSchema` + `upsertRef`: aceitar `fabric_type_id` (nullable) e gravar quando `kind === "fabric_refs"`.
+- `getCatalogs`: incluir `fabric_type_id` no select de `ref_fabric_refs`.
 
-### `src/components/dashboard/OrdersListView.tsx`
-- Remover o input local de pesquisa (fica redundante com o filtro global). A vista passa a listar apenas o que o pai já filtrou.
+### 3) `src/routes/_authenticated/admin.catalogo.tsx`
+- Na tab "Refs. Tecido":
+  - Nova coluna **Tipo** que mostra o código/nome do fabric_type vinculado.
+  - `UpsertDialog`: quando `kind === "fabric_refs"`, mostrar um Select com todos os `fabric_types` ativos (opção "— nenhum —" para desvincular).
+- Passar a lista de fabric_types para o diálogo (via `useQuery(["ref","fabric_types"])`) e reutilizar `catById` para mostrar o vínculo na tabela.
 
-### Kanban/Mobile
-- Sem alterações — recebem `DashboardData` filtrado por `byStage`.
+### 4) `src/routes/_authenticated/encomendas.nova.tsx`
+- Ao renderizar o `RefSelect` da Ref. Tecido, filtrar `cat?.fabric_refs` por `fabric_type_id === form.fabric_type_id` (ou `null` — refs sem tipo continuam disponíveis para não bloquear casos legados).
+- Se a ref atualmente escolhida deixar de ser compatível com o novo tipo, limpar `form.fabric_ref_id`.
+- Manter o parsing por código (barcode) inalterado.
 
-## Notas técnicas
-- Filtros são case-insensitive, funcionam offline sobre o payload já em memória (sem refetch).
-- Etapa: se seleccionada, `byStage` só mantém essa chave preenchida.
-- Estado no cliente (sem URL params) para manter o scope pequeno; posso trocar para `validateSearch` depois se pedires.
+## Fora de âmbito
+- Não altero `product_recipe` (não guarda tecido) nem a semântica das encomendas existentes.
+- Não faço backfill automático — deixo o admin definir o tipo em cada ref via UI (é rápido e evita palpites como "OPERA = aveludado").

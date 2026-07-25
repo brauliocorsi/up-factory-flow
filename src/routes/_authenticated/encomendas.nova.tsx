@@ -106,6 +106,20 @@ function NovaEncomendaPage() {
     [cat, form.category_id],
   );
 
+  const fabricRefsForType = useMemo(
+    () =>
+      (cat?.fabric_refs ?? []).filter(
+        (r: any) => !form.fabric_type_id || !r.fabric_type_id || r.fabric_type_id === form.fabric_type_id,
+      ),
+    [cat, form.fabric_type_id],
+  );
+
+  useEffect(() => {
+    if (!form.fabric_ref_id) return;
+    const ok = fabricRefsForType.some((r: any) => r.id === form.fabric_ref_id);
+    if (!ok) setForm((f) => ({ ...f, fabric_ref_id: "" }));
+  }, [fabricRefsForType, form.fabric_ref_id]);
+
   const sel = {
     category: cat?.categories.find((x: any) => x.id === form.category_id),
     model: cat?.models.find((x: any) => x.id === form.model_id),
@@ -371,7 +385,7 @@ function NovaEncomendaPage() {
               <RefSelect items={cat?.fabric_types ?? []} value={form.fabric_type_id} onChange={(v) => set("fabric_type_id", v)} />
             </Field>
             <Field label="Ref. Tecido" highlight={missingSegments.has("fabric_ref")}>
-              <RefSelect items={cat?.fabric_refs ?? []} value={form.fabric_ref_id} onChange={(v) => set("fabric_ref_id", v)} />
+              <RefSelect items={fabricRefsForType} value={form.fabric_ref_id} onChange={(v) => set("fabric_ref_id", v)} />
             </Field>
             <Field label="Cor" highlight={missingSegments.has("color")}>
               <RefSelect items={cat?.colors ?? []} value={form.color_id} onChange={(v) => set("color_id", v)} />

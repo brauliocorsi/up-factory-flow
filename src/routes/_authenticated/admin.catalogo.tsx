@@ -75,6 +75,17 @@ function RefTable({ kind, hint, hasCategory }: { kind: RefKind; hint: string; ha
   });
   const catById = useMemo(() => new Map((cats ?? []).map((c) => [c.id, c])), [cats]);
 
+  const showFabricType = kind === "fabric_refs";
+  const { data: fabricTypes = [] } = useQuery({
+    queryKey: ["ref", "fabric_types"],
+    queryFn: () => listRef({ data: { kind: "fabric_types" } }),
+    enabled: showFabricType,
+  });
+  const ftById = useMemo(
+    () => new Map((fabricTypes ?? []).map((t) => [t.id, t])),
+    [fabricTypes],
+  );
+
   const refresh = () => qc.invalidateQueries({ queryKey: ["ref", kind] });
 
   const del = useMutation({
@@ -100,7 +111,7 @@ function RefTable({ kind, hint, hasCategory }: { kind: RefKind; hint: string; ha
         <div className="text-xs text-muted-foreground">{hint}</div>
         <div className="flex gap-2">
           <ImportDialog kind={kind} hasCategory={hasCategory} onDone={refresh} />
-          <UpsertDialog kind={kind} hasCategory={hasCategory} cats={cats} onDone={refresh} />
+          <UpsertDialog kind={kind} hasCategory={hasCategory} cats={cats} fabricTypes={fabricTypes} onDone={refresh} />
         </div>
       </div>
       <div className="overflow-x-auto">
@@ -115,6 +126,7 @@ function RefTable({ kind, hint, hasCategory }: { kind: RefKind; hint: string; ha
               <TableHead className="w-24">Código</TableHead>
               <TableHead>Nome</TableHead>
               {hasCategory && <TableHead>Categoria</TableHead>}
+              {showFabricType && <TableHead>Tipo de Tecido</TableHead>}
               {showDirectional && <TableHead className="w-32">Sentido do veio</TableHead>}
               <TableHead className="w-24">Ativo</TableHead>
               <TableHead className="w-32 text-right">Ações</TableHead>
@@ -136,6 +148,17 @@ function RefTable({ kind, hint, hasCategory }: { kind: RefKind; hint: string; ha
                     ) : <span className="text-muted-foreground">—</span>}
                   </TableCell>
                 )}
+                {showFabricType && (
+                  <TableCell>
+                    {r.fabric_type_id ? (
+                      <Badge variant="secondary">
+                        {ftById.get(r.fabric_type_id)?.code ?? "?"} · {ftById.get(r.fabric_type_id)?.name ?? ""}
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                )}
                 {showDirectional && (
                   <TableCell>
                     <Switch
@@ -148,7 +171,7 @@ function RefTable({ kind, hint, hasCategory }: { kind: RefKind; hint: string; ha
                   <Switch checked={r.active} onCheckedChange={() => toggle.mutate(r)} />
                 </TableCell>
                 <TableCell className="text-right space-x-1">
-                  <UpsertDialog kind={kind} hasCategory={hasCategory} cats={cats} editing={r} onDone={refresh} />
+                  <UpsertDialog kind={kind} hasCategory={hasCategory} cats={cats} fabricTypes={fabricTypes} editing={r} onDone={refresh} />
                   <Button variant="ghost" size="icon" onClick={() => { if (confirm(`Apagar ${r.code} — ${r.name}?`)) del.mutate(r.id); }}>
                     <Trash2 className="size-4 text-destructive" />
                   </Button>
@@ -162,15 +185,32 @@ function RefTable({ kind, hint, hasCategory }: { kind: RefKind; hint: string; ha
   );
 }
 
-function UpsertDialog({ kind, hasCategory, cats, editing, onDone }: { kind: RefKind; hasCategory: boolean; cats: RefRow[]; editing?: RefRow; onDone: () => void }) {
+function UpsertDialog({ kind, hasCategory, cats, fabricTypes = [], editing, onDone }: { kind: RefKind; hasCategory: boolean; cats: RefRow[]; fabricTypes?: RefRow[]; editing?: RefRow; onDone: () => void }) {
   const [open, setOpen] = useState(false);
   const [code, setCode] = useState(editing?.code ?? "");
   const [name, setName] = useState(editing?.name ?? "");
   const [categoryId, setCategoryId] = useState<string>(editing?.category_id ?? "");
+  const [fabricTypeId, setFabricTypeId] = useState<string>(editing?.fabric_type_id ?? "");
+  const showFabricType = kind === "fabric_refs";
 
   const mut = useMutation({
-    mutationFn: () => upsertRef({ data: { kind, id: editing?.id, code: code.trim(), name: name.trim(), category_id: categoryId || null } }),
-    onSuccess: () => { toast.success(editing ? "Atualizado" : "Adicionado"); setOpen(false); onDone(); if (!editing) { setCode(""); setName(""); setCategoryId(""); } },
+    mutationFn: () =>
+      upsertRef({
+        data: {
+          kind,
+          id: editing?.id,
+          code: code.trim(),
+          name: name.trim(),
+          category_id: categoryId || null,
+          fabric_type_id: showFabricType ? (fabricTypeId || null) : undefined,
+        },
+      }),
+    onSuccess: () => {
+      toast.success(editing ? "Atualizado" : "Adicionado");
+      setOpen(false);
+      onDone();
+      if (!editing) { setCode(""); setName(""); setCategoryId(""); setFabricTypeId(""); }
+    },
     onError: (e: any) => toast.error(e.message),
   });
 
@@ -201,6 +241,20 @@ function UpsertDialog({ kind, hasCategory, cats, editing, onDone }: { kind: RefK
                 <SelectTrigger className="h-11"><SelectValue placeholder="—" /></SelectTrigger>
                 <SelectContent>
                   {cats.map((c) => <SelectItem key={c.id} value={c.id}>{c.code} · {c.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          {showFabricType && (
+            <div className="space-y-1.5">
+              <Label className="text-xs">Tipo de Tecido</Label>
+              <Select value={fabricTypeId || "__none__"} onValueChange={(v) => setFabricTypeId(v === "__none__" ? "" : v)}>
+                <SelectTrigger className="h-11"><SelectValue placeholder="— nenhum —" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— nenhum —</SelectItem>
+                  {fabricTypes.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{t.code} · {t.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
