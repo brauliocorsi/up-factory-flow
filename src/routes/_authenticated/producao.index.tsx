@@ -497,13 +497,28 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
   );
 
   return (
-    <Card className={`p-4 border-l-4 ${
+    <Card id={`stage-card-${item.id}`} className={`p-4 border-l-4 scroll-mt-24 transition-shadow ${
       item.is_rework ? "border-l-orange-500 bg-orange-50/40" :
       blocked ? "border-l-destructive bg-destructive/5"
       : paused ? "border-l-warning bg-warning/5"
-      : running ? "border-l-emerald-500"
-      : "border-l-primary"
+      : running ? "border-l-emerald-500 bg-emerald-50/30"
+      : done ? "border-l-emerald-700 bg-emerald-50/50 opacity-80"
+      : "border-l-slate-400"
     }`}>
+      {/* Faixa de estado bem visível */}
+      <div className={`-m-4 mb-3 px-4 py-1.5 text-xs font-bold uppercase tracking-wider rounded-t ${
+        done ? "bg-emerald-700 text-white"
+        : running ? "bg-emerald-600 text-white"
+        : paused ? "bg-amber-500 text-white"
+        : blocked ? "bg-destructive text-destructive-foreground"
+        : "bg-slate-200 text-slate-700"
+      }`}>
+        {done ? "✓ Concluída"
+          : running ? "● A produzir"
+          : paused ? "❚❚ Em pausa"
+          : blocked ? "⚠ Bloqueada"
+          : "○ Não iniciada"}
+      </div>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
