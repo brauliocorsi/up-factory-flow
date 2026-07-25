@@ -19,6 +19,7 @@ export type DashboardOrder = {
   has_stock_completed?: boolean;
   measure: string | null;
   fabric_type: string | null;
+  fabric_ref: string | null;
   customer_order: string | null;
   model_id: string | null;
   lines?: ConvergenceLines;
@@ -37,7 +38,7 @@ export const getDashboardData = createServerFn({ method: "GET" })
     const { supabase } = context;
     const { data: orders, error } = await (supabase as any)
       .from("production_orders")
-      .select("id, order_number, product_description, priority, due_date, status, observation, is_stock_production, measure, fabric_type, customer_order, model_id, models(name), order_stages(stage, status, started_at, notes)")
+      .select("id, order_number, product_description, priority, due_date, status, observation, is_stock_production, measure, fabric_type, fabric_ref, customer_order, model_id, models(name), order_stages(stage, status, started_at, notes)")
       .neq("status", "cancelada")
       .order("priority", { ascending: false })
       .order("entry_date", { ascending: true });
@@ -79,6 +80,7 @@ export const getDashboardData = createServerFn({ method: "GET" })
         has_stock_completed: stages.some((s: any) => typeof s.notes === "string" && s.notes.startsWith("Concluída de stock")),
         measure: ((o as any).measure as string | null) ?? null,
         fabric_type: ((o as any).fabric_type as string | null) ?? null,
+        fabric_ref: ((o as any).fabric_ref as string | null) ?? null,
         customer_order: ((o as any).customer_order as string | null) ?? null,
         model_id: ((o as any).model_id as string | null) ?? null,
         lines,
