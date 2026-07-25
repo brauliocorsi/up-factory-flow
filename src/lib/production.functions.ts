@@ -62,7 +62,7 @@ export const getProductionData = createServerFn({ method: "GET" })
     const { supabase } = context;
     const { data, error } = await (supabase as any)
       .from("order_stages")
-      .select("id, stage, status, started_at, productive_seconds, paused_seconds, is_paused, is_rework, rework_seconds, rework_count, production_orders!inner(id, order_number, product_description, observation, status), operators(code)")
+      .select("id, stage, status, started_at, finished_at, productive_seconds, paused_seconds, is_paused, is_rework, rework_seconds, rework_count, production_orders!inner(id, order_number, product_description, observation, status), operators(code)")
       .neq("production_orders.status", "cancelada")
       .order("started_at", { ascending: true, nullsFirst: false });
     if (error) throw new Error(error.message);
@@ -122,7 +122,12 @@ export const getProductionData = createServerFn({ method: "GET" })
     for (const row of (data ?? []) as any[]) {
       const o = row.production_orders;
       const coliCount = coliCountByOrder.get(o.id) ?? 0;
-      if (row.status === "concluida" && coliCount <= 1) continue;
+      // Manter concluídas de coli único apenas se finalizadas nas últimas 12h,
+      // para permitir mostrar "Concluídas hoje" no quadro do operador.
+      if (row.status === "concluida" && coliCount <= 1) {
+        const finishedAt = row.finished_at ? new Date(row.finished_at).getTime() : 0;
+        if (!finishedAt || Date.now() - finishedAt > 12 * 60 * 60 * 1000) continue;
+      }
       byStage[row.stage as Stage].push({
         id: row.id,
         order_id: o.id,
@@ -133,6 +138,7 @@ export const getProductionData = createServerFn({ method: "GET" })
         status: row.status,
         is_paused: Boolean(row.is_paused),
         started_at: row.started_at,
+        finished_at: row.finished_at,
         productive_seconds: row.productive_seconds ?? 0,
         paused_seconds: row.paused_seconds ?? 0,
         operator_code: row.operators?.code ?? null,
