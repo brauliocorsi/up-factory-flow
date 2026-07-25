@@ -18,7 +18,15 @@ export type DashboardFilterState = {
 
 export const emptyFilters: DashboardFilterState = { q: "", modelId: "all", fabric: "all", measure: "all", structure: "all", stage: "all" };
 
-export function DashboardFilters({ value, onChange }: { value: DashboardFilterState; onChange: (v: DashboardFilterState) => void }) {
+export function DashboardFilters({
+  value,
+  onChange,
+  structureCounts,
+}: {
+  value: DashboardFilterState;
+  onChange: (v: DashboardFilterState) => void;
+  structureCounts?: Record<string, number>;
+}) {
   const { data: models = [] } = useQuery({ queryKey: ["ref", "models"], queryFn: () => listRef({ data: { kind: "models" } }) });
   const { data: fabrics = [] } = useQuery({ queryKey: ["ref", "fabric_types"], queryFn: () => listRef({ data: { kind: "fabric_types" } }) });
   const { data: measures = [] } = useQuery({ queryKey: ["ref", "measures"], queryFn: () => listRef({ data: { kind: "measures" } }) });
@@ -70,7 +78,15 @@ export function DashboardFilters({ value, onChange }: { value: DashboardFilterSt
         <SelectTrigger className="h-10"><SelectValue placeholder="Estrutura" /></SelectTrigger>
         <SelectContent>
           <SelectItem value="all">Todas as estruturas</SelectItem>
-          {filteredStructures.map((s) => <SelectItem key={s.id} value={s.id}>{s.code} · {s.name}</SelectItem>)}
+          {filteredStructures.map((s) => {
+            const n = structureCounts?.[s.id];
+            return (
+              <SelectItem key={s.id} value={s.id}>
+                {s.code} · {s.name}
+                {typeof n === "number" ? ` (${n})` : ""}
+              </SelectItem>
+            );
+          })}
         </SelectContent>
       </Select>
       <div className="flex gap-2">
