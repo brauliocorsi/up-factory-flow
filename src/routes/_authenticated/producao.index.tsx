@@ -8,7 +8,8 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Lock, Play, Pause, Check, RotateCcw, Clock, UserCircle2, AlertTriangle, Boxes, Wrench, Search, ClipboardCheck, CheckCircle2, XCircle } from "lucide-react";
+import { Lock, Play, Pause, Check, RotateCcw, Clock, UserCircle2, AlertTriangle, Boxes, Wrench, Search, ClipboardCheck, CheckCircle2, XCircle, ListTree } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Link } from "@tanstack/react-router";
 import { STAGE_LABELS } from "@/lib/format";
 import {
@@ -127,7 +128,9 @@ function ProducaoPage() {
     onError: (e: any) => toast.error(e?.message ?? "Erro ao registar"),
   });
 
-  const [onlyReady, setOnlyReady] = useState<boolean>(true);
+  const [showPending, setShowPending] = useState<boolean>(true);
+  const [showRunning, setShowRunning] = useState<boolean>(true);
+  const [showDone, setShowDone] = useState<boolean>(true);
   const [onlyMine, setOnlyMine] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [operatorCode, setOperatorCode] = useState<string>(() =>
@@ -198,13 +201,27 @@ function ProducaoPage() {
     return true;
   };
   const allItems = visibleItemsByStage[activeStage] ?? [];
-  const items = allItems.filter((it) => {
-    if (searchQuery.trim() && !it.order_number.toLowerCase().includes(searchQuery.toLowerCase().trim())) return false;
-    if (onlyMine && !canActOnStage(it.stage)) return false;
-    if (onlyReady && !isReadyToStart(it)) return false;
-    return true;
-  });
+  const items = useMemo(() => {
+    const rank = (it: ProductionStageOrder) => {
+      if (it.status === "em_curso") return 0;
+      if (it.status === "bloqueada") return 3;
+      if (it.status === "concluida") return 2;
+      return 1; // pendente
+    };
+    return allItems
+      .filter((it) => {
+        if (searchQuery.trim() && !it.order_number.toLowerCase().includes(searchQuery.toLowerCase().trim())) return false;
+        if (onlyMine && !canActOnStage(it.stage)) return false;
+        if (it.status === "em_curso" && !showRunning) return false;
+        if (it.status === "concluida" && !showDone) return false;
+        if ((it.status === "pendente" || it.status === "bloqueada") && !showPending) return false;
+        return true;
+      })
+      .sort((a, b) => rank(a) - rank(b));
+  }, [allItems, searchQuery, onlyMine, showRunning, showDone, showPending, currentOp]);
   const hiddenCount = allItems.length - items.length;
+
+  const sidebar = <StageQueuePanel stage={activeStage} variant="sidebar" />;
 
   return (
     <div className="max-w-5xl mx-auto p-4 space-y-4">
@@ -288,12 +305,28 @@ function ProducaoPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card p-3 rounded-lg border">
         <div className="flex flex-wrap items-center gap-2">
           <button
-            onClick={() => setOnlyReady((v) => !v)}
+            onClick={() => setShowPending((v) => !v)}
             className={`text-xs font-medium px-2.5 py-1.5 rounded-md border transition ${
-              onlyReady ? "bg-emerald-600 text-white border-emerald-600" : "bg-card hover:bg-accent"
+              showPending ? "bg-slate-600 text-white border-slate-600" : "bg-card hover:bg-accent"
             }`}
           >
-            {onlyReady ? "✓ " : ""}Só prontas para iniciar
+            {showPending ? "✓ " : ""}Não iniciadas
+          </button>
+          <button
+            onClick={() => setShowRunning((v) => !v)}
+            className={`text-xs font-medium px-2.5 py-1.5 rounded-md border transition ${
+              showRunning ? "bg-emerald-600 text-white border-emerald-600" : "bg-card hover:bg-accent"
+            }`}
+          >
+            {showRunning ? "✓ " : ""}Em curso
+          </button>
+          <button
+            onClick={() => setShowDone((v) => !v)}
+            className={`text-xs font-medium px-2.5 py-1.5 rounded-md border transition ${
+              showDone ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-accent"
+            }`}
+          >
+            {showDone ? "✓ " : ""}Concluídas hoje
           </button>
           <button
             onClick={() => setOnlyMine((v) => !v)}
@@ -303,6 +336,19 @@ function ProducaoPage() {
           >
             {onlyMine ? "✓ " : ""}Só as minhas etapas
           </button>
+          <Sheet>
+            <SheetTrigger asChild>
+              <button className="lg:hidden text-xs font-medium px-2.5 py-1.5 rounded-md border bg-card hover:bg-accent inline-flex items-center gap-1">
+                <ListTree className="size-3" /> Fila prioritária
+              </button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-80 overflow-y-auto">
+              <SheetHeader>
+                <SheetTitle>Fila prioritária</SheetTitle>
+              </SheetHeader>
+              <div className="mt-4">{sidebar}</div>
+            </SheetContent>
+          </Sheet>
           {hiddenCount > 0 && (
             <span className="text-[11px] text-muted-foreground">
               {hiddenCount} ocultas pelos filtros
@@ -322,36 +368,40 @@ function ProducaoPage() {
         </div>
       </div>
 
-      {/* Lista */}
-      <div className="space-y-2">
-        <StageQueuePanel stage={activeStage} />
-        {(activeStage === "corte" || activeStage === "estrutura") ? (
-          <StageGroupView
-            stage={activeStage}
-            canAct={canActOnStage(activeStage) && !!currentOp}
-            operatorCode={operatorCode.trim()}
-          />
-        ) : items.length === 0 ? (
-          <div className="text-center text-muted-foreground py-12 border border-dashed rounded-md">
-            Sem encomendas em {STAGE_LABELS[activeStage].toLowerCase()}
-          </div>
-        ) : items.map((it) => (
-          <StageCard
-            key={it.id}
-            item={it}
-            canAct={canActOnStage(activeStage) && !!currentOp}
-            onAction={(event) => mutation.mutate({ order_stage_id: it.id, event })}
-            pending={mutation.isPending}
-            operatorCode={operatorCode.trim()}
-            expectedMinutes={expectedMap?.[it.order_id]?.[it.stage] ?? null}
-            colis={colisByStage?.byOrder?.[it.order_id] ?? []}
-            isMultiColiOrder={(colisByStage?.multiColiOrderIds ?? []).includes(it.order_id)}
-            onColiAction={(coli_stage_id, event) =>
-              coliMutation.mutate({ order_coli_stage_id: coli_stage_id, event })
-            }
-            coliPending={coliMutation.isPending}
-          />
-        ))}
+      {/* Lista + Sidebar */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4 items-start">
+        <div className="space-y-2 min-w-0">
+          {(activeStage === "corte" || activeStage === "estrutura") ? (
+            <StageGroupView
+              stage={activeStage}
+              canAct={canActOnStage(activeStage) && !!currentOp}
+              operatorCode={operatorCode.trim()}
+            />
+          ) : items.length === 0 ? (
+            <div className="text-center text-muted-foreground py-12 border border-dashed rounded-md">
+              Sem encomendas em {STAGE_LABELS[activeStage].toLowerCase()}
+            </div>
+          ) : items.map((it) => (
+            <StageCard
+              key={it.id}
+              item={it}
+              canAct={canActOnStage(activeStage) && !!currentOp}
+              onAction={(event) => mutation.mutate({ order_stage_id: it.id, event })}
+              pending={mutation.isPending}
+              operatorCode={operatorCode.trim()}
+              expectedMinutes={expectedMap?.[it.order_id]?.[it.stage] ?? null}
+              colis={colisByStage?.byOrder?.[it.order_id] ?? []}
+              isMultiColiOrder={(colisByStage?.multiColiOrderIds ?? []).includes(it.order_id)}
+              onColiAction={(coli_stage_id, event) =>
+                coliMutation.mutate({ order_coli_stage_id: coli_stage_id, event })
+              }
+              coliPending={coliMutation.isPending}
+            />
+          ))}
+        </div>
+        <aside className="hidden lg:block sticky top-4 max-h-[calc(100vh-2rem)] overflow-y-auto">
+          {sidebar}
+        </aside>
       </div>
     </div>
   );
@@ -377,9 +427,19 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
   const segmentStartMs = item.current_segment_started_at
     ? new Date(item.current_segment_started_at).getTime()
     : null;
-  const liveSeconds = running && segmentStartMs
+  // Guarda contra "recuos" quando um refetch devolve productive_seconds
+  // mais baixo do que o último visto (pode acontecer se o backend ainda não
+  // consolidou o segmento em curso). Mantém sempre o maior valor observado
+  // por instância de etapa.
+  const maxSeenRef = useRef<{ id: string; value: number }>({ id: item.id, value: 0 });
+  if (maxSeenRef.current.id !== item.id) {
+    maxSeenRef.current = { id: item.id, value: item.productive_seconds };
+  }
+  const rawLive = running && segmentStartMs
     ? item.productive_seconds + Math.max(0, Math.floor((Date.now() - segmentStartMs) / 1000))
     : item.productive_seconds;
+  const liveSeconds = Math.max(rawLive, maxSeenRef.current.value);
+  if (liveSeconds > maxSeenRef.current.value) maxSeenRef.current.value = liveSeconds;
 
   // Notificações de SLA (perto do limite / excedido). Cada limiar dispara
   // uma única vez por instância de etapa; reinicia quando muda a etapa.
@@ -416,6 +476,7 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
 
   const blocked = item.status === "bloqueada";
   const paused = item.is_paused;
+  const done = item.status === "concluida";
   const isUpholstery = item.stage === "estofagem";
   const isQuality = item.stage === "qualidade";
   const isPacking = item.stage === "embalagem";
@@ -433,13 +494,28 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
   );
 
   return (
-    <Card className={`p-4 border-l-4 ${
+    <Card id={`stage-card-${item.id}`} className={`p-4 border-l-4 scroll-mt-24 transition-shadow ${
       item.is_rework ? "border-l-orange-500 bg-orange-50/40" :
       blocked ? "border-l-destructive bg-destructive/5"
       : paused ? "border-l-warning bg-warning/5"
-      : running ? "border-l-emerald-500"
-      : "border-l-primary"
+      : running ? "border-l-emerald-500 bg-emerald-50/30"
+      : done ? "border-l-emerald-700 bg-emerald-50/50 opacity-80"
+      : "border-l-slate-400"
     }`}>
+      {/* Faixa de estado bem visível */}
+      <div className={`-m-4 mb-3 px-4 py-1.5 text-xs font-bold uppercase tracking-wider rounded-t ${
+        done ? "bg-emerald-700 text-white"
+        : running ? "bg-emerald-600 text-white"
+        : paused ? "bg-amber-500 text-white"
+        : blocked ? "bg-destructive text-destructive-foreground"
+        : "bg-slate-200 text-slate-700"
+      }`}>
+        {done ? "✓ Concluída"
+          : running ? "● A produzir"
+          : paused ? "❚❚ Em pausa"
+          : blocked ? "⚠ Bloqueada"
+          : "○ Não iniciada"}
+      </div>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
