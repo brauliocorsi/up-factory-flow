@@ -12,22 +12,30 @@ export type DashboardFilterState = {
   modelId: string;
   fabric: string;
   measure: string;
+  structure: string;
   stage: string;
 };
 
-export const emptyFilters: DashboardFilterState = { q: "", modelId: "all", fabric: "all", measure: "all", stage: "all" };
+export const emptyFilters: DashboardFilterState = { q: "", modelId: "all", fabric: "all", measure: "all", structure: "all", stage: "all" };
 
 export function DashboardFilters({ value, onChange }: { value: DashboardFilterState; onChange: (v: DashboardFilterState) => void }) {
   const { data: models = [] } = useQuery({ queryKey: ["ref", "models"], queryFn: () => listRef({ data: { kind: "models" } }) });
   const { data: fabrics = [] } = useQuery({ queryKey: ["ref", "fabric_types"], queryFn: () => listRef({ data: { kind: "fabric_types" } }) });
   const { data: measures = [] } = useQuery({ queryKey: ["ref", "measures"], queryFn: () => listRef({ data: { kind: "measures" } }) });
+  const { data: structures = [] } = useQuery({ queryKey: ["ref", "structures"], queryFn: () => listRef({ data: { kind: "structures" } }) });
 
   const set = <K extends keyof DashboardFilterState>(k: K, v: DashboardFilterState[K]) => onChange({ ...value, [k]: v });
   const hasFilters =
-    value.q.trim() !== "" || value.modelId !== "all" || value.fabric !== "all" || value.measure !== "all" || value.stage !== "all";
+    value.q.trim() !== "" || value.modelId !== "all" || value.fabric !== "all" || value.measure !== "all" || value.structure !== "all" || value.stage !== "all";
+
+  // If a model is selected, restrict structures to the ones linked to that model.
+  const filteredStructures = useMemo(() => {
+    if (value.modelId === "all") return structures.filter((s) => s.active);
+    return structures.filter((s) => s.active && (s.model_ids ?? []).includes(value.modelId));
+  }, [structures, value.modelId]);
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-6 gap-2 mt-3">
+    <div className="grid grid-cols-2 md:grid-cols-7 gap-2 mt-3">
       <div className="relative col-span-2">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
         <Input
@@ -56,6 +64,13 @@ export function DashboardFilters({ value, onChange }: { value: DashboardFilterSt
         <SelectContent>
           <SelectItem value="all">Todas as medidas</SelectItem>
           {measures.filter((m) => m.active).map((m) => <SelectItem key={m.id} value={m.name}>{m.name}</SelectItem>)}
+        </SelectContent>
+      </Select>
+      <Select value={value.structure} onValueChange={(v) => set("structure", v)}>
+        <SelectTrigger className="h-10"><SelectValue placeholder="Estrutura" /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Todas as estruturas</SelectItem>
+          {filteredStructures.map((s) => <SelectItem key={s.id} value={s.id}>{s.code} · {s.name}</SelectItem>)}
         </SelectContent>
       </Select>
       <div className="flex gap-2">
@@ -96,6 +111,22 @@ export function useFabricMatchContext(filters: DashboardFilterState): FabricMatc
   }, [filters.fabric, fabrics, refs]);
 }
 
+export type StructureMatchContext = {
+  /** allowed structure code + name tokens for the selected structure id */
+  allowedTokens: string[] | null;
+};
+
+export function useStructureMatchContext(filters: DashboardFilterState): StructureMatchContext {
+  const { data: structures = [] } = useQuery({ queryKey: ["ref", "structures"], queryFn: () => listRef({ data: { kind: "structures" } }) });
+  return useMemo(() => {
+    if (filters.structure === "all") return { allowedTokens: null };
+    const s = structures.find((x) => x.id === filters.structure);
+    if (!s) return { allowedTokens: [] };
+    const tokens = [s.code, s.name].filter(Boolean) as string[];
+    return { allowedTokens: tokens };
+  }, [filters.structure, structures]);
+}
+
 export function applyDashboardFilters<T extends {
   order_number: string;
   product_description: string;
@@ -104,8 +135,9 @@ export function applyDashboardFilters<T extends {
   fabric_type: string | null;
   fabric_ref?: string | null;
   measure: string | null;
+  structure_type?: string | null;
   current_stage: string;
-}>(byStage: Record<string, T[]>, filters: DashboardFilterState, fabricCtx?: FabricMatchContext): Record<string, T[]> {
+}>(byStage: Record<string, T[]>, filters: DashboardFilterState, fabricCtx?: FabricMatchContext, structureCtx?: StructureMatchContext): Record<string, T[]> {
   const q = filters.q.trim().toLowerCase();
   const out: Record<string, T[]> = {};
   for (const stage of Object.keys(byStage)) {
@@ -136,6 +168,17 @@ export function applyDashboardFilters<T extends {
           const desc = (o.product_description ?? "").toLowerCase();
           if (!desc.includes(m.toLowerCase())) return false;
         }
+      }
+      if (filters.structure !== "all") {
+        const tokens = structureCtx?.allowedTokens;
+        if (!tokens || tokens.length === 0) return false;
+        const st = (o.structure_type ?? "").toLowerCase();
+        const desc = (o.product_description ?? "").toLowerCase();
+        const hit = tokens.some((t) => {
+          const lt = t.toLowerCase();
+          return (st && st === lt) || (st && st.includes(lt)) || desc.includes(lt);
+        });
+        if (!hit) return false;
       }
       return true;
     });
