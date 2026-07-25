@@ -86,6 +86,17 @@ function RefTable({ kind, hint, hasCategory }: { kind: RefKind; hint: string; ha
     [fabricTypes],
   );
 
+  const showModels = kind === "structures";
+  const { data: modelsAll = [] } = useQuery({
+    queryKey: ["ref", "models"],
+    queryFn: () => listRef({ data: { kind: "models" } }),
+    enabled: showModels,
+  });
+  const modelById = useMemo(
+    () => new Map((modelsAll ?? []).map((m) => [m.id, m])),
+    [modelsAll],
+  );
+
   const refresh = () => qc.invalidateQueries({ queryKey: ["ref", kind] });
 
   const del = useMutation({
@@ -94,7 +105,7 @@ function RefTable({ kind, hint, hasCategory }: { kind: RefKind; hint: string; ha
     onError: (e: any) => toast.error(e.message),
   });
   const toggle = useMutation({
-    mutationFn: (r: RefRow) => upsertRef({ data: { kind, id: r.id, code: r.code, name: r.name, active: !r.active, category_id: r.category_id ?? null } }),
+    mutationFn: (r: RefRow) => upsertRef({ data: { kind, id: r.id, code: r.code, name: r.name, active: !r.active, category_id: r.category_id ?? null, model_ids: r.model_ids } }),
     onSuccess: refresh,
   });
   const toggleDirectional = useMutation({
@@ -111,7 +122,7 @@ function RefTable({ kind, hint, hasCategory }: { kind: RefKind; hint: string; ha
         <div className="text-xs text-muted-foreground">{hint}</div>
         <div className="flex gap-2">
           <ImportDialog kind={kind} hasCategory={hasCategory} onDone={refresh} />
-          <UpsertDialog kind={kind} hasCategory={hasCategory} cats={cats} fabricTypes={fabricTypes} onDone={refresh} />
+          <UpsertDialog kind={kind} hasCategory={hasCategory} cats={cats} fabricTypes={fabricTypes} modelsAll={modelsAll} onDone={refresh} />
         </div>
       </div>
       <div className="overflow-x-auto">
@@ -127,6 +138,7 @@ function RefTable({ kind, hint, hasCategory }: { kind: RefKind; hint: string; ha
               <TableHead>Nome</TableHead>
               {hasCategory && <TableHead>Categoria</TableHead>}
               {showFabricType && <TableHead>Tipo de Tecido</TableHead>}
+              {showModels && <TableHead>Modelos vinculados</TableHead>}
               {showDirectional && <TableHead className="w-32">Sentido do veio</TableHead>}
               <TableHead className="w-24">Ativo</TableHead>
               <TableHead className="w-32 text-right">Ações</TableHead>
@@ -159,6 +171,21 @@ function RefTable({ kind, hint, hasCategory }: { kind: RefKind; hint: string; ha
                     )}
                   </TableCell>
                 )}
+                {showModels && (
+                  <TableCell>
+                    {r.model_ids && r.model_ids.length ? (
+                      <div className="flex flex-wrap gap-1">
+                        {r.model_ids.map((mid) => (
+                          <Badge key={mid} variant="secondary">
+                            {modelById.get(mid)?.code ?? "?"} · {modelById.get(mid)?.name ?? ""}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                )}
                 {showDirectional && (
                   <TableCell>
                     <Switch
@@ -171,7 +198,7 @@ function RefTable({ kind, hint, hasCategory }: { kind: RefKind; hint: string; ha
                   <Switch checked={r.active} onCheckedChange={() => toggle.mutate(r)} />
                 </TableCell>
                 <TableCell className="text-right space-x-1">
-                  <UpsertDialog kind={kind} hasCategory={hasCategory} cats={cats} fabricTypes={fabricTypes} editing={r} onDone={refresh} />
+                  <UpsertDialog kind={kind} hasCategory={hasCategory} cats={cats} fabricTypes={fabricTypes} modelsAll={modelsAll} editing={r} onDone={refresh} />
                   <Button variant="ghost" size="icon" onClick={() => { if (confirm(`Apagar ${r.code} — ${r.name}?`)) del.mutate(r.id); }}>
                     <Trash2 className="size-4 text-destructive" />
                   </Button>
