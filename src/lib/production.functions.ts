@@ -35,6 +35,7 @@ export type ProductionStageOrder = {
   status: string;
   is_paused: boolean;
   started_at: string | null;
+  finished_at?: string | null;
   productive_seconds: number;
   paused_seconds: number;
   operator_code: string | null;
