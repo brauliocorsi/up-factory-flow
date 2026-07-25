@@ -212,13 +212,15 @@ function RefTable({ kind, hint, hasCategory }: { kind: RefKind; hint: string; ha
   );
 }
 
-function UpsertDialog({ kind, hasCategory, cats, fabricTypes = [], editing, onDone }: { kind: RefKind; hasCategory: boolean; cats: RefRow[]; fabricTypes?: RefRow[]; editing?: RefRow; onDone: () => void }) {
+function UpsertDialog({ kind, hasCategory, cats, fabricTypes = [], modelsAll = [], editing, onDone }: { kind: RefKind; hasCategory: boolean; cats: RefRow[]; fabricTypes?: RefRow[]; modelsAll?: RefRow[]; editing?: RefRow; onDone: () => void }) {
   const [open, setOpen] = useState(false);
   const [code, setCode] = useState(editing?.code ?? "");
   const [name, setName] = useState(editing?.name ?? "");
   const [categoryId, setCategoryId] = useState<string>(editing?.category_id ?? "");
   const [fabricTypeId, setFabricTypeId] = useState<string>(editing?.fabric_type_id ?? "");
+  const [modelIds, setModelIds] = useState<string[]>(editing?.model_ids ?? []);
   const showFabricType = kind === "fabric_refs";
+  const showModels = kind === "structures";
 
   const mut = useMutation({
     mutationFn: () =>
@@ -230,13 +232,14 @@ function UpsertDialog({ kind, hasCategory, cats, fabricTypes = [], editing, onDo
           name: name.trim(),
           category_id: categoryId || null,
           fabric_type_id: showFabricType ? (fabricTypeId || null) : undefined,
+          model_ids: showModels ? modelIds : undefined,
         },
       }),
     onSuccess: () => {
       toast.success(editing ? "Atualizado" : "Adicionado");
       setOpen(false);
       onDone();
-      if (!editing) { setCode(""); setName(""); setCategoryId(""); setFabricTypeId(""); }
+      if (!editing) { setCode(""); setName(""); setCategoryId(""); setFabricTypeId(""); setModelIds([]); }
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -284,6 +287,36 @@ function UpsertDialog({ kind, hasCategory, cats, fabricTypes = [], editing, onDo
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          )}
+          {showModels && (
+            <div className="space-y-1.5">
+              <Label className="text-xs">Modelos vinculados</Label>
+              <div className="max-h-56 overflow-y-auto rounded-md border p-2 space-y-1">
+                {modelsAll.length === 0 && (
+                  <div className="text-xs text-muted-foreground px-1 py-2">Sem modelos.</div>
+                )}
+                {modelsAll.map((m) => {
+                  const checked = modelIds.includes(m.id);
+                  return (
+                    <label key={m.id} className="flex items-center gap-2 text-sm px-1 py-1 rounded hover:bg-muted cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(e) =>
+                          setModelIds((prev) =>
+                            e.target.checked ? [...prev, m.id] : prev.filter((x) => x !== m.id),
+                          )
+                        }
+                      />
+                      <span className="font-mono text-xs">{m.code}</span>
+                      <span className="text-muted-foreground">·</span>
+                      <span>{m.name}</span>
+                    </label>
+                  );
+                })}
+              </div>
+              <div className="text-xs text-muted-foreground">{modelIds.length} selecionado(s)</div>
             </div>
           )}
         </div>
