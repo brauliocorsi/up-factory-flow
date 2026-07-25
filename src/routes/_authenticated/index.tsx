@@ -38,7 +38,7 @@ function Dashboard() {
   const [tab, setTab] = useState("kanban");
   const [filters, setFilters] = useState<DashboardFilterState>(emptyFilters);
   const filteredData = useMemo(
-    () => ({ ...data, byStage: applyDashboardFilters(data.byStage as any, filters) }),
+    () => ({ ...data, byStage: applyDashboardFilters(data.byStage, filters) }),
     [data, filters]
   );
   return (
