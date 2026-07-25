@@ -11,7 +11,7 @@ import { OrdersListView } from "@/components/dashboard/OrdersListView";
 import { OperatorsActiveView } from "@/components/dashboard/OperatorsActiveView";
 import { OperatorsEfficiencyView } from "@/components/dashboard/OperatorsEfficiencyView";
 import { ProductionKpisBar } from "@/components/dashboard/ProductionKpisBar";
-import { DashboardFilters, applyDashboardFilters, emptyFilters, useFabricMatchContext, type DashboardFilterState } from "@/components/dashboard/DashboardFilters";
+import { DashboardFilters, applyDashboardFilters, emptyFilters, useFabricMatchContext, useStructureMatchContext, type DashboardFilterState } from "@/components/dashboard/DashboardFilters";
 
 const dashboardQuery = queryOptions({
   queryKey: ["dashboard"],
@@ -37,9 +37,10 @@ function Dashboard() {
   const [tab, setTab] = useState("kanban");
   const [filters, setFilters] = useState<DashboardFilterState>(emptyFilters);
   const fabricCtx = useFabricMatchContext(filters);
+  const structureCtx = useStructureMatchContext(filters);
   const filteredData = useMemo(
-    () => ({ ...data, byStage: applyDashboardFilters(data.byStage, filters, fabricCtx) }),
-    [data, filters, fabricCtx]
+    () => ({ ...data, byStage: applyDashboardFilters(data.byStage, filters, fabricCtx, structureCtx) }),
+    [data, filters, fabricCtx, structureCtx]
   );
   return (
     <div>
