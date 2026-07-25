@@ -29,6 +29,8 @@ export type RefRow = {
   category_id?: string | null;
   /** Apenas para fabric_types: corte no sentido do veio. */
   directional?: boolean;
+  /** Apenas para fabric_refs: tipo de tecido vinculado. */
+  fabric_type_id?: string | null;
 };
 
 const kindSchema = z.enum([
@@ -50,7 +52,9 @@ export const listRef = createServerFn({ method: "POST" })
         ? "id, code, name, active, category_id"
         : data.kind === "fabric_types"
           ? "id, code, name, active, directional"
-          : "id, code, name, active";
+          : data.kind === "fabric_refs"
+            ? "id, code, name, active, fabric_type_id"
+            : "id, code, name, active";
     const { data: rows, error } = await (context.supabase as any)
       .from(REF_TABLE[data.kind])
       .select(cols)
@@ -67,6 +71,7 @@ const upsertSchema = z.object({
   active: z.boolean().optional(),
   category_id: z.string().uuid().nullable().optional(),
   directional: z.boolean().optional(),
+  fabric_type_id: z.string().uuid().nullable().optional(),
 });
 
 export const upsertRef = createServerFn({ method: "POST" })
@@ -78,6 +83,9 @@ export const upsertRef = createServerFn({ method: "POST" })
     if (data.kind === "models") row.category_id = data.category_id ?? null;
     if (data.kind === "fabric_types" && data.directional !== undefined) {
       row.directional = data.directional;
+    }
+    if (data.kind === "fabric_refs" && data.fabric_type_id !== undefined) {
+      row.fabric_type_id = data.fabric_type_id;
     }
     const table = REF_TABLE[data.kind];
     if (data.id) {
@@ -159,7 +167,7 @@ export const getCatalogs = createServerFn({ method: "GET" })
       s.from("ref_structures").select("id, code, name, active").eq("active", true).order("code"),
       s.from("ref_measures").select("id, code, name, active").eq("active", true).order("code"),
       s.from("ref_fabric_types").select("id, code, name, active").eq("active", true).order("code"),
-      s.from("ref_fabric_refs").select("id, code, name, active").eq("active", true).order("code"),
+      s.from("ref_fabric_refs").select("id, code, name, active, fabric_type_id").eq("active", true).order("code"),
       s.from("ref_colors").select("id, code, name, active").eq("active", true).order("code"),
     ]);
     return {
