@@ -121,9 +121,22 @@ export function applyDashboardFilters<T extends {
         if (!allowed) return false;
         const ft = o.fabric_type ?? "";
         const fr = o.fabric_ref ?? "";
-        if (!allowed.has(ft) && !allowed.has(fr)) return false;
+        if (allowed.has(ft) || allowed.has(fr)) {
+          // ok
+        } else {
+          // Fallback: some legacy/imported orders keep the fabric info only in product_description.
+          const desc = (o.product_description ?? "").toLowerCase();
+          const hit = Array.from(allowed).some((n) => n && desc.includes(n.toLowerCase()));
+          if (!hit) return false;
+        }
       }
-      if (filters.measure !== "all" && (o.measure ?? "") !== filters.measure) return false;
+      if (filters.measure !== "all") {
+        const m = filters.measure;
+        if ((o.measure ?? "") !== m) {
+          const desc = (o.product_description ?? "").toLowerCase();
+          if (!desc.includes(m.toLowerCase())) return false;
+        }
+      }
       return true;
     });
   }
