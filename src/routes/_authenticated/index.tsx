@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useSuspenseQuery, queryOptions, useQuery } from "@tanstack/react-query";
-import { Suspense, useState } from "react";
+import { useSuspenseQuery, queryOptions } from "@tanstack/react-query";
+import { Suspense, useState, useMemo } from "react";
 import { getDashboardData } from "@/lib/orders.functions";
 import { StatCards } from "@/components/app/StatCards";
 import { KanbanBoard } from "@/components/kanban/KanbanBoard";
@@ -12,7 +12,6 @@ import { OperatorsActiveView } from "@/components/dashboard/OperatorsActiveView"
 import { OperatorsEfficiencyView } from "@/components/dashboard/OperatorsEfficiencyView";
 import { ProductionKpisBar } from "@/components/dashboard/ProductionKpisBar";
 import { DashboardFilters, applyDashboardFilters, emptyFilters, type DashboardFilterState } from "@/components/dashboard/DashboardFilters";
-import { useMemo } from "react";
 
 const dashboardQuery = queryOptions({
   queryKey: ["dashboard"],
