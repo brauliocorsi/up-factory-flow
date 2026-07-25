@@ -47,7 +47,7 @@ export function DashboardFilters({ value, onChange }: { value: DashboardFilterSt
         <SelectTrigger className="h-10"><SelectValue placeholder="Tecido" /></SelectTrigger>
         <SelectContent>
           <SelectItem value="all">Todos os tecidos</SelectItem>
-          {fabrics.filter((f) => f.active).map((f) => <SelectItem key={f.id} value={f.name}>{f.name}</SelectItem>)}
+          {fabrics.filter((f) => f.active).map((f) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
         </SelectContent>
       </Select>
       <Select value={value.measure} onValueChange={(v) => set("measure", v)}>
