@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -47,7 +48,7 @@ export function DashboardFilters({ value, onChange }: { value: DashboardFilterSt
         <SelectTrigger className="h-10"><SelectValue placeholder="Tecido" /></SelectTrigger>
         <SelectContent>
           <SelectItem value="all">Todos os tecidos</SelectItem>
-          {fabrics.filter((f) => f.active).map((f) => <SelectItem key={f.id} value={f.name}>{f.name}</SelectItem>)}
+          {fabrics.filter((f) => f.active).map((f) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
         </SelectContent>
       </Select>
       <Select value={value.measure} onValueChange={(v) => set("measure", v)}>
@@ -75,15 +76,36 @@ export function DashboardFilters({ value, onChange }: { value: DashboardFilterSt
   );
 }
 
+export type FabricMatchContext = {
+  /** allowed fabric_type names AND fabric_ref names for the selected type id */
+  allowedNames: Set<string> | null;
+};
+
+export function useFabricMatchContext(filters: DashboardFilterState): FabricMatchContext {
+  const { data: fabrics = [] } = useQuery({ queryKey: ["ref", "fabric_types"], queryFn: () => listRef({ data: { kind: "fabric_types" } }) });
+  const { data: refs = [] } = useQuery({ queryKey: ["ref", "fabric_refs"], queryFn: () => listRef({ data: { kind: "fabric_refs" } }) });
+  return useMemo(() => {
+    if (filters.fabric === "all") return { allowedNames: null };
+    const type = fabrics.find((f) => f.id === filters.fabric);
+    const allowed = new Set<string>();
+    if (type) allowed.add(type.name);
+    for (const r of refs) {
+      if ((r as any).fabric_type_id === filters.fabric) allowed.add(r.name);
+    }
+    return { allowedNames: allowed };
+  }, [filters.fabric, fabrics, refs]);
+}
+
 export function applyDashboardFilters<T extends {
   order_number: string;
   product_description: string;
   customer_order: string | null;
   model_id: string | null;
   fabric_type: string | null;
+  fabric_ref?: string | null;
   measure: string | null;
   current_stage: string;
-}>(byStage: Record<string, T[]>, filters: DashboardFilterState): Record<string, T[]> {
+}>(byStage: Record<string, T[]>, filters: DashboardFilterState, fabricCtx?: FabricMatchContext): Record<string, T[]> {
   const q = filters.q.trim().toLowerCase();
   const out: Record<string, T[]> = {};
   for (const stage of Object.keys(byStage)) {
@@ -94,7 +116,13 @@ export function applyDashboardFilters<T extends {
         if (!hay.includes(q)) return false;
       }
       if (filters.modelId !== "all" && o.model_id !== filters.modelId) return false;
-      if (filters.fabric !== "all" && (o.fabric_type ?? "") !== filters.fabric) return false;
+      if (filters.fabric !== "all") {
+        const allowed = fabricCtx?.allowedNames;
+        if (!allowed) return false;
+        const ft = o.fabric_type ?? "";
+        const fr = o.fabric_ref ?? "";
+        if (!allowed.has(ft) && !allowed.has(fr)) return false;
+      }
       if (filters.measure !== "all" && (o.measure ?? "") !== filters.measure) return false;
       return true;
     });
