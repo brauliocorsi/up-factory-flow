@@ -22,6 +22,7 @@ export type DashboardOrder = {
   fabric_ref: string | null;
   customer_order: string | null;
   model_id: string | null;
+  structure_type: string | null;
   lines?: ConvergenceLines;
 };
 
@@ -38,7 +39,7 @@ export const getDashboardData = createServerFn({ method: "GET" })
     const { supabase } = context;
     const { data: orders, error } = await (supabase as any)
       .from("production_orders")
-      .select("id, order_number, product_description, priority, due_date, status, observation, is_stock_production, measure, fabric_type, fabric_ref, customer_order, model_id, models(name), order_stages(stage, status, started_at, notes)")
+      .select("id, order_number, product_description, priority, due_date, status, observation, is_stock_production, measure, fabric_type, fabric_ref, structure_type, customer_order, model_id, models(name), order_stages(stage, status, started_at, notes)")
       .neq("status", "cancelada")
       .order("priority", { ascending: false })
       .order("entry_date", { ascending: true });
@@ -83,6 +84,7 @@ export const getDashboardData = createServerFn({ method: "GET" })
         fabric_ref: ((o as any).fabric_ref as string | null) ?? null,
         customer_order: ((o as any).customer_order as string | null) ?? null,
         model_id: ((o as any).model_id as string | null) ?? null,
+        structure_type: ((o as any).structure_type as string | null) ?? null,
         lines,
       };
       byStage[current.stage].push(card);

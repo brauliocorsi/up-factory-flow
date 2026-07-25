@@ -243,6 +243,39 @@ export type Database = {
           },
         ]
       }
+      model_structures: {
+        Row: {
+          created_at: string
+          model_id: string
+          structure_id: string
+        }
+        Insert: {
+          created_at?: string
+          model_id: string
+          structure_id: string
+        }
+        Update: {
+          created_at?: string
+          model_id?: string
+          structure_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "model_structures_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "models"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "model_structures_structure_id_fkey"
+            columns: ["structure_id"]
+            isOneToOne: false
+            referencedRelation: "ref_structures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       models: {
         Row: {
           active: boolean

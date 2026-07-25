@@ -31,6 +31,8 @@ export type RefRow = {
   directional?: boolean;
   /** Apenas para fabric_refs: tipo de tecido vinculado. */
   fabric_type_id?: string | null;
+  /** Apenas para structures: modelos vinculados. */
+  model_ids?: string[];
 };
 
 const kindSchema = z.enum([
@@ -60,7 +62,22 @@ export const listRef = createServerFn({ method: "POST" })
       .select(cols)
       .order("code");
     if (error) throw new Error(error.message);
-    return (rows ?? []) as RefRow[];
+    const list = (rows ?? []) as RefRow[];
+    if (data.kind === "structures" && list.length > 0) {
+      const ids = list.map((r) => r.id);
+      const { data: links } = await (context.supabase as any)
+        .from("model_structures")
+        .select("structure_id, model_id")
+        .in("structure_id", ids);
+      const byStructure = new Map<string, string[]>();
+      for (const l of (links as any[]) ?? []) {
+        const arr = byStructure.get(l.structure_id) ?? [];
+        arr.push(l.model_id);
+        byStructure.set(l.structure_id, arr);
+      }
+      for (const r of list) r.model_ids = byStructure.get(r.id) ?? [];
+    }
+    return list;
   });
 
 const upsertSchema = z.object({
@@ -72,6 +89,7 @@ const upsertSchema = z.object({
   category_id: z.string().uuid().nullable().optional(),
   directional: z.boolean().optional(),
   fabric_type_id: z.string().uuid().nullable().optional(),
+  model_ids: z.array(z.string().uuid()).optional(),
 });
 
 export const upsertRef = createServerFn({ method: "POST" })
@@ -88,18 +106,35 @@ export const upsertRef = createServerFn({ method: "POST" })
       row.fabric_type_id = data.fabric_type_id;
     }
     const table = REF_TABLE[data.kind];
+    let structureId: string | undefined = data.id;
     if (data.id) {
       const { error } = await context.supabase.from(table as any).update(row).eq("id", data.id);
       if (error) throw new Error(error.message);
-      return { id: data.id };
+    } else {
+      const { data: ins, error } = await context.supabase
+        .from(table as any)
+        .insert(row)
+        .select("id")
+        .single();
+      if (error) throw new Error(error.message);
+      structureId = (ins as any).id as string;
     }
-    const { data: ins, error } = await context.supabase
-      .from(table as any)
-      .insert(row)
-      .select("id")
-      .single();
-    if (error) throw new Error(error.message);
-    return ins;
+    if (data.kind === "structures" && data.model_ids && structureId) {
+      const sid = structureId;
+      const { error: delErr } = await (context.supabase as any)
+        .from("model_structures")
+        .delete()
+        .eq("structure_id", sid);
+      if (delErr) throw new Error(delErr.message);
+      if (data.model_ids.length) {
+        const payload = data.model_ids.map((mid) => ({ structure_id: sid, model_id: mid }));
+        const { error: insErr } = await (context.supabase as any)
+          .from("model_structures")
+          .insert(payload);
+        if (insErr) throw new Error(insErr.message);
+      }
+    }
+    return { id: structureId };
   });
 
 export const deleteRef = createServerFn({ method: "POST" })
