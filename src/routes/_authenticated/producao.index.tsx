@@ -396,7 +396,6 @@ function ProducaoPage() {
                 coliMutation.mutate({ order_coli_stage_id: coli_stage_id, event })
               }
               coliPending={coliMutation.isPending}
-              isReady={isReadyToStart(it)}
             />
           ))}
         </div>
@@ -408,7 +407,7 @@ function ProducaoPage() {
   );
 }
 
-function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinutes, colis, isMultiColiOrder, onColiAction, coliPending, isReady }: {
+function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinutes, colis, isMultiColiOrder, onColiAction, coliPending }: {
   item: ProductionStageOrder;
   canAct: boolean;
   onAction: (event: "iniciar"|"pausar"|"retomar"|"finalizar") => void;
@@ -419,7 +418,6 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
   isMultiColiOrder: boolean;
   onColiAction: (coli_stage_id: string, event: "iniciar"|"pausar"|"retomar"|"finalizar") => void;
   coliPending: boolean;
-  isReady: boolean;
 }) {
   // Contador "live": usa como âncora o instante em que o segmento ativo
   // começou (último `iniciar`/`retomar`, vindo do servidor). Assim o tempo
@@ -479,7 +477,6 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
   const blocked = item.status === "bloqueada";
   const paused = item.is_paused;
   const done = item.status === "concluida";
-  const pendingStart = !running && !paused && !blocked && !done;
   const isUpholstery = item.stage === "estofagem";
   const isQuality = item.stage === "qualidade";
   const isPacking = item.stage === "embalagem";
