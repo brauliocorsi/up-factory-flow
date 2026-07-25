@@ -80,7 +80,7 @@ export function StageQueuePanel({
                 key={it.order_stage_id}
                 onClick={() => handleClick(it)}
                 className="w-full text-left rounded-md border bg-card hover:bg-accent transition p-2 group"
-                title={it.product_description}
+                title={it.product_description ?? undefined}
               >
                 <div className="flex items-center gap-2">
                   <span className={`inline-block size-2.5 rounded-full shrink-0 ${DOT_STYLE[it.status]}`} />
