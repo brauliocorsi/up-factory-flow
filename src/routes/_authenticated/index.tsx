@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useSuspenseQuery, queryOptions, useQuery } from "@tanstack/react-query";
-import { Suspense, useState } from "react";
+import { useSuspenseQuery, queryOptions } from "@tanstack/react-query";
+import { Suspense, useState, useMemo } from "react";
 import { getDashboardData } from "@/lib/orders.functions";
 import { StatCards } from "@/components/app/StatCards";
 import { KanbanBoard } from "@/components/kanban/KanbanBoard";
@@ -11,6 +11,7 @@ import { OrdersListView } from "@/components/dashboard/OrdersListView";
 import { OperatorsActiveView } from "@/components/dashboard/OperatorsActiveView";
 import { OperatorsEfficiencyView } from "@/components/dashboard/OperatorsEfficiencyView";
 import { ProductionKpisBar } from "@/components/dashboard/ProductionKpisBar";
+import { DashboardFilters, applyDashboardFilters, emptyFilters, type DashboardFilterState } from "@/components/dashboard/DashboardFilters";
 
 const dashboardQuery = queryOptions({
   queryKey: ["dashboard"],
@@ -34,11 +35,17 @@ function Dashboard() {
   const { data } = useSuspenseQuery(dashboardQuery);
   useRealtimeOrders([["dashboard"], ["orders"]]);
   const [tab, setTab] = useState("kanban");
+  const [filters, setFilters] = useState<DashboardFilterState>(emptyFilters);
+  const filteredData = useMemo(
+    () => ({ ...data, byStage: applyDashboardFilters(data.byStage, filters) }),
+    [data, filters]
+  );
   return (
     <div>
       <div className="px-4 pt-4 md:pt-6">
         <h1 className="text-2xl font-bold">Chão de fábrica</h1>
         <p className="text-sm text-muted-foreground">Vista em tempo real das etapas de produção</p>
+        <DashboardFilters value={filters} onChange={setFilters} />
       </div>
       <StatCards stats={data.stats} />
       <ProductionKpisBar />
@@ -51,11 +58,11 @@ function Dashboard() {
             <TabsTrigger value="eficiencia">Eficiência</TabsTrigger>
           </TabsList>
           <TabsContent value="kanban" className="mt-4">
-            <div className="hidden md:block -mx-4"><KanbanBoard data={data} /></div>
-            <div className="md:hidden -mx-4"><MobileStageView data={data} /></div>
+            <div className="hidden md:block -mx-4"><KanbanBoard data={filteredData} /></div>
+            <div className="md:hidden -mx-4"><MobileStageView data={filteredData} /></div>
           </TabsContent>
           <TabsContent value="lista" className="mt-4">
-            <OrdersListView data={data} />
+            <OrdersListView data={filteredData} />
           </TabsContent>
           <TabsContent value="operadores" className="mt-4">
             <OperatorsActiveView />
