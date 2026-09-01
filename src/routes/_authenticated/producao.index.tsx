@@ -168,7 +168,12 @@ function ProducaoPage() {
       if (!code) throw new Error("Indica o teu código primeiro");
       return recordFn({ data: { ...vars, operator_code: code } });
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["production"] }),
+    onSuccess: (res: any) => {
+      if (res && res.ok === false) {
+        toast.error(res.message ?? "Não foi possível registar");
+      }
+      qc.invalidateQueries({ queryKey: ["production"] });
+    },
     onError: (e: any) => toast.error(e?.message ?? "Erro ao registar"),
   });
 
