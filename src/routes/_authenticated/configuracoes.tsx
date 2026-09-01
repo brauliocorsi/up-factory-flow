@@ -145,9 +145,12 @@ function ModeOption({ title, description, checked, onSelect }: {
   title: string; description: string; checked: boolean; onSelect: () => void;
 }) {
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onSelect}
-      className={`w-full text-left border rounded-md p-3 transition ${checked ? "border-primary bg-primary/5" : "hover:bg-accent"}`}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(); } }}
+      className={`w-full cursor-pointer text-left border rounded-md p-3 transition ${checked ? "border-primary bg-primary/5" : "hover:bg-accent"}`}
     >
       <div className="flex items-start gap-3">
         <Switch checked={checked} onCheckedChange={() => onSelect()} />
@@ -156,9 +159,10 @@ function ModeOption({ title, description, checked, onSelect }: {
           <div className="text-xs text-muted-foreground mt-0.5">{description}</div>
         </div>
       </div>
-    </button>
+    </div>
   );
 }
+
 
 function OperatorRow({ op, onSave, saving, onSetPin, settingPin, onEdit, editing, onDelete, deleting }: {
   op: { id: string; code: string; name: string; active: boolean; user_id: string | null; stages: Stage[] };
