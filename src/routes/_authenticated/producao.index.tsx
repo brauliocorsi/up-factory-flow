@@ -590,7 +590,7 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
         ) : (
           <>
             {!isQuality && !operateByColis && item.status !== "em_curso" && !blocked && (!isUpholstery || convergenceReady) && (
-              <Button size="lg" disabled={pending} onClick={() => onAction("iniciar")} className="gap-2">
+              <Button size="lg" disabled={pending} onClick={() => onAction("iniciar")} className="gap-2 h-12 flex-1 sm:flex-none">
                 <Play className="size-4" /> Iniciar
               </Button>
             )}
@@ -602,17 +602,17 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
               </div>
             )}
             {!isQuality && !operateByColis && running && (
-              <Button size="lg" variant="outline" disabled={pending} onClick={() => onAction("pausar")} className="gap-2">
+              <Button size="lg" variant="outline" disabled={pending} onClick={() => onAction("pausar")} className="gap-2 h-12 flex-1 sm:flex-none">
                 <Pause className="size-4" /> Pausar
               </Button>
             )}
             {!isQuality && !operateByColis && paused && (
-              <Button size="lg" variant="outline" disabled={pending} onClick={() => onAction("retomar")} className="gap-2">
+              <Button size="lg" variant="outline" disabled={pending} onClick={() => onAction("retomar")} className="gap-2 h-12 flex-1 sm:flex-none">
                 <RotateCcw className="size-4" /> Retomar
               </Button>
             )}
             {!isQuality && !operateByColis && item.status === "em_curso" && (
-              <Button size="lg" variant="default" disabled={pending} onClick={() => onAction("finalizar")} className="gap-2 bg-emerald-600 hover:bg-emerald-700">
+              <Button size="lg" variant="default" disabled={pending} onClick={() => onAction("finalizar")} className="gap-2 h-12 flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700">
                 <Check className="size-4" /> Finalizar
               </Button>
             )}
