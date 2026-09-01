@@ -224,16 +224,20 @@ function ProducaoPage() {
   const sidebar = <StageQueuePanel stage={activeStage} variant="sidebar" />;
 
   return (
-    <div className="max-w-5xl mx-auto p-4 space-y-4">
+    <div className="max-w-5xl mx-auto p-3 sm:p-4 space-y-3 sm:space-y-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h1 className="text-2xl font-bold">Produção</h1>
+        <h1 className="text-xl sm:text-2xl font-bold">
+          {isOperatorOnly ? "O meu posto" : "Produção"}
+        </h1>
         <div className="flex items-center gap-2 flex-wrap">
-          <Link
-            to="/producao/cascos"
-            className="inline-flex items-center gap-1 rounded-md border bg-card px-3 py-1.5 text-sm font-medium hover:bg-accent"
-          >
-            <Boxes className="size-4" /> Cascos em massa
-          </Link>
+          {!isOperatorOnly && (
+            <Link
+              to="/producao/cascos"
+              className="inline-flex items-center gap-1 rounded-md border bg-card px-3 py-1.5 text-sm font-medium hover:bg-accent"
+            >
+              <Boxes className="size-4" /> Cascos em massa
+            </Link>
+          )}
           {currentOp ? (
           <div className="flex items-center gap-2 bg-primary/10 text-primary rounded-md px-3 py-1.5">
             <UserCircle2 className="size-4" />
@@ -246,8 +250,37 @@ function ProducaoPage() {
         </div>
       </div>
 
-      {/* Identificação */}
-      {!currentOp && (
+      {/* Painel pessoal do operador (login-only, sem código) */}
+      {isOperatorOnly && currentOp && (
+        <Card className="p-3 sm:p-4">
+          <div className="text-xs text-muted-foreground">Etapas atribuídas a ti</div>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {myStages.length === 0 ? (
+              <span className="text-sm text-muted-foreground">
+                Ainda não tens etapas atribuídas. Fala com o responsável.
+              </span>
+            ) : myStages.map((s) => (
+              <Badge key={s} variant="secondary" className="text-xs">
+                {STAGE_LABELS[s]} · {visibleItemsByStage[s]?.length ?? 0}
+              </Badge>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Operador autenticado mas sem ficha ligada */}
+      {isOperatorOnly && !currentOp && (
+        <Card className="p-4 flex items-start gap-2">
+          <AlertTriangle className="size-4 text-orange-600 mt-0.5" />
+          <div className="text-sm">
+            A tua conta ainda não está ligada a uma ficha de operador. Pede ao
+            responsável para associar o teu login antes de produzir.
+          </div>
+        </Card>
+      )}
+
+      {/* Identificação por código: apenas para administradores */}
+      {!isOperatorOnly && !currentOp && (
         <Card className="p-4">
           <Label className="text-sm font-medium">
             {mode === "sessao" ? "Confirma o teu código de operador" : "O teu código de operador"}
@@ -278,9 +311,9 @@ function ProducaoPage() {
       )}
 
       {/* Tabs de etapas */}
-      <div className="overflow-x-auto -mx-4 px-4">
+      <div className="overflow-x-auto -mx-3 px-3 sm:-mx-4 sm:px-4">
         <div className="flex gap-1 min-w-max">
-          {VISIBLE_STAGES.map((s) => {
+          {stageTabs.map((s) => {
             const count = visibleItemsByStage[s]?.length ?? 0;
             const linked = canActOnStage(s);
             const isActive = s === activeStage;
@@ -288,7 +321,7 @@ function ProducaoPage() {
               <button
                 key={s}
                 onClick={() => setActiveStage(s)}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium border transition ${
+                className={`flex items-center gap-1.5 px-3 py-2.5 rounded-md text-sm font-medium border transition ${
                   isActive ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-accent"
                 }`}
               >
@@ -300,6 +333,7 @@ function ProducaoPage() {
           })}
         </div>
       </div>
+
 
       {/* Filtros e Pesquisa */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card p-3 rounded-lg border">
