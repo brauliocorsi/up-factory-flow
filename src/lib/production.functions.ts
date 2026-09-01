@@ -169,8 +169,10 @@ export const recordStageEvent = createServerFn({ method: "POST" })
       _operator_code: data.operator_code,
       _event: data.event,
     });
-    if (error) throw new Error(error.message);
-    return res;
+    // Erros de regra de negócio (ex.: "Etapa já concluída") não devem
+    // rebentar como exceção — devolvemos um resultado tratável na UI.
+    if (error) return { ok: false as const, message: error.message as string };
+    return { ok: true as const, result: res };
   });
 
 // -------- App settings --------
