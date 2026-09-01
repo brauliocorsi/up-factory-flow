@@ -379,6 +379,7 @@ function ProducaoPage() {
             {showDone ? "✓ " : ""}Concluídas hoje
           </button>
           <button
+            hidden={isOperatorOnly}
             onClick={() => setOnlyMine((v) => !v)}
             className={`text-xs font-medium px-2.5 py-1.5 rounded-md border transition ${
               onlyMine ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-accent"
