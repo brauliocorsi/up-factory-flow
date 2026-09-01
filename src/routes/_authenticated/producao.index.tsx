@@ -60,7 +60,7 @@ function ProducaoPage() {
   const fetchSettings = useServerFn(getAppSettings);
   const fetchOps = useServerFn(listOperatorsWithStages);
   const recordFn = useServerFn(recordStageEvent);
-  const { operator: sessionOperator } = useMySession();
+  const { operator: sessionOperator, role } = useMySession();
 
   const { data } = useQuery({ queryKey: ["production"], queryFn: () => fetchData(), refetchInterval: 30000 });
   const { data: settings } = useQuery({ queryKey: ["app-settings"], queryFn: () => fetchSettings() });
