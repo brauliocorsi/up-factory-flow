@@ -17,11 +17,15 @@ Tabela com filtros (pesquisa, modelo, prioridade, estado, data de saída) e sele
 - Prioridade, data de saída, data-alvo da etapa mais antecipada, e sinalização de atraso.
 Ações em lote: **Ativar produção**, **Voltar a planeado** (apenas se nenhuma etapa já foi iniciada), **Definir prioridade**.
 
-### 3. Trabalho do dia
+### 3. Trabalho do dia (folgas nunca bloqueiam)
 Filtro rápido "Hoje" nesse separador, com a regra:
 - Etapas finais (estofagem, qualidade, embalagem, picagem) entram no dia pela **data de saída**.
 - Casco/estrutura, corte, costura e branco entram **antecipadamente**, pela data-alvo calculada com as folgas por etapa já configuradas em Planeamento > Folgas.
-Assim uma encomenda pode aparecer no trabalho de hoje para corte e só dentro de dias para estofagem.
+
+As folgas são **apenas orientação de planeamento**, nunca uma travagem:
+- Qualquer etapa pode ser iniciada assim que a etapa anterior estiver concluída, mesmo que a data-alvo ainda esteja no futuro — se o casco, o branco e o corte/costura acabaram antes do previsto, o estofador adianta-se.
+- A única condição para avançar é a sequência: passo anterior concluído (e o material reservado, como já hoje acontece).
+- Encomendas adiantadas aparecem no ecrã de produção com etiqueta "adiantada" em vez de serem escondidas do posto.
 
 ### 4. Barra de urgentes no chão de fábrica
 Faixa fixa no topo do ecrã de produção com as encomendas Urgentes ativas (número da encomenda, produto, etapa atual, data de saída), visível a todos os utilizadores, independentemente do posto selecionado. Pode ser recolhida, mas não desativada.
