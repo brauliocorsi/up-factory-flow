@@ -13,9 +13,11 @@ Um separador de planeamento na página de Encomendas onde o escritório decide o
 
 ### 2. Separador "Planeamento" dentro de Encomendas
 Tabela com filtros (pesquisa, modelo, prioridade, estado, data de saída) e seleção múltipla, mostrando por encomenda:
-- Estado de planeamento: **Planeado** (pendente) ou **Ativo** (em produção).
+- Estado de planeamento: **Planeado/Ativo** (visível e a produzir no chão de fábrica) ou **Pendente** (não planeado, não aparece na produção).
 - Prioridade, data de saída, data-alvo da etapa mais antecipada, e sinalização de atraso.
-Ações em lote: **Ativar produção**, **Voltar a planeado** (apenas se nenhuma etapa já foi iniciada), **Definir prioridade**.
+Ações em lote: **Planear/Ativar** (passa a Ativo → entra na produção), **Tirar de planeamento** (volta a Pendente, só se nenhuma etapa já foi iniciada), **Definir prioridade**.
+
+**Planeado = Ativo**: uma encomenda "planeada" está ativa para produzir; as "não planeadas" ficam Pendente e não surgem no chão de fábrica.
 
 ### 3. Trabalho do dia (folgas nunca bloqueiam)
 Filtro rápido "Hoje" nesse separador, com a regra:
