@@ -223,6 +223,22 @@ function ProducaoPage() {
 
   const sidebar = <StageQueuePanel stage={activeStage} variant="sidebar" />;
 
+  // Painel pessoal: um operador (login) vê apenas as etapas a que está ligado.
+  const isOperatorOnly = role === "operador";
+  const myStages = useMemo<Stage[]>(
+    () => VISIBLE_STAGES.filter((s) => currentOp?.stages.includes(s)),
+    [currentOp],
+  );
+  const stageTabs: Stage[] = isOperatorOnly
+    ? (myStages.length > 0 ? myStages : [])
+    : [...VISIBLE_STAGES];
+  useEffect(() => {
+    if (stageTabs.length > 0 && !stageTabs.includes(activeStage)) {
+      setActiveStage(stageTabs[0]!);
+    }
+  }, [stageTabs.join(","), activeStage]);
+
+
   return (
     <div className="max-w-5xl mx-auto p-3 sm:p-4 space-y-3 sm:space-y-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
