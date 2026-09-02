@@ -14,6 +14,7 @@ import {
   scanPickingColi,
   sendPickingBatchToStock,
   listPickingQueue,
+  listPendingDispatch,
   type PickingOrder,
 } from "@/lib/picking.functions";
 import { useMySession } from "@/hooks/useMySession";
@@ -99,6 +100,15 @@ function PicagemPage() {
     refetchInterval: 15_000,
   });
 
+  // Picadas que ainda não foram enviadas para o stock (sobrevive a refresh da página)
+  const pendingFn = useServerFn(listPendingDispatch);
+  const { data: pendingDispatch = [] } = useQuery({
+    queryKey: ["picking-pending-dispatch"],
+    queryFn: () => pendingFn(),
+    refetchInterval: 15_000,
+  });
+
+
   // Try resolving by order_number first (when operator scans the order barcode).
   // Otherwise treat as coli scan and dispatch to whichever loaded order matches.
   const resolveMutation = useMutation({
@@ -146,8 +156,9 @@ function PicagemPage() {
         };
       });
       if (res.completed) {
-        toast.success(`Encomenda EM ARMAZÉM (${res.done}/${res.total} colis lidos)`);
+        toast.success(`Encomenda picada (${res.done}/${res.total} colis lidos)`);
         queryClient.invalidateQueries({ queryKey: ["picking-queue"] });
+        queryClient.invalidateQueries({ queryKey: ["picking-pending-dispatch"] });
       } else {
         toast.info(`Coli ${res.coli_number} lido (${res.done}/${res.total})`);
       }
@@ -161,9 +172,14 @@ function PicagemPage() {
   });
 
   const sendBatchMutation = useMutation({
-    mutationFn: async () => {
-      const completedIds = Object.values(loaded).filter((s) => s.completed).map((s) => s.order.id);
-      if (completedIds.length === 0) throw new Error("Não há encomendas concluídas para enviar.");
+    mutationFn: async (ids?: string[]) => {
+      const completedIds = ids && ids.length > 0
+        ? ids
+        : Array.from(new Set([
+            ...Object.values(loaded).filter((s) => s.completed).map((s) => s.order.id),
+            ...pendingDispatch.map((p) => p.order_id),
+          ]));
+      if (completedIds.length === 0) throw new Error("Não há encomendas picadas para enviar.");
       return sendPickingBatchToStock({ data: { operator_code: operatorCode, order_ids: completedIds } });
     },
     onSuccess: (res) => {
@@ -175,6 +191,8 @@ function PicagemPage() {
           return next;
         });
       } else toast.error(res.message);
+      queryClient.invalidateQueries({ queryKey: ["picking-pending-dispatch"] });
+      queryClient.invalidateQueries({ queryKey: ["picking-queue"] });
     },
     onError: (err: any) => toast.error(err.message || "Erro ao enviar lote."),
   });
@@ -297,14 +315,55 @@ function PicagemPage() {
               ))}
             </CardContent>
           </Card>
+
+          <Card className={pendingDispatch.length > 0 ? "border-2 border-amber-500/40" : ""}>
+            <CardHeader className="flex flex-row items-center justify-between gap-2">
+              <CardTitle className="text-sm flex items-center gap-2">
+                <PackageCheck className="size-4" /> Picadas à espera de envio ({pendingDispatch.length})
+              </CardTitle>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={pendingDispatch.length === 0 || !operatorCode || sendBatchMutation.isPending}
+                onClick={() => sendBatchMutation.mutate(pendingDispatch.map((p) => p.order_id))}
+                className="gap-1 h-8"
+              >
+                <Send className="size-3" /> Enviar todas
+              </Button>
+            </CardHeader>
+            <CardContent className="text-sm space-y-1 max-h-[260px] overflow-y-auto">
+              {pendingDispatch.length === 0 ? (
+                <p className="text-muted-foreground">Nada por enviar.</p>
+              ) : pendingDispatch.map((p) => (
+                <div key={p.order_id} className="flex justify-between items-center gap-2 py-1 border-b last:border-0">
+                  <div className="min-w-0">
+                    <div className="font-mono">{p.order_number}</div>
+                    <div className="text-[11px] text-muted-foreground truncate">{p.product_description}</div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-xs text-muted-foreground">{p.coli_total} colis</span>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 gap-1"
+                      disabled={!operatorCode || sendBatchMutation.isPending}
+                      onClick={() => sendBatchMutation.mutate([p.order_id])}
+                    >
+                      <Send className="size-3" /> Enviar
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
         </div>
 
         <div className="lg:col-span-7 space-y-6">
           <Card className="min-h-[400px]">
             <CardHeader className="flex flex-row items-center justify-between border-b pb-4">
               <CardTitle className="text-lg flex items-center gap-2"><Box className="size-5 text-primary" /> Em curso ({loadedList.length})</CardTitle>
-              <Button disabled={completedCount === 0 || sendBatchMutation.isPending} onClick={() => sendBatchMutation.mutate()} className="gap-2 bg-green-600 hover:bg-green-700">
-                {sendBatchMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />} Enviar lote ({completedCount})
+              <Button disabled={(completedCount === 0 && pendingDispatch.length === 0) || sendBatchMutation.isPending} onClick={() => sendBatchMutation.mutate(undefined)} className="gap-2 bg-green-600 hover:bg-green-700">
+                {sendBatchMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />} Enviar lote ({Math.max(completedCount, pendingDispatch.length)})
               </Button>
             </CardHeader>
             <CardContent className="pt-6">

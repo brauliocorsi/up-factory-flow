@@ -30,8 +30,9 @@ function StockProductionPage() {
   const { data: rows = [], isLoading } = useQuery({ queryKey: ["stock-prod"], queryFn: () => listStockProductions() });
   const complete = useMutation({
     mutationFn: (id: string) => completeStockProduction({ data: { order_id: id } }),
-    onSuccess: () => {
-      toast.success("Stock atualizado");
+    onSuccess: (res: any) => {
+      if (res?.ok === false) toast.error(res.message || "Não foi possível concluir");
+      else toast.success("Stock atualizado");
       qc.invalidateQueries({ queryKey: ["stock-prod"] });
       qc.invalidateQueries({ queryKey: ["shells"] });
       qc.invalidateQueries({ queryKey: ["covers"] });
