@@ -101,7 +101,8 @@ export function PlanningTable({ canEdit }: { canEdit: boolean }) {
   const activateMut = useMutation({
     mutationFn: (ids: string[]) => activateFn({ data: { order_ids: ids } }),
     onSuccess: (res: any) => {
-      toast.success(`Planear: ${res.activated?.length ?? ids.length} encomenda(s) ativa(s)`);
+      const n = res.activated?.length ?? 0;
+      toast.success(`Planeamento: ${n} encomenda(s) ativa(s)`);
       if (res.skipped?.length) toast.warning(`${res.skipped.length} já estavam ativas`);
       if (res.failed?.length) toast.error(`${res.failed.length} falharam`);
       invalidate();
