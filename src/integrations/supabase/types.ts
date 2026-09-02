@@ -1773,6 +1773,13 @@ export type Database = {
         }
         Returns: undefined
       }
+      assert_shell_batch_actor: {
+        Args: {
+          _batch: Database["public"]["Tables"]["shell_batches"]["Row"]
+          _op: Database["public"]["Tables"]["operators"]["Row"]
+        }
+        Returns: undefined
+      }
       cancel_order_with_recovery: { Args: { _order_id: string }; Returns: Json }
       complete_stock_production: { Args: { _order_id: string }; Returns: Json }
       count_backlog_batches: { Args: never; Returns: Json }
