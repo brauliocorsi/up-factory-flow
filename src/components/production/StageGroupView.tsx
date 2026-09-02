@@ -37,10 +37,12 @@ export function StageGroupView({ stage, canAct, operatorCode }: Props) {
   const finalizeFn = useServerFn(finalizeStageGroup);
   const eventFn = useServerFn(recordStageEvent);
 
+  const { session } = useAuth();
   const { data: groups = [], isLoading, error } = useQuery({
     queryKey: ["stage-groups", stage],
     queryFn: () => fetchGroups({ data: { stage } }),
     refetchInterval: 30000,
+    enabled: Boolean(session),
   });
 
   const finalizeMut = useMutation({
