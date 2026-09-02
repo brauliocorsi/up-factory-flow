@@ -39,7 +39,7 @@ function ReworkPage() {
     queryFn: () => metricsFn(),
     refetchInterval: 30000,
   });
-  useRealtimeOrders([["rework-events"], ["rework-metrics"]]);
+  useRealtimeOrders([["rework-events"], ["rework-metrics"]], { tables: ["rework_events", "order_stages"] });
 
   return (
     <div className="max-w-6xl mx-auto p-4 space-y-4">
