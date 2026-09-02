@@ -299,7 +299,75 @@ function EncomendasPage() {
             </div>
           )}
         </TabsContent>
+
+        <TabsContent value="historico" className="mt-4 space-y-4">
+          <div className="relative max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            <Input
+              placeholder="Procurar nº encomenda…"
+              value={histSearch}
+              onChange={(e) => setHistSearch(e.target.value)}
+              className="pl-9 h-11"
+            />
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Encomendas produzidas e picadas — saíram da lista de encomendas e do planeamento.
+          </p>
+          <Card className="overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nº</TableHead>
+                  <TableHead>Produto</TableHead>
+                  <TableHead>Modelo</TableHead>
+                  <TableHead>Medida</TableHead>
+                  <TableHead>Tecido</TableHead>
+                  <TableHead>Saída prevista</TableHead>
+                  <TableHead>Concluída</TableHead>
+                  <TableHead></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(history ?? []).map((o) => (
+                  <TableRow key={o.id}>
+                    <TableCell className="font-mono text-xs">
+                      {o.customer_order ? (
+                        <>
+                          <div className="font-bold">{o.customer_order}</div>
+                          <div className="text-[10px] text-muted-foreground">{o.order_number}</div>
+                        </>
+                      ) : (
+                        o.order_number
+                      )}
+                    </TableCell>
+                    <TableCell>{o.product_description}</TableCell>
+                    <TableCell>{o.model_name ?? "—"}</TableCell>
+                    <TableCell>{o.measure ?? "—"}</TableCell>
+                    <TableCell>{o.fabric_type ?? "—"}</TableCell>
+                    <TableCell>{formatDatePT(o.due_date)}</TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">{formatDatePT(o.completed_at)}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Button size="sm" variant="ghost" className="gap-1 h-8" onClick={() => printOne(o.id)}>
+                        <Printer className="size-3" /> Etiqueta
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {(history ?? []).length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                      Sem encomendas concluídas
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </Card>
+        </TabsContent>
       </Tabs>
+
 
       <Dialog open={!!cancelTarget} onOpenChange={(o) => !o && setCancelTarget(null)}>
         <DialogContent>
