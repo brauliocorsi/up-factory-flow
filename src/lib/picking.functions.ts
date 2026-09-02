@@ -229,7 +229,7 @@ export const resolveOrderForPicking = createServerFn({ method: "POST" })
   });
 
 // Validate a scanned coli code against the real colis of an order, and mark it picked.
-// When all colis are picked, the picagem stage closes and the order goes to "em_armazem".
+// When all colis are picked, the picagem stage closes. The order stays "concluida" (packing sets it); picking only records the transfer.
 export const scanPickingColi = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({
