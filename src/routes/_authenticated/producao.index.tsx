@@ -557,6 +557,10 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
   // mantém-se contínuo entre montagens do componente (ex.: trocar de aba
   // de etapa e voltar) — não reinicia com base em Date.now() do mount.
   const running = item.status === "em_curso" && !item.is_paused;
+  // A etapa em curso pertence a outro operador → só ele pode pausar/finalizar (regra do servidor)
+  const ownedByOther = Boolean(
+    item.status === "em_curso" && item.operator_code && operatorCode && item.operator_code !== operatorCode
+  );
   const segmentStartMs = item.current_segment_started_at
     ? new Date(item.current_segment_started_at).getTime()
     : null;
