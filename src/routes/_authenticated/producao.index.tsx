@@ -96,9 +96,14 @@ function ProducaoPage() {
     const out = Object.fromEntries(VISIBLE_STAGES.map((s) => [s, []])) as unknown as Record<Stage, ProductionStageOrder[]>;
     if (!data) return out;
     for (const s of VISIBLE_STAGES) {
-      const activeColiOrderIds = new Set(Object.keys(colisByStageMap[s]?.byOrder ?? {}));
+      const coliData = colisByStageMap[s];
+      const activeColiOrderIds = new Set(Object.keys(coliData?.byOrder ?? {}));
       for (const it of data.byStage[s] ?? []) {
-        if ((it.coli_count ?? 0) > 1 && !activeColiOrderIds.has(it.order_id)) continue;
+        // Só escondemos a encomenda quando ela tem colis nesta etapa mas
+        // nenhum coli ativo (já tratados pelos cartões de coli). Se a etapa
+        // não usa colis (ex.: estrutura/corte), mostramos o cartão normal.
+        const stageUsesColis = (coliData?.multiColiOrderIds ?? []).includes(it.order_id);
+        if (stageUsesColis && !activeColiOrderIds.has(it.order_id)) continue;
         out[s].push(it);
       }
     }
