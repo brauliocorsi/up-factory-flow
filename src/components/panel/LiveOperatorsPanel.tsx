@@ -46,6 +46,11 @@ export function LiveOperatorsPanel({ operators, now }: { operators: PanelOperato
                   <span className="font-mono font-semibold text-foreground">{op.order_number}</span>
                   {" · "}
                   {STAGE_LABELS[op.stage] ?? op.stage}
+                  {(op.order_count ?? 1) > 1 && (
+                    <span className="ml-2 rounded-full bg-primary/15 text-primary px-2 py-0.5 text-[11px] font-semibold">
+                      +{(op.order_count ?? 1) - 1} encomenda(s)
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="text-right shrink-0">

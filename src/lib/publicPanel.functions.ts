@@ -15,6 +15,7 @@ export type PanelOperator = {
   started_at: string | null;
   last_resume_at: string | null;
   productive_seconds: number;
+  order_count?: number;
 };
 
 export type PanelData = {

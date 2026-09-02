@@ -22,6 +22,12 @@ export type StageGroupItem = {
   model_name?: string | null;
   is_stock_production: boolean;
   status: string;
+  is_paused?: boolean;
+  productive_seconds?: number;
+  paused_seconds?: number;
+  started_at?: string | null;
+  operator_code?: string | null;
+  current_segment_started_at?: string | null;
 };
 
 export type StageGroup = {
