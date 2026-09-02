@@ -275,7 +275,7 @@ function PicagemPage() {
                 <p className="font-semibold text-foreground">Como funciona:</p>
                 <ul className="list-disc list-inside space-y-1">
                   <li>1º scan = código da encomenda → carrega a lista de colis.</li>
-                  <li>2º+ scans = códigos de cada coli individual.</li>
+                  <li>2º+ scans = código de cada coli, ou repete a etiqueta da encomenda para marcar o coli seguinte.</li>
                   <li>Quando todos os colis forem lidos, a encomenda passa a EM ARMAZÉM.</li>
                 </ul>
               </div>
