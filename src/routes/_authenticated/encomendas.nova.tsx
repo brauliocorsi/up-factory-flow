@@ -86,6 +86,7 @@ function NovaEncomendaPage() {
 
   const [form, setForm] = useState({
     order_number: "",
+    quantity: 1,
     category_id: "",
     model_id: "",
     structure_id: "",
