@@ -219,10 +219,10 @@ function ProducaoPage() {
   const allItems = visibleItemsByStage[activeStage] ?? [];
   const items = useMemo(() => {
     const rank = (it: ProductionStageOrder) => {
-      if (it.status === "em_curso") return 0;
-      if (it.status === "bloqueada") return 3;
-      if (it.status === "concluida") return 2;
-      return 1; // pendente
+      if (it.status === "bloqueada") return 4;
+      if (it.status === "concluida") return 3;
+      if (it.status === "em_curso") return 1;
+      return isReadyToStart(it) ? 0 : 2; // prontas a iniciar primeiro
     };
     return allItems
       .filter((it) => {
