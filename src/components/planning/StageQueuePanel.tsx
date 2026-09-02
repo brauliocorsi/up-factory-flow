@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronUp, ListTree } from "lucide-react";
 import { formatDatePT } from "@/lib/format";
 import { getStageQueue, type Stage, type StageQueueItem } from "@/lib/planning.functions";
+import { useAuth } from "@/hooks/useAuth";
 
 const STATUS_STYLE: Record<string, string> = {
   ok: "bg-emerald-100 text-emerald-800 border-emerald-300",
@@ -35,11 +36,13 @@ export function StageQueuePanel({
   onItemClick?: (item: StageQueueItem) => void;
 }) {
   const fetchQueue = useServerFn(getStageQueue);
+  const { session } = useAuth();
   const [showAll, setShowAll] = useState(false);
   const { data, isLoading, error } = useQuery({
     queryKey: ["stage-queue", stage],
     queryFn: () => fetchQueue({ data: { stage } }),
     refetchInterval: 60_000,
+    enabled: Boolean(session),
   });
 
   const items = data?.items ?? [];
