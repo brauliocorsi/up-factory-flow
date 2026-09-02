@@ -33,7 +33,8 @@ function EncomendasPage() {
   const { operator, role } = useMySession();
   const opCode = operator?.code ?? "";
   const canEditPlanning = role === "admin" || role === "escritorio";
-  const [tab, setTab] = useState<"lista" | "planeamento">("lista");
+  const [tab, setTab] = useState<"lista" | "planeamento" | "historico">("lista");
+  const [histSearch, setHistSearch] = useState("");
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<string>("all");
   const [modelId, setModelId] = useState<string>("all");
