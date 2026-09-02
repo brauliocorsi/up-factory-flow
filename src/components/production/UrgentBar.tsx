@@ -8,10 +8,12 @@ import { Link } from "@tanstack/react-router";
 
 export function UrgentBar() {
   const fetchUrgent = useServerFn(listUrgentActive);
+  const { session } = useAuth();
   const { data } = useQuery({
     queryKey: ["urgent-active"],
     queryFn: () => fetchUrgent(),
     refetchInterval: 30000,
+    enabled: Boolean(session),
   });
   const [collapsed, setCollapsed] = useState(false);
   const urgent = (data ?? []) as UrgentOrder[];
