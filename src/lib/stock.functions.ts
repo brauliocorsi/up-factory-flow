@@ -282,23 +282,10 @@ export const completeStockProduction = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ order_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const s = context.supabase as any;
-    const { data: ord, error } = await s.from("production_orders")
-      .select("id, status, is_stock_production, stock_item_type, stock_item_id, stock_quantity")
-      .eq("id", data.order_id).single();
-    if (error) throw new Error(error.message);
-    if (!ord.is_stock_production) throw new Error("Não é ordem de stock");
-    if (ord.status === "concluida") throw new Error("Já concluída");
-    const table = ord.stock_item_type === "shell" ? "shells" : "covers";
-    const { data: cur, error: e2 } = await s.from(table).select("quantity").eq("id", ord.stock_item_id).single();
-    if (e2) throw new Error(e2.message);
-    const next = Number(cur.quantity) + Number(ord.stock_quantity ?? 0);
-    const { error: e3 } = await s.from(table).update({ quantity: next }).eq("id", ord.stock_item_id);
-    if (e3) throw new Error(e3.message);
-    await s.from("production_orders").update({ status: "concluida" }).eq("id", ord.id);
-    await s.from("stock_movements").insert({
-      item_type: ord.stock_item_type, item_id: ord.stock_item_id,
-      delta: ord.stock_quantity, reason: `Produção para stock ${ord.id}`, user_id: context.userId,
+    // Atomic + idempotent: row is locked and the status guard blocks double clicks
+    const { error } = await (context.supabase as any).rpc("complete_stock_production", {
+      _order_id: data.order_id,
     });
-    return { ok: true };
+    if (error) return { ok: false as const, message: error.message };
+    return { ok: true as const };
   });
