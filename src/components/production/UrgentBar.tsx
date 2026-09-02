@@ -4,14 +4,17 @@ import { listUrgentActive, type UrgentOrder } from "@/lib/orders.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { STAGE_LABELS, formatDatePT } from "@/lib/format";
 import { Flame, ChevronUp, ChevronDown } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 import { Link } from "@tanstack/react-router";
 
 export function UrgentBar() {
   const fetchUrgent = useServerFn(listUrgentActive);
+  const { session } = useAuth();
   const { data } = useQuery({
     queryKey: ["urgent-active"],
     queryFn: () => fetchUrgent(),
     refetchInterval: 30000,
+    enabled: Boolean(session),
   });
   const [collapsed, setCollapsed] = useState(false);
   const urgent = (data ?? []) as UrgentOrder[];
