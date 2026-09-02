@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS idx_production_orders_priority_due ON public.production_orders (priority DESC, due_date ASC NULLS LAST);

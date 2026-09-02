@@ -3,6 +3,9 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { listOrders, listModels, previewCancelOrder, cancelOrder, type CancelPreview } from "@/lib/orders.functions";
+import { PlanningTable } from "@/components/planning/PlanningTable";
+import { useMySession } from "@/hooks/useMySession";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +19,6 @@ import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
 import { useRealtimeOrders } from "@/hooks/useRealtimeOrders";
 import { QualityCheckDialog } from "@/components/quality/QualityCheckDialog";
-import { useMySession } from "@/hooks/useMySession";
 
 export const Route = createFileRoute("/_authenticated/encomendas/")({
   component: EncomendasPage,
@@ -25,8 +27,10 @@ export const Route = createFileRoute("/_authenticated/encomendas/")({
 function EncomendasPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const { operator } = useMySession();
+  const { operator, role } = useMySession();
   const opCode = operator?.code ?? "";
+  const canEditPlanning = role === "admin" || role === "escritorio";
+  const [tab, setTab] = useState<"lista" | "planeamento">("lista");
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<string>("all");
   const [modelId, setModelId] = useState<string>("all");
@@ -117,7 +121,14 @@ function EncomendasPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+      <Tabs value={tab} onValueChange={(v) => setTab(v as "lista" | "planeamento")}>
+        <TabsList>
+          <TabsTrigger value="lista">Lista</TabsTrigger>
+          <TabsTrigger value="planeamento">Planeamento</TabsTrigger>
+        </TabsList>
+        <TabsContent value="lista" className="mt-4 space-y-4">
+          {/* Filtros Lista */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
         <div className="relative md:col-span-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
           <Input placeholder="Procurar nº encomenda…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 h-11" />
@@ -246,7 +257,19 @@ function EncomendasPage() {
           </Card>
         ))}
         {orderList.length === 0 && <div className="text-center text-sm text-muted-foreground py-8">Sem encomendas</div>}
-      </div>
+        </div>
+        </TabsContent>
+
+        <TabsContent value="planeamento" className="mt-4">
+          {canEditPlanning ? (
+            <PlanningTable canEdit />
+          ) : (
+            <div className="text-center text-sm text-muted-foreground py-8 border border-dashed rounded-lg">
+              O planeamento está disponível para admin e escritório.
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={!!cancelTarget} onOpenChange={(o) => !o && setCancelTarget(null)}>
         <DialogContent>

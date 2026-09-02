@@ -3,6 +3,18 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { computeLines, type ConvergenceLines } from "@/lib/convergence";
 
+async function assertAdminOrOffice(context: any) {
+  const admin = await (context.supabase as any).rpc("has_role", {
+    _user_id: context.userId,
+    _role: "admin",
+  });
+  const office = await (context.supabase as any).rpc("has_role", {
+    _user_id: context.userId,
+    _role: "escritorio",
+  });
+  if (!admin && !office) throw new Error("Sem permissão (apenas admin ou escritório)");
+}
+
 export type DashboardOrder = {
   id: string;
   order_number: string;
@@ -582,7 +594,154 @@ async function computeBatchHints(
     }
   }
 
-  return Array.from(counts.values())
+    return Array.from(counts.values())
     .filter((g) => g.count >= 2)
     .sort((a, b) => b.count - a.count);
 }
+
+// ============================================================
+// PLANEAMENTO — Prioridade, ativação/desativação, urgentes
+// ============================================================
+
+export type PlanningOrder = {
+  id: string;
+  order_number: string;
+  customer_order: string | null;
+  product_description: string;
+  model_name: string | null;
+  measure: string | null;
+  fabric_type: string | null;
+  structure_type: string | null;
+  entry_date: string | null;
+  due_date: string | null;
+  status: string;
+  priority: number;
+  has_started: boolean;        // alguma etapa já iniciou?
+  is_planned: boolean;         // status !== 'pendente'
+};
+
+export const listPlanningOrders = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<PlanningOrder[]> => {
+    const { supabase } = context;
+    const { data: orders, error } = await (supabase as any)
+      .from("production_orders")
+      .select("id, order_number, customer_order, product_description, measure, fabric_type, structure_type, entry_date, due_date, status, priority, models(name), order_stages(stage, started_at)")
+      .neq("status", "cancelada")
+      .order("priority", { ascending: false })
+      .order("due_date", { ascending: true, nullsFirst: false });
+    if (error) throw new Error(error.message);
+    return (orders ?? []).map((o: any) => {
+      const stages: any[] = o.order_stages ?? [];
+      const has_started = stages.some((s) => s.started_at != null);
+      return {
+        id: o.id,
+        order_number: o.order_number,
+        customer_order: o.customer_order ?? null,
+        product_description: o.product_description,
+        model_name: o.models?.name ?? null,
+        measure: o.measure ?? null,
+        fabric_type: o.fabric_type ?? null,
+        structure_type: o.structure_type ?? null,
+        entry_date: o.entry_date ?? null,
+        due_date: o.due_date ?? null,
+        status: o.status,
+        priority: o.priority,
+        has_started,
+        is_planned: o.status !== "pendente",
+      };
+    });
+  });
+
+export const setOrdersPriority = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      order_ids: z.array(z.string().uuid()).min(1).max(500),
+      priority: z.coerce.number().int().min(1).max(3),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdminOrOffice(context);
+    const { error } = await (context.supabase as any)
+      .from("production_orders")
+      .update({ priority: data.priority })
+      .in("id", data.order_ids);
+    if (error) throw new Error(error.message);
+    return { ok: true, updated: data.order_ids.length };
+  });
+
+export const deactivateOrders = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ order_ids: z.array(z.string().uuid()).min(1).max(500) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdminOrOffice(context);
+    const { supabase } = context;
+    // Validar: nenhuma encomenda pode ter etapas já iniciadas.
+    const { data: stages, error: sErr } = await (supabase as any)
+      .from("order_stages")
+      .select("order_id")
+      .in("order_id", data.order_ids)
+      .not("started_at", "is", null);
+    if (sErr) throw new Error(sErr.message);
+    if ((stages ?? []).length > 0) {
+      const blocked = Array.from(new Set((stages ?? []).map((s: any) => s.order_id)));
+      const { data: names } = await (supabase as any)
+        .from("production_orders")
+        .select("order_number")
+        .in("id", blocked);
+      throw new Error(
+        `Não é possível tirar do planeamento: ${((names ?? []).map((n: any) => n.order_number)).join(", ")} já tem produção iniciada`,
+      );
+    }
+    const { error } = await (supabase as any)
+      .from("production_orders")
+      .update({ status: "pendente" })
+      .in("id", data.order_ids)
+      .eq("status", "em_producao");
+    if (error) throw new Error(error.message);
+    return { ok: true, deactivated: data.order_ids.length };
+  });
+
+export type UrgentOrder = {
+  id: string;
+  order_id: string;
+  order_number: string;
+  customer_order: string | null;
+  product_description: string;
+  stage: string;
+  due_date: string | null;
+};
+
+export const listUrgentActive = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<UrgentOrder[]> => {
+    const { supabase } = context;
+    // Urgentes (priority >= 3) ativas em produção.
+    const { data, error } = await (supabase as any)
+      .from("order_stages")
+      .select("id, stage, production_orders!inner(id, order_number, customer_order, product_description, due_date, priority, status)")
+      .eq("production_orders.priority", 3)
+      .eq("production_orders.status", "em_producao")
+      .neq("status", "concluida");
+    if (error) throw new Error(error.message);
+    const seen = new Set<string>();
+    const out: UrgentOrder[] = [];
+    for (const r of data ?? []) {
+      const o = r.production_orders;
+      if (!o || seen.has(o.id)) continue;
+      seen.add(o.id);
+      out.push({
+        id: r.id,
+        order_id: o.id,
+        order_number: o.order_number,
+        customer_order: o.customer_order ?? null,
+        product_description: o.product_description,
+        stage: r.stage,
+        due_date: o.due_date ?? null,
+      });
+    }
+    return out;
+  });
