@@ -103,7 +103,14 @@ function PicagemPage() {
   // Otherwise treat as coli scan and dispatch to whichever loaded order matches.
   const resolveMutation = useMutation({
     mutationFn: (code: string) => resolveOrderForPicking({ data: { code } }),
-    onSuccess: (order) => {
+    onSuccess: (order, code) => {
+      const existing = loaded[order.id];
+      if (existing && !existing.completed) {
+        // Re-scanning the order label picks the next pending coli.
+        scanMutation.mutate({ order_id: order.id, code });
+        setBarcodeInput("");
+        return;
+      }
       if (soundEnabled) playSound("success");
       setLoaded((prev) => prev[order.id] ? prev : {
         ...prev,
@@ -118,6 +125,7 @@ function PicagemPage() {
       setBarcodeInput("");
     },
   });
+
 
   const scanMutation = useMutation({
     mutationFn: async (vars: { order_id: string; code: string }) => {
