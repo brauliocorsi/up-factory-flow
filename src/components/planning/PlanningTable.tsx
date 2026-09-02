@@ -5,8 +5,10 @@ import {
   listPlanningOrders,
   setOrdersPriority,
   deactivateOrders,
+  updateOrder,
   type PlanningOrder,
 } from "@/lib/orders.functions";
+import { EditOrderDialog } from "@/components/orders/EditOrderDialog";
 import { useServerFn } from "@tanstack/react-start";
 import { activateOrders } from "@/lib/planning.functions";
 import { Card } from "@/components/ui/card";
@@ -35,6 +37,7 @@ export function PlanningTable({ canEdit }: { canEdit: boolean }) {
   const setPriorityFn = useServerFn(setOrdersPriority);
   const deactivateFn = useServerFn(deactivateOrders);
   const activateFn = useServerFn(activateOrders);
+  const updateOrderFn = useServerFn(updateOrder);
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -125,6 +128,16 @@ export function PlanningTable({ canEdit }: { canEdit: boolean }) {
       setPriorityFn({ data: { order_ids: vars.ids, priority: vars.priority } }),
     onSuccess: (res: any) => {
       toast.success(`Prioridade atualizada (${res.updated} encomenda(s))`);
+      invalidate();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const datesMut = useMutation({
+    mutationFn: (vars: { id: string; entry_date?: string; due_date?: string }) =>
+      updateOrderFn({ data: vars }),
+    onSuccess: () => {
+      toast.success("Data atualizada");
       invalidate();
     },
     onError: (e: any) => toast.error(e.message),
@@ -231,6 +244,7 @@ export function PlanningTable({ canEdit }: { canEdit: boolean }) {
                 <TableHead>Produto</TableHead>
                 <TableHead>Prioridade</TableHead>
                 <TableHead>Estado</TableHead>
+                <TableHead>Entrada</TableHead>
                 <TableHead>Saída</TableHead>
                 <TableHead>Etapa atual</TableHead>
                 <TableHead></TableHead>
@@ -247,12 +261,14 @@ export function PlanningTable({ canEdit }: { canEdit: boolean }) {
                   onPriorityChange={(p) => priorityMut.mutate({ ids: [o.id], priority: p })}
                   onActivate={() => activateMut.mutate([o.id])}
                   onDeactivate={() => deactivateMut.mutate([o.id])}
+                  onDateChange={(field, value) => datesMut.mutate({ id: o.id, [field]: value })}
+                  savingDates={datesMut.isPending}
                   pending={priorityMut.isPending || activateMut.isPending || deactivateMut.isPending}
                 />
               ))}
               {filtered.length === 0 && !isLoading && (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                     Sem encomendas com estes filtros
                   </TableCell>
                 </TableRow>
@@ -277,6 +293,8 @@ function PlanningRow({
   onPriorityChange,
   onActivate,
   onDeactivate,
+  onDateChange,
+  savingDates,
   pending,
 }: {
   order: PlanningOrder;
@@ -286,6 +304,8 @@ function PlanningRow({
   onPriorityChange: (p: number) => void;
   onActivate: () => void;
   onDeactivate: () => void;
+  onDateChange: (field: "entry_date" | "due_date", value: string) => void;
+  savingDates: boolean;
   pending: boolean;
 }) {
   const todayStr = new Date().toISOString().slice(0, 10);
@@ -336,7 +356,34 @@ function PlanningRow({
         )}
       </TableCell>
       <TableCell>
-        {order.due_date ? (
+        {canEdit ? (
+          <Input
+            type="date"
+            className="h-7 w-32 text-xs"
+            defaultValue={order.entry_date ?? ""}
+            disabled={savingDates}
+            onChange={(e) => {
+              if (e.target.value !== (order.entry_date ?? "")) onDateChange("entry_date", e.target.value);
+            }}
+          />
+        ) : order.entry_date ? (
+          formatDatePT(order.entry_date)
+        ) : (
+          "—"
+        )}
+      </TableCell>
+      <TableCell>
+        {canEdit ? (
+          <Input
+            type="date"
+            className={`h-7 w-32 text-xs ${isOverdue ? "border-red-400 text-red-600 font-semibold" : isToday ? "border-amber-400 text-amber-700 font-semibold" : ""}`}
+            defaultValue={order.due_date ?? ""}
+            disabled={savingDates}
+            onChange={(e) => {
+              if (e.target.value !== (order.due_date ?? "")) onDateChange("due_date", e.target.value);
+            }}
+          />
+        ) : order.due_date ? (
           <span className={isOverdue ? "text-red-600 font-semibold" : isToday ? "text-amber-600 font-semibold" : ""}>
             {formatDatePT(order.due_date)}
           </span>
@@ -352,6 +399,7 @@ function PlanningRow({
       <TableCell>
         {canEdit && (
           <div className="flex gap-1">
+            <EditOrderDialog orderId={order.id} orderNumber={order.order_number} />
             {!order.is_planned && (
               <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs bg-emerald-50 hover:bg-emerald-100" onClick={onActivate} disabled={pending}>
                 <Power className="size-3" /> Planear
