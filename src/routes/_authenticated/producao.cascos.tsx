@@ -199,10 +199,12 @@ function CascosBulkPage() {
   );
 }
 
-function ActiveBatchCard({ batch, disabled, onPause, onResume, onFinalize }: {
-  batch: ActiveBatch; disabled: boolean;
+function ActiveBatchCard({ batch, disabled, lockedReason, onPause, onResume, onFinalize }: {
+  batch: ActiveBatch; disabled: boolean; lockedReason?: string | null;
   onPause: () => void; onResume: () => void; onFinalize: () => void;
 }) {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const blocked = disabled || Boolean(lockedReason);
   // Tempo ao vivo: produtivo + delta desde último update
   const liveProd = batch.is_paused ? batch.productive_seconds
     : batch.productive_seconds + Math.max(0, Math.floor((Date.now() - new Date(batch.started_at ?? Date.now()).getTime()) / 1000) - batch.productive_seconds - batch.paused_seconds);
