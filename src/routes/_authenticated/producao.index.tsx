@@ -677,6 +677,33 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
             )}
           </div>
           <div className="text-sm font-medium mt-1">{item.product_description}</div>
+          {(item.stage_states?.length ?? 0) > 0 && (
+            <div className="flex flex-wrap items-center gap-1 mt-2">
+              {item.stage_states!.map((st) => {
+                const isDone = st.status === "concluida";
+                const isRunning = st.status === "em_curso";
+                const isBlocked = st.status === "bloqueada";
+                return (
+                  <span
+                    key={st.stage}
+                    className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                      isDone
+                        ? "bg-emerald-600 text-white border-emerald-600"
+                        : isRunning
+                        ? "bg-emerald-100 text-emerald-800 border-emerald-400"
+                        : isBlocked
+                        ? "bg-destructive/10 text-destructive border-destructive/40"
+                        : "bg-muted text-muted-foreground border-border"
+                    } ${st.stage === item.stage ? "ring-2 ring-primary/50" : ""}`}
+                    title={`${STAGE_LABELS[st.stage]}: ${st.status}`}
+                  >
+                    {isDone && <Check className="size-3" />}
+                    {STAGE_LABELS[st.stage]}
+                  </span>
+                );
+              })}
+            </div>
+          )}
           {item.observation && (
             <div className="mt-1 text-xs font-semibold bg-warning/15 text-warning-foreground border border-warning/40 rounded px-2 py-1 inline-flex items-center gap-1">
               <AlertTriangle className="size-3 text-warning" />
