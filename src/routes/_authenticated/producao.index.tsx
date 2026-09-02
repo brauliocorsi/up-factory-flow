@@ -145,8 +145,15 @@ function ProducaoPage() {
   const [showPending, setShowPending] = useState<boolean>(true);
   const [showRunning, setShowRunning] = useState<boolean>(true);
   const [showDone, setShowDone] = useState<boolean>(true);
-  const [onlyMine, setOnlyMine] = useState<boolean>(true);
-  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [onlyMine, setOnlyMine] = useState<boolean>(!search.q);
+  const [searchQuery, setSearchQuery] = useState<string>(search.q ?? "");
+  useEffect(() => {
+    if (search.q) {
+      setSearchQuery(search.q);
+      setOnlyMine(false);
+    }
+    if (search.stage) setActiveStage(search.stage as Stage);
+  }, [search.q, search.stage]);
   const [operatorCode, setOperatorCode] = useState<string>(() =>
     (typeof window !== "undefined" && sessionStorage.getItem("op_code")) || ""
   );
