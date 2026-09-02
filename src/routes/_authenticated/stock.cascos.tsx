@@ -150,7 +150,10 @@ export function AdjustDialog({ itemType, itemId, label, onDone }: { itemType: "s
   const [reason, setReason] = useState("");
   const mut = useMutation({
     mutationFn: () => adjustStock({ data: { item_type: itemType, item_id: itemId, delta: Number(delta), reason } }),
-    onSuccess: () => { toast.success("Stock ajustado"); setOpen(false); setDelta(0); setReason(""); onDone(); },
+    onSuccess: (res: any) => {
+      if (res?.ok === false) { toast.error(res.message || "Não foi possível ajustar o stock"); return; }
+      toast.success("Stock ajustado"); setOpen(false); setDelta(0); setReason(""); onDone();
+    },
     onError: (e: any) => toast.error(e.message),
   });
   return (
