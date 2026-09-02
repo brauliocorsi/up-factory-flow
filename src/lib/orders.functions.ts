@@ -164,13 +164,14 @@ export const listOrders = createServerFn({ method: "POST" })
       q = q.or(`order_number.ilike.%${s}%,customer_order.ilike.%${s}%`);
     }
     if (data.only_completed) {
-      q = q.eq("status", "concluida");
+      q = q.in("status", ["concluida", "em_armazem"] as any);
     } else if (data.status) {
       q = q.eq("status", data.status as any);
     } else if (!data.include_completed) {
-      // Encomendas concluídas (picagem feita) vivem só no histórico
-      q = q.neq("status", "concluida");
+      // Encomendas produzidas/picadas vivem só no histórico
+      q = q.not("status", "in", "(concluida,em_armazem)");
     }
+
     if (data.modelId) q = q.eq("model_id", data.modelId);
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
