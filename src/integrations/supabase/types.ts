@@ -1936,6 +1936,17 @@ export type Database = {
         }
         Returns: Json
       }
+      record_picking_dispatch: {
+        Args: {
+          _batch_id: string
+          _operator_code: string
+          _order_ids: string[]
+          _response_body: string
+          _response_code: number
+          _status: string
+        }
+        Returns: Json
+      }
       record_shell_batch_event: {
         Args: { _batch_id: string; _event: string; _operator_code: string }
         Returns: Json
