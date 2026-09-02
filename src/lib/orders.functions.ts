@@ -4,16 +4,25 @@ import { z } from "zod";
 import { computeLines, type ConvergenceLines } from "@/lib/convergence";
 
 async function assertAdminOrOffice(context: any) {
-  const admin = await (context.supabase as any).rpc("has_role", {
+  const { data: isAdmin } = await (context.supabase as any).rpc("has_role", {
     _user_id: context.userId,
     _role: "admin",
   });
-  const office = await (context.supabase as any).rpc("has_role", {
+  const { data: isOffice } = await (context.supabase as any).rpc("has_role", {
     _user_id: context.userId,
     _role: "escritorio",
   });
-  if (!admin && !office) throw new Error("Sem permissão (apenas admin ou escritório)");
+  if (!isAdmin && !isOffice) throw new Error("Sem permissão (apenas admin ou escritório)");
 }
+
+async function assertAdmin(context: any) {
+  const { data: isAdmin } = await (context.supabase as any).rpc("has_role", {
+    _user_id: context.userId,
+    _role: "admin",
+  });
+  if (!isAdmin) throw new Error("Sem permissão (apenas admin)");
+}
+
 
 export type DashboardOrder = {
   id: string;
