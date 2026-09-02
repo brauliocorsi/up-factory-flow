@@ -62,10 +62,12 @@ function ProducaoPage() {
   const fetchOps = useServerFn(listOperatorsWithStages);
   const recordFn = useServerFn(recordStageEvent);
   const { operator: sessionOperator, role } = useMySession();
+  const { session } = useAuth();
+  const authed = Boolean(session);
 
-  const { data } = useQuery({ queryKey: ["production"], queryFn: () => fetchData(), refetchInterval: 30000 });
-  const { data: settings } = useQuery({ queryKey: ["app-settings"], queryFn: () => fetchSettings() });
-  const { data: operators } = useQuery({ queryKey: ["operators-stages"], queryFn: () => fetchOps() });
+  const { data } = useQuery({ queryKey: ["production"], queryFn: () => fetchData(), refetchInterval: 30000, enabled: authed });
+  const { data: settings } = useQuery({ queryKey: ["app-settings"], queryFn: () => fetchSettings(), enabled: authed });
+  const { data: operators } = useQuery({ queryKey: ["operators-stages"], queryFn: () => fetchOps(), enabled: authed });
   const fetchExpected = useServerFn(getExpectedForOrders);
   const fetchColis = useServerFn(getColisByStage);
   const recordColiFn = useServerFn(recordColiStageEvent);
@@ -75,6 +77,7 @@ function ProducaoPage() {
       queryKey: ["production-colis", stage],
       queryFn: () => fetchColis({ data: { stage } }),
       refetchInterval: 30000,
+      enabled: authed,
     })),
   });
   const colisByStageMap = Object.fromEntries(
