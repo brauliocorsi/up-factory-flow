@@ -132,22 +132,41 @@ export const resolveOrderForPicking = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ code: z.string().trim() }).parse(d))
   .handler(async ({ data, context }): Promise<PickingOrder> => {
     const { supabase } = context;
-    const cleanCode = data.code;
+    // Strip a coli suffix (e.g. "16566-01-C2" -> "16566-01") if present.
+    const cleanCode = data.code.trim().replace(/-C\d+$/i, "");
+    const SELECT_COLS =
+      "id, order_number, customer_order, barcode, product_description, structure_type, measure, fabric_type, fabric_ref, color, observation, model_id, status";
 
-    // 1. Find the production order (accept by order_number or barcode; status-agnostic)
-    // Accept order_number, barcode or customer_order (nota do cliente).
-    const { data: matches, error: orderErr } = await supabase
+    // 1. Exact match by order_number, barcode or customer_order (nota do cliente).
+    const { data: exact, error: orderErr } = await supabase
       .from("production_orders")
-      .select("id, order_number, customer_order, barcode, product_description, structure_type, measure, fabric_type, fabric_ref, color, observation, model_id, status")
+      .select(SELECT_COLS)
       .or(`order_number.eq.${cleanCode},barcode.eq.${cleanCode},customer_order.eq.${cleanCode}`);
-
     if (orderErr) throw new Error(orderErr.message);
-    if (!matches || matches.length === 0) {
+
+    let matches = exact ?? [];
+
+    // 1b. Fallback: partial reading (scanner cut the code). Only accept if unique.
+    if (matches.length === 0 && cleanCode.length >= 3) {
+      const { data: partial, error: partialErr } = await supabase
+        .from("production_orders")
+        .select(SELECT_COLS)
+        .neq("status", "cancelada")
+        .or(`order_number.ilike.%${cleanCode}%,barcode.ilike.%${cleanCode}%,customer_order.ilike.%${cleanCode}%`);
+      if (partialErr) throw new Error(partialErr.message);
+      matches = partial ?? [];
+      if (matches.length > 1) {
+        throw new Error(`Código "${cleanCode}" é incompleto (${matches.length} encomendas). Lê o código completo.`);
+      }
+    }
+
+    if (matches.length === 0) {
       throw new Error(`Encomenda com código "${cleanCode}" não encontrada.`);
     }
     if (matches.length > 1) {
       throw new Error(`Nota "${cleanCode}" tem ${matches.length} artigos. Lê o código da coli ou o nº técnico do artigo.`);
     }
+
     const order = matches[0];
     if (order.status === "cancelada") {
       throw new Error(`A encomenda "${order.order_number}" está cancelada.`);
