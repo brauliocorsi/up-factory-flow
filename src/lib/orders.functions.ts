@@ -224,6 +224,8 @@ const orderInputSchema = z.object({
   observation: z.string().trim().max(500).nullable().optional(),
   finishing: z.enum(["F", "N"]).nullable().optional(),
   barcode: z.string().trim().max(64).nullable().optional(),
+  /** Nº de unidades: cada unidade gera uma encomenda numerada (BASE-01, BASE-02, …). */
+  quantity: z.coerce.number().int().min(1).max(200).optional(),
 });
 
 export type OrderInput = z.infer<typeof orderInputSchema>;
@@ -239,16 +241,32 @@ export const createOrder = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => orderInputSchema.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { data: exists } = await supabase
-      .from("production_orders")
-      .select("id")
-      .eq("order_number", data.order_number)
-      .maybeSingle();
-    if (exists) throw new Error(`Encomenda ${data.order_number} já existe`);
+    const quantity = data.quantity ?? 1;
+    // Base = nº de encomenda escrito (sem sufixo -NN). Várias unidades do mesmo
+    // nº ficam numeradas BASE-01, BASE-02, … e agrupadas por customer_order.
+    const base = data.order_number.replace(/-(\d{1,3})$/, "");
 
-    const row = {
-      order_number: data.order_number,
-      customer_order: data.customer_order ?? null,
+    const { data: existingRows, error: exErr } = await supabase
+      .from("production_orders")
+      .select("order_number")
+      .or(`order_number.eq.${base},order_number.like.${base}-%`);
+    if (exErr) throw new Error(exErr.message);
+    const existing = (existingRows ?? []) as Array<{ order_number: string }>;
+
+    let seq = 0;
+    for (const e of existing) {
+      const m = /-(\d{1,3})$/.exec(e.order_number);
+      const n = m ? parseInt(m[1], 10) : 0;
+      if (Number.isFinite(n) && n > seq) seq = n;
+    }
+    const plainExists = existing.some((e) => e.order_number === base);
+    if (quantity === 1 && !plainExists && seq === 0) {
+      // Caso simples: primeira unidade deste nº → mantém o número tal como escrito.
+      seq = -1;
+    }
+
+    const baseRow = {
+      customer_order: data.customer_order ?? base,
       product_description: data.product_description,
       model_id: data.model_id ?? null,
       measure: data.measure ?? null,
@@ -262,16 +280,34 @@ export const createOrder = createServerFn({ method: "POST" })
       notes: data.notes ?? null,
       observation: data.observation ?? null,
       finishing: data.finishing ?? null,
-      barcode: (data.barcode && data.barcode.trim()) || genBarcode(data.order_number),
       created_by: userId,
     } as any;
+
+    const rows: any[] = [];
+    for (let i = 0; i < quantity; i++) {
+      const orderNumber = seq === -1 ? base : `${base}-${String(seq + 1 + i).padStart(2, "0")}`;
+      const bc = (data.barcode && data.barcode.trim()) || "";
+      rows.push({
+        ...baseRow,
+        order_number: orderNumber,
+        barcode: bc ? `${bc}-${orderNumber}` : genBarcode(orderNumber),
+      });
+    }
+
     const { data: inserted, error } = await supabase
       .from("production_orders")
-      .insert(row)
-      .select("id, order_number, barcode")
-      .single();
+      .insert(rows)
+      .select("id, order_number, barcode");
     if (error) throw new Error(error.message);
-    return inserted;
+    const list = (inserted ?? []) as Array<{ id: string; order_number: string; barcode: string | null }>;
+    const first = list[0];
+    return {
+      id: first?.id,
+      order_number: first?.order_number ?? rows[0].order_number,
+      barcode: first?.barcode ?? null,
+      created: list.length || rows.length,
+      order_numbers: list.map((r) => r.order_number),
+    };
   });
 
 const bulkSchema = z.object({ rows: z.array(orderInputSchema).min(1).max(1000) });

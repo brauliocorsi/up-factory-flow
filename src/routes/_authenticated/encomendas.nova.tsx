@@ -86,6 +86,7 @@ function NovaEncomendaPage() {
 
   const [form, setForm] = useState({
     order_number: "",
+    quantity: 1,
     category_id: "",
     model_id: "",
     structure_id: "",
@@ -273,13 +274,20 @@ function NovaEncomendaPage() {
   const mut = useMutation({
     mutationFn: (input: any) => createOrder({ data: input }),
     onSuccess: (res: any) => {
-      toast.success(`Encomenda ${res.order_number} criada`);
+      const n = Number(res?.created ?? 1);
+      if (n > 1) {
+        const nums: string[] = res?.order_numbers ?? [];
+        toast.success(`${n} encomendas criadas: ${nums[0]} … ${nums[nums.length - 1]}`);
+      } else {
+        toast.success(`Encomenda ${res.order_number} criada`);
+      }
       // Reset estado para próxima leitura sequencial (fluxo de fábrica)
       setScanValue("");
       setMissingSegments(new Set());
       setForm((s) => ({
         ...s,
         order_number: "",
+        quantity: 1,
         observation: "",
         notes: "",
         due_date: "",
@@ -317,6 +325,7 @@ function NovaEncomendaPage() {
       entry_date: form.entry_date,
       due_date: form.due_date || null,
       priority: Number(form.priority) || 0,
+      quantity: Number(form.quantity) || 1,
     });
   }
 
@@ -369,6 +378,29 @@ function NovaEncomendaPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <Field label="Nº Encomenda (vazio = automático)">
+              <Input value={form.order_number} onChange={(e) => set("order_number", e.target.value)} className="h-11" placeholder="auto" />
+            </Field>
+            <Field label="Quantidade (unidades)">
+              <Input
+                type="number"
+                min={1}
+                max={200}
+                value={form.quantity}
+                onChange={(e) => set("quantity", Math.max(1, Math.min(200, Number(e.target.value) || 1)))}
+                className="h-11"
+              />
+              <div className="text-xs text-muted-foreground mt-1">
+                {form.quantity > 1
+                  ? `Cria ${form.quantity} encomendas numeradas ${(form.order_number.trim() || "NNNN")}-01 … ${(form.order_number.trim() || "NNNN")}-${String(form.quantity).padStart(2, "0")}`
+                  : "1 unidade = 1 encomenda. Se o nº já existir, é numerado automaticamente (-01, -02, …)."}
+              </div>
+            </Field>
+          </div>
+
+
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <Field label="Categoria" highlight={missingSegments.has("category")}>
               <RefSelect items={cat?.categories ?? []} value={form.category_id} onChange={(v) => { set("category_id", v); set("model_id", ""); }} />
             </Field>
@@ -411,9 +443,6 @@ function NovaEncomendaPage() {
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-3 pt-3">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <Field label="Nº Encomenda (vazio = automático)">
-                  <Input value={form.order_number} onChange={(e) => set("order_number", e.target.value)} className="h-11" placeholder="auto" />
-                </Field>
                 <Field label="Prioridade">
                   <Input type="number" min={0} max={10} value={form.priority} onChange={(e) => set("priority", Number(e.target.value))} className="h-11" />
                 </Field>
