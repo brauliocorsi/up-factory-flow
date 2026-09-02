@@ -743,6 +743,7 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
 
       {/* Ações */}
       <div className="flex gap-2 mt-3 flex-wrap">
+        {/* Bloqueio de propriedade: etapa iniciada por outro operador */}
         {!canAct ? (
           <div className="text-xs text-muted-foreground flex items-center gap-1">
             <Lock className="size-3" /> Não atribuído a esta etapa
