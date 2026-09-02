@@ -3,6 +3,18 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { computeLines, type ConvergenceLines } from "@/lib/convergence";
 
+async function assertAdminOrOffice(context: any) {
+  const admin = await (context.supabase as any).rpc("has_role", {
+    _user_id: context.userId,
+    _role: "admin",
+  });
+  const office = await (context.supabase as any).rpc("has_role", {
+    _user_id: context.userId,
+    _role: "escritorio",
+  });
+  if (!admin && !office) throw new Error("Sem permissão (apenas admin ou escritório)");
+}
+
 export type DashboardOrder = {
   id: string;
   order_number: string;
