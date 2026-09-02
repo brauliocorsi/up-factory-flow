@@ -826,6 +826,7 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
               key={c.id}
               coli={c}
               canAct={canAct}
+              operatorCode={operatorCode}
               pending={coliPending}
               onAction={(ev) => onColiAction(c.id, ev)}
             />
