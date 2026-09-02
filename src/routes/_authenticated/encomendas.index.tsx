@@ -52,9 +52,15 @@ function EncomendasPage() {
     queryKey: ["orders", filters],
     queryFn: () => listOrders({ data: filters }),
   });
+  const { data: history } = useQuery({
+    queryKey: ["orders", "historico", histSearch],
+    queryFn: () => listOrders({ data: { only_completed: true, search: histSearch || undefined } }),
+    enabled: tab === "historico",
+  });
   const { data: models } = useQuery({ queryKey: ["models"], queryFn: () => listModels() });
 
   useRealtimeOrders([["orders"], ["dashboard"]]);
+
 
   const orderList = orders ?? [];
   const allIds = useMemo(() => orderList.map((o) => o.id), [orderList]);
