@@ -146,8 +146,10 @@ export type OrderListItem = {
   due_date: string | null;
   status: string;
   current_stage: string;
-  /** Data em que a picagem foi concluída (histórico de produzidas). */
+  /** Data em que o embalamento foi concluído (encomenda concluída). */
   completed_at: string | null;
+  /** Data em que a picagem/transferência foi registada, se já ocorreu. */
+  picked_at: string | null;
 };
 
 export const listOrders = createServerFn({ method: "POST" })
