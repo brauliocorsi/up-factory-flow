@@ -159,6 +159,7 @@ export const getProductionData = createServerFn({ method: "GET" })
         rework_seconds: row.rework_seconds ?? 0,
         rework_count: row.rework_count ?? 0,
         current_segment_started_at: segmentStartByStageId.get(row.id) ?? null,
+        stage_states: stageStatesByOrder.get(o.id) ?? [],
       });
     }
     return { byStage };
