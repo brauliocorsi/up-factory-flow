@@ -435,9 +435,6 @@ function NovaEncomendaPage() {
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-3 pt-3">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <Field label="Nº Encomenda (vazio = automático)">
-                  <Input value={form.order_number} onChange={(e) => set("order_number", e.target.value)} className="h-11" placeholder="auto" />
-                </Field>
                 <Field label="Prioridade">
                   <Input type="number" min={0} max={10} value={form.priority} onChange={(e) => set("priority", Number(e.target.value))} className="h-11" />
                 </Field>
