@@ -107,6 +107,7 @@ function ProducaoPage() {
         out[s].push(it);
       }
     }
+    console.log("DBG estrutura", (data?.byStage?.estrutura??[]).length, out.estrutura.length, colisByStageMap.estrutura);
     return out;
   }, [data, colisByStageMap]);
 
