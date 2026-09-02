@@ -1757,6 +1757,13 @@ export type Database = {
     Functions: {
       activate_orders: { Args: { _order_ids: string[] }; Returns: Json }
       add_business_days: { Args: { _d: string; _n: number }; Returns: string }
+      assert_previous_stages_done: {
+        Args: {
+          _order_id: string
+          _stage: Database["public"]["Enums"]["production_stage"]
+        }
+        Returns: undefined
+      }
       cancel_order_with_recovery: { Args: { _order_id: string }; Returns: Json }
       count_backlog_batches: { Args: never; Returns: Json }
       create_order_colis: { Args: { _order_id: string }; Returns: Json }
