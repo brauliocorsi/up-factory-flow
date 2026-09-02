@@ -99,6 +99,13 @@ function ProducaoPage() {
       const coliData = colisByStageMap[s];
       const activeColiOrderIds = new Set(Object.keys(coliData?.byOrder ?? {}));
       for (const it of data.byStage[s] ?? []) {
+        // Estrutura e Corte operam sempre pelo cartão da encomenda. Os lotes
+        // destas etapas são uma alternativa explícita através de "Agrupar",
+        // nunca um motivo para esconder ou substituir o cartão individual.
+        if (s === "estrutura" || s === "corte") {
+          out[s].push(it);
+          continue;
+        }
         // Só escondemos a encomenda quando ela tem colis nesta etapa mas
         // nenhum coli ativo (já tratados pelos cartões de coli). Se a etapa
         // não usa colis (ex.: estrutura/corte), mostramos o cartão normal.
@@ -234,7 +241,9 @@ function ProducaoPage() {
     // Qualidade não tem iniciar/pausar/finalizar — está sempre "pronta"
     // para receber o formulário enquanto não estiver concluída.
     if (it.stage === "qualidade") return it.status !== "concluida";
-    if ((it.coli_count ?? 0) > 1) {
+    // Estrutura/Corte são iniciadas pelo cartão normal. O facto de a
+    // encomenda ter vários colis só interessa ao modo "Agrupar".
+    if (it.stage !== "estrutura" && it.stage !== "corte" && (it.coli_count ?? 0) > 1) {
       const activeColis = colisByStageMap[it.stage]?.byOrder?.[it.order_id] ?? [];
       return activeColis.some((c) => c.status !== "em_curso");
     }
@@ -514,7 +523,7 @@ function ProducaoPage() {
               operatorCode={operatorCode.trim()}
               expectedMinutes={expectedMap?.[it.order_id]?.[it.stage] ?? null}
               colis={colisByStage?.byOrder?.[it.order_id] ?? []}
-              isMultiColiOrder={(colisByStage?.multiColiOrderIds ?? []).includes(it.order_id)}
+              isMultiColiOrder={activeStage !== "estrutura" && activeStage !== "corte" && (colisByStage?.multiColiOrderIds ?? []).includes(it.order_id)}
               onColiAction={(coli_stage_id, event) =>
                 coliMutation.mutate({ order_coli_stage_id: coli_stage_id, event })
               }
