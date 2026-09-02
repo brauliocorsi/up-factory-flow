@@ -217,6 +217,10 @@ export const recordColiStageEvent = createServerFn({ method: "POST" })
         _event: data.event,
       },
     );
-    if (error) throw new Error(error.message);
+    if (error) {
+      // Erros esperados do RPC (bloqueio de operador, estado inválido) devolvem
+      // uma mensagem em vez de rebentar a UI.
+      return { ok: false, message: error.message } as const;
+    }
     return res;
   });
