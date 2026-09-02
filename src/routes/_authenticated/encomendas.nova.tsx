@@ -325,6 +325,7 @@ function NovaEncomendaPage() {
       entry_date: form.entry_date,
       due_date: form.due_date || null,
       priority: Number(form.priority) || 0,
+      quantity: Number(form.quantity) || 1,
     });
   }
 
