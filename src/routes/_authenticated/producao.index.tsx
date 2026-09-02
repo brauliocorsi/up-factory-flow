@@ -931,12 +931,14 @@ function SlaBar({ productiveSeconds, expectedMinutes }: { productiveSeconds: num
  * conferido (OK/NOK) e eventuais notas antes de fechar o pacote.
  */
 function LastQualityCheckSummary({ orderId }: { orderId: string }) {
+  const { session } = useAuth();
   const fetchFn = useServerFn(listQualityChecks);
   const { data, isLoading } = useQuery({
     queryKey: ["quality-checks", orderId],
     queryFn: () => fetchFn({ data: { order_id: orderId, limit: 1 } }),
+    enabled: Boolean(session),
   });
-  if (isLoading) return null;
+  if (!session || isLoading) return null;
   const last = (data ?? [])[0];
   if (!last) {
     return (
