@@ -35,11 +35,13 @@ export function StageQueuePanel({
   onItemClick?: (item: StageQueueItem) => void;
 }) {
   const fetchQueue = useServerFn(getStageQueue);
+  const { session } = useAuth();
   const [showAll, setShowAll] = useState(false);
   const { data, isLoading, error } = useQuery({
     queryKey: ["stage-queue", stage],
     queryFn: () => fetchQueue({ data: { stage } }),
     refetchInterval: 60_000,
+    enabled: Boolean(session),
   });
 
   const items = data?.items ?? [];
