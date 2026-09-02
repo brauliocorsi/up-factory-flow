@@ -41,6 +41,7 @@ export function UrgentBar() {
             <Link
               key={o.id}
               to="/producao"
+              search={{ q: o.order_number, stage: o.stage }}
               className="inline-flex items-center gap-1.5 rounded-md border border-red-300 bg-white dark:bg-card px-2.5 py-1.5 text-xs font-medium hover:bg-red-100 dark:hover:bg-red-900/40 transition"
             >
               <span className="font-mono font-bold text-red-700 dark:text-red-400">

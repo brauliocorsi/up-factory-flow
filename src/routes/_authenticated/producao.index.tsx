@@ -33,6 +33,12 @@ import { StageQueuePanel } from "@/components/planning/StageQueuePanel";
 import { UrgentBar } from "@/components/production/UrgentBar";
 
 export const Route = createFileRoute("/_authenticated/producao/")({
+  validateSearch: (search: Record<string, unknown>): { q?: string; stage?: string } => {
+    const out: { q?: string; stage?: string } = {};
+    if (typeof search.q === "string" && search.q) out.q = search.q;
+    if (typeof search.stage === "string" && search.stage) out.stage = search.stage;
+    return out;
+  },
   component: ProducaoPage,
   errorComponent: ({ error, reset }) => (
     <div className="max-w-2xl mx-auto p-6 text-center space-y-3">
@@ -117,7 +123,10 @@ function ProducaoPage() {
 
   useRealtimeOrders([["production"], ...VISIBLE_STAGES.map((s) => ["production-colis", s])]);
 
-  const [activeStage, setActiveStage] = useState<Stage>("estofagem");
+  const search = Route.useSearch();
+  const [activeStage, setActiveStage] = useState<Stage>(
+    (search.stage as Stage | undefined) ?? "estofagem",
+  );
   const colisByStage = colisByStageMap[activeStage];
 
   const coliMutation = useMutation({
@@ -136,8 +145,15 @@ function ProducaoPage() {
   const [showPending, setShowPending] = useState<boolean>(true);
   const [showRunning, setShowRunning] = useState<boolean>(true);
   const [showDone, setShowDone] = useState<boolean>(true);
-  const [onlyMine, setOnlyMine] = useState<boolean>(true);
-  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [onlyMine, setOnlyMine] = useState<boolean>(!search.q);
+  const [searchQuery, setSearchQuery] = useState<string>(search.q ?? "");
+  useEffect(() => {
+    if (search.q) {
+      setSearchQuery(search.q);
+      setOnlyMine(false);
+    }
+    if (search.stage) setActiveStage(search.stage as Stage);
+  }, [search.q, search.stage]);
   const [operatorCode, setOperatorCode] = useState<string>(() =>
     (typeof window !== "undefined" && sessionStorage.getItem("op_code")) || ""
   );
@@ -213,10 +229,10 @@ function ProducaoPage() {
   const allItems = visibleItemsByStage[activeStage] ?? [];
   const items = useMemo(() => {
     const rank = (it: ProductionStageOrder) => {
-      if (it.status === "em_curso") return 0;
-      if (it.status === "bloqueada") return 3;
-      if (it.status === "concluida") return 2;
-      return 1; // pendente
+      if (it.status === "bloqueada") return 4;
+      if (it.status === "concluida") return 3;
+      if (it.status === "em_curso") return 1;
+      return isReadyToStart(it) ? 0 : 2; // prontas a iniciar primeiro
     };
     return allItems
       .filter((it) => {
