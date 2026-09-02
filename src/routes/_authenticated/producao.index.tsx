@@ -762,19 +762,24 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
               </div>
             )}
             {!isQuality && !operateByColis && running && (
-              <Button size="lg" variant="outline" disabled={pending} onClick={() => onAction("pausar")} className="gap-2 h-12 flex-1 sm:flex-none">
+              <Button size="lg" variant="outline" disabled={pending || ownedByOther} onClick={() => onAction("pausar")} className="gap-2 h-12 flex-1 sm:flex-none">
                 <Pause className="size-4" /> Pausar
               </Button>
             )}
             {!isQuality && !operateByColis && paused && (
-              <Button size="lg" variant="outline" disabled={pending} onClick={() => onAction("retomar")} className="gap-2 h-12 flex-1 sm:flex-none">
+              <Button size="lg" variant="outline" disabled={pending || ownedByOther} onClick={() => onAction("retomar")} className="gap-2 h-12 flex-1 sm:flex-none">
                 <RotateCcw className="size-4" /> Retomar
               </Button>
             )}
             {!isQuality && !operateByColis && item.status === "em_curso" && (
-              <Button size="lg" variant="default" disabled={pending} onClick={() => onAction("finalizar")} className="gap-2 h-12 flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700">
+              <Button size="lg" variant="default" disabled={pending || ownedByOther} onClick={() => onAction("finalizar")} className="gap-2 h-12 flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700">
                 <Check className="size-4" /> Finalizar
               </Button>
+            )}
+            {!isQuality && !operateByColis && ownedByOther && (
+              <div className="text-xs text-muted-foreground flex items-center gap-1">
+                <Lock className="size-3" /> Iniciada pelo operador {item.operator_code} — só ele pode pausar/finalizar
+              </div>
             )}
             {!isQuality && !operateByColis && blocked && (
               <div className="text-xs text-destructive flex items-center gap-1">
