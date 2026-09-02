@@ -100,6 +100,15 @@ function PicagemPage() {
     refetchInterval: 15_000,
   });
 
+  // Picadas que ainda não foram enviadas para o stock (sobrevive a refresh da página)
+  const pendingFn = useServerFn(listPendingDispatch);
+  const { data: pendingDispatch = [] } = useQuery({
+    queryKey: ["picking-pending-dispatch"],
+    queryFn: () => pendingFn(),
+    refetchInterval: 15_000,
+  });
+
+
   // Try resolving by order_number first (when operator scans the order barcode).
   // Otherwise treat as coli scan and dispatch to whichever loaded order matches.
   const resolveMutation = useMutation({
