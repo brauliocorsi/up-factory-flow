@@ -179,13 +179,17 @@ export const listOrders = createServerFn({ method: "POST" })
       const stages: any[] = o.order_stages ?? [];
       const current = STAGES.map((name) => stages.find((s) => s.stage === name && s.status !== "concluida")).find(Boolean) ?? { stage: "picagem" };
       const picking = stages.find((s) => s.stage === "picagem");
+      const packing = stages.find((s) => s.stage === "embalagem");
+      const packedAt = packing?.status === "concluida" ? (packing.finished_at ?? null) : null;
+      const pickedAt = picking?.status === "concluida" ? (picking.finished_at ?? null) : null;
       return {
         id: o.id, order_number: o.order_number, customer_order: o.customer_order ?? null,
         product_description: o.product_description,
         model_name: o.models?.name ?? null, measure: o.measure, fabric_type: o.fabric_type,
         entry_date: o.entry_date, due_date: o.due_date, status: o.status,
         current_stage: current.stage,
-        completed_at: picking?.status === "concluida" ? (picking.finished_at ?? null) : null,
+        completed_at: packedAt ?? pickedAt,
+        picked_at: pickedAt,
       };
     });
   });
