@@ -160,26 +160,15 @@ export const adjustStock = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => adjustSchema.parse(d))
   .handler(async ({ data, context }) => {
-    const s = context.supabase as any;
-    if (data.item_type === "fabric") {
-      const { data: row, error } = await s.from("fabric_rolls").select("meters").eq("id", data.item_id).single();
-      if (error) throw new Error(error.message);
-      const next = Math.max(0, Number(row.meters) + data.delta);
-      const { error: upErr } = await s.from("fabric_rolls").update({ meters: next }).eq("id", data.item_id);
-      if (upErr) throw new Error(upErr.message);
-    } else {
-      const table = data.item_type === "shell" ? "shells" : "covers";
-      const { data: row, error } = await s.from(table).select("quantity").eq("id", data.item_id).single();
-      if (error) throw new Error(error.message);
-      const next = Math.max(0, Number(row.quantity) + data.delta);
-      const { error: upErr } = await s.from(table).update({ quantity: next }).eq("id", data.item_id);
-      if (upErr) throw new Error(upErr.message);
-    }
-    await s.from("stock_movements").insert({
-      item_type: data.item_type, item_id: data.item_id,
-      delta: data.delta, reason: data.reason ?? null, user_id: context.userId,
+    // Atomic: single UPDATE + movement inside one DB function (no read-modify-write)
+    const { error } = await (context.supabase as any).rpc("adjust_stock_atomic", {
+      _item_type: data.item_type,
+      _item_id: data.item_id,
+      _delta: data.delta,
+      _reason: data.reason ?? null,
     });
-    return { ok: true };
+    if (error) return { ok: false as const, message: error.message };
+    return { ok: true as const };
   });
 
 // ============ RECIPES ============
