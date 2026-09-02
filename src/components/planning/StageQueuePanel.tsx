@@ -73,7 +73,7 @@ export function StageQueuePanel({
         {isLoading ? (
           <div className="text-xs text-muted-foreground py-3 px-1">A calcular fila…</div>
         ) : error ? (
-          <div className="text-xs text-destructive px-1">Erro: {(error as Error).message}</div>
+          <div className="text-xs text-destructive px-1">Erro: {(error as Error)?.message ?? "falha ao carregar"}</div>
         ) : visible.length === 0 ? (
           <div className="text-xs text-muted-foreground py-3 px-1">Sem encomendas em fila.</div>
         ) : (
@@ -132,7 +132,7 @@ export function StageQueuePanel({
       {isLoading ? (
         <div className="text-xs text-muted-foreground py-3">A calcular fila…</div>
       ) : error ? (
-        <div className="text-xs text-destructive">Erro: {(error as Error).message}</div>
+        <div className="text-xs text-destructive">Erro: {(error as Error)?.message ?? "falha ao carregar"}</div>
       ) : visible.length === 0 ? (
         <div className="text-xs text-muted-foreground py-3">Sem encomendas em fila.</div>
       ) : (
