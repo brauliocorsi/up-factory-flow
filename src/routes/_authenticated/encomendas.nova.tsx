@@ -274,13 +274,20 @@ function NovaEncomendaPage() {
   const mut = useMutation({
     mutationFn: (input: any) => createOrder({ data: input }),
     onSuccess: (res: any) => {
-      toast.success(`Encomenda ${res.order_number} criada`);
+      const n = Number(res?.created ?? 1);
+      if (n > 1) {
+        const nums: string[] = res?.order_numbers ?? [];
+        toast.success(`${n} encomendas criadas: ${nums[0]} … ${nums[nums.length - 1]}`);
+      } else {
+        toast.success(`Encomenda ${res.order_number} criada`);
+      }
       // Reset estado para próxima leitura sequencial (fluxo de fábrica)
       setScanValue("");
       setMissingSegments(new Set());
       setForm((s) => ({
         ...s,
         order_number: "",
+        quantity: 1,
         observation: "",
         notes: "",
         due_date: "",
