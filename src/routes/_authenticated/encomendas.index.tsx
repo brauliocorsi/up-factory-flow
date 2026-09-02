@@ -128,6 +128,7 @@ function EncomendasPage() {
         </TabsList>
         <TabsContent value="lista" className="mt-4 space-y-4">
           {/* Filtros Lista */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
         <div className="relative md:col-span-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
           <Input placeholder="Procurar nº encomenda…" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 h-11" />
