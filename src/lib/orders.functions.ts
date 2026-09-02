@@ -745,3 +745,93 @@ export const listUrgentActive = createServerFn({ method: "GET" })
     }
     return out;
   });
+// ============================================================
+// EDIÇÃO DE ENCOMENDAS
+// ============================================================
+
+export type EditableOrder = {
+  id: string;
+  order_number: string;
+  customer_order: string | null;
+  product_description: string;
+  model_id: string | null;
+  measure: string | null;
+  fabric_type: string | null;
+  fabric_ref: string | null;
+  color: string | null;
+  structure_type: string | null;
+  finishing: string | null;
+  entry_date: string | null;
+  due_date: string | null;
+  priority: number;
+  notes: string | null;
+  observation: string | null;
+  status: string;
+};
+
+export const getOrderForEdit = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<EditableOrder> => {
+    const { data: o, error } = await (context.supabase as any)
+      .from("production_orders")
+      .select("id, order_number, customer_order, product_description, model_id, measure, fabric_type, fabric_ref, color, structure_type, finishing, entry_date, due_date, priority, notes, observation, status")
+      .eq("id", data.id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!o) throw new Error("Encomenda não encontrada");
+    return o as EditableOrder;
+  });
+
+const dateOrNull = z.union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/), z.literal(""), z.null()]).optional();
+const textOrNull = z.union([z.string().max(400), z.null()]).optional();
+
+const updateOrderSchema = z.object({
+  id: z.string().uuid(),
+  customer_order: textOrNull,
+  product_description: z.string().min(1).max(400).optional(),
+  model_id: z.union([z.string().uuid(), z.null()]).optional(),
+  measure: textOrNull,
+  fabric_type: textOrNull,
+  fabric_ref: textOrNull,
+  color: textOrNull,
+  structure_type: textOrNull,
+  finishing: textOrNull,
+  entry_date: dateOrNull,
+  due_date: dateOrNull,
+  priority: z.coerce.number().int().min(1).max(3).optional(),
+  notes: textOrNull,
+  observation: textOrNull,
+});
+
+/** Atualiza campos de uma encomenda (admin/escritório). Só grava os campos enviados. */
+export const updateOrder = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => updateOrderSchema.parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdminOrOffice(context);
+    const { id, ...rest } = data;
+
+    const { data: existing, error: exErr } = await (context.supabase as any)
+      .from("production_orders")
+      .select("id, status")
+      .eq("id", id)
+      .maybeSingle();
+    if (exErr) throw new Error(exErr.message);
+    if (!existing) throw new Error("Encomenda não encontrada");
+    if (existing.status === "cancelada") throw new Error("Encomenda cancelada — não é possível editar");
+
+    const patch: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(rest)) {
+      if (v === undefined) continue;
+      patch[k] = v === "" ? null : v;
+    }
+    if (Object.keys(patch).length === 0) return { ok: true, updated: false };
+
+    const { error } = await (context.supabase as any)
+      .from("production_orders")
+      .update(patch)
+      .eq("id", id);
+    if (error) throw new Error(error.message);
+    return { ok: true, updated: true };
+  });
