@@ -145,10 +145,12 @@ function ProducaoPage() {
       if (!code) throw new Error("Indica o teu código primeiro");
       return recordColiFn({ data: { ...vars, operator_code: code } });
     },
-    onSuccess: () => {
+    onSuccess: (res: any) => {
+      if (res && res.ok === false) toast.error(res.message ?? "Não foi possível registar o evento");
       qc.invalidateQueries({ queryKey: ["production"] });
       VISIBLE_STAGES.forEach((stage) => qc.invalidateQueries({ queryKey: ["production-colis", stage] }));
     },
+
     onError: (e: any) => toast.error(e?.message ?? "Erro ao registar"),
   });
 
