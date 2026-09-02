@@ -177,16 +177,26 @@ function PicagemPage() {
     const code = barcodeInput.trim();
     if (!code) return;
 
+    const upper = code.toUpperCase();
     // First, try to match against any LOADED order's expected coli barcodes.
     for (const entry of Object.values(loaded)) {
-      const match = entry.order.packages.find((p) => p.expected_code === code);
+      const match = entry.order.packages.find((p) => (p.expected_code ?? "").toUpperCase() === upper);
       if (match) {
+        scanMutation.mutate({ order_id: entry.order.id, code });
+        return;
+      }
+    }
+    // Then, if the code is the ORDER label of an already loaded order, pick the next pending coli.
+    for (const entry of Object.values(loaded)) {
+      if (entry.completed) continue;
+      if (entry.order.order_number.toUpperCase() === upper) {
         scanMutation.mutate({ order_id: entry.order.id, code });
         return;
       }
     }
     // Otherwise resolve as an order_number/barcode (load it).
     resolveMutation.mutate(code);
+
   };
 
   const removeOrder = (orderId: string) => {
