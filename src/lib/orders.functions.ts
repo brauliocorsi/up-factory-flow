@@ -129,6 +129,9 @@ const listOrdersSchema = z.object({
   search: z.string().optional(),
   status: z.string().optional(),
   modelId: z.string().optional(),
+  /** true = histórico (apenas concluídas). Por omissão as concluídas ficam fora da lista. */
+  include_completed: z.boolean().optional(),
+  only_completed: z.boolean().optional(),
 });
 
 export type OrderListItem = {
@@ -143,6 +146,8 @@ export type OrderListItem = {
   due_date: string | null;
   status: string;
   current_stage: string;
+  /** Data em que a picagem foi concluída (histórico de produzidas). */
+  completed_at: string | null;
 };
 
 export const listOrders = createServerFn({ method: "POST" })
@@ -152,28 +157,38 @@ export const listOrders = createServerFn({ method: "POST" })
     const { supabase } = context;
     let q = supabase
       .from("production_orders")
-      .select("id, order_number, customer_order, product_description, measure, fabric_type, entry_date, due_date, status, models(name), order_stages(stage, status)")
+      .select("id, order_number, customer_order, product_description, measure, fabric_type, entry_date, due_date, status, models(name), order_stages(stage, status, finished_at)")
       .order("entry_date", { ascending: false, nullsFirst: false });
     if (data.search) {
       const s = data.search.replace(/[%,]/g, "");
       q = q.or(`order_number.ilike.%${s}%,customer_order.ilike.%${s}%`);
     }
-    if (data.status) q = q.eq("status", data.status as any);
+    if (data.only_completed) {
+      q = q.eq("status", "concluida");
+    } else if (data.status) {
+      q = q.eq("status", data.status as any);
+    } else if (!data.include_completed) {
+      // Encomendas concluídas (picagem feita) vivem só no histórico
+      q = q.neq("status", "concluida");
+    }
     if (data.modelId) q = q.eq("model_id", data.modelId);
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
     return (rows ?? []).map((o: any) => {
       const stages: any[] = o.order_stages ?? [];
       const current = STAGES.map((name) => stages.find((s) => s.stage === name && s.status !== "concluida")).find(Boolean) ?? { stage: "picagem" };
+      const picking = stages.find((s) => s.stage === "picagem");
       return {
         id: o.id, order_number: o.order_number, customer_order: o.customer_order ?? null,
         product_description: o.product_description,
         model_name: o.models?.name ?? null, measure: o.measure, fabric_type: o.fabric_type,
         entry_date: o.entry_date, due_date: o.due_date, status: o.status,
         current_stage: current.stage,
+        completed_at: picking?.status === "concluida" ? (picking.finished_at ?? null) : null,
       };
     });
   });
+
 
 export const listModels = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
