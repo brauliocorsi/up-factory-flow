@@ -130,7 +130,7 @@ function ProducaoPage() {
   const { data: expectedMap } = useQuery({
     queryKey: ["production-sla", orderStagePairs.length, orderStagePairs.map((p) => `${p.order_id}|${p.stage}`).join(",")],
     queryFn: () => fetchExpected({ data: { orders: orderStagePairs } }),
-    enabled: orderStagePairs.length > 0,
+    enabled: authed && orderStagePairs.length > 0,
   });
 
   useRealtimeOrders([["production"], ...VISIBLE_STAGES.map((s) => ["production-colis", s])], {
