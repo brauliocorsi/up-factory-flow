@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { bulkCancelOrders, bulkDeleteOrders, setOrdersDates, setOrdersPriority } from "@/lib/orders.functions";
 import { activateOrders } from "@/lib/planning.functions";
 import { CalendarDays, Flag, PlayCircle, Trash2, XCircle } from "lucide-react";
