@@ -33,6 +33,10 @@ import { StageQueuePanel } from "@/components/planning/StageQueuePanel";
 import { UrgentBar } from "@/components/production/UrgentBar";
 
 export const Route = createFileRoute("/_authenticated/producao/")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    q: typeof search.q === "string" ? search.q : undefined,
+    stage: typeof search.stage === "string" ? search.stage : undefined,
+  }),
   component: ProducaoPage,
   errorComponent: ({ error, reset }) => (
     <div className="max-w-2xl mx-auto p-6 text-center space-y-3">
