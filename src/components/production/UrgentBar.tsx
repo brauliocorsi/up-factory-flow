@@ -4,6 +4,7 @@ import { listUrgentActive, type UrgentOrder } from "@/lib/orders.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { STAGE_LABELS, formatDatePT } from "@/lib/format";
 import { Flame, ChevronUp, ChevronDown } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 import { Link } from "@tanstack/react-router";
 
 export function UrgentBar() {
