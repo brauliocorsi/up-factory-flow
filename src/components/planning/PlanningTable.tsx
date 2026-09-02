@@ -122,7 +122,7 @@ export function PlanningTable({ canEdit }: { canEdit: boolean }) {
 
   const priorityMut = useMutation({
     mutationFn: (vars: { ids: string[]; priority: number }) =>
-      setPriorityFn({ data: vars }),
+      setPriorityFn({ data: { order_ids: vars.ids, priority: vars.priority } }),
     onSuccess: (res: any) => {
       toast.success(`Prioridade atualizada (${res.updated} encomenda(s))`);
       invalidate();
