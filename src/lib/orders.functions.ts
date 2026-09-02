@@ -844,3 +844,97 @@ export const updateOrder = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true, updated: true };
   });
+
+// ============================================================
+// AÇÕES EM MASSA (seleção na lista de encomendas)
+// ============================================================
+
+export type BulkResult = { ok: boolean; affected: number; skipped: string[]; message?: string };
+
+const idsSchema = z.object({ order_ids: z.array(z.string().uuid()).min(1).max(500) });
+
+/** Cancela várias encomendas (com recuperação de stock, uma a uma). */
+export const bulkCancelOrders = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => idsSchema.parse(d))
+  .handler(async ({ data, context }): Promise<BulkResult> => {
+    await assertAdminOrOffice(context);
+    let affected = 0;
+    const skipped: string[] = [];
+    for (const id of data.order_ids) {
+      const { error } = await (context.supabase as any).rpc("cancel_order_with_recovery", { _order_id: id });
+      if (error) skipped.push(id);
+      else affected++;
+    }
+    return { ok: true, affected, skipped };
+  });
+
+/** Apaga definitivamente encomendas (apenas admin, sem produção iniciada). */
+export const bulkDeleteOrders = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => idsSchema.parse(d))
+  .handler(async ({ data, context }): Promise<BulkResult> => {
+    await assertAdmin(context);
+    const { supabase } = context;
+
+    const { data: started, error: sErr } = await (supabase as any)
+      .from("order_stages")
+      .select("order_id")
+      .in("order_id", data.order_ids)
+      .not("started_at", "is", null);
+    if (sErr) throw new Error(sErr.message);
+    const blocked = new Set<string>((started ?? []).map((s: any) => s.order_id));
+
+    const { data: fg } = await (supabase as any)
+      .from("finished_goods")
+      .select("order_id")
+      .in("order_id", data.order_ids);
+    for (const r of fg ?? []) if (r.order_id) blocked.add(r.order_id);
+
+    const deletable = data.order_ids.filter((id) => !blocked.has(id));
+    let affected = 0;
+    if (deletable.length > 0) {
+      const { error } = await (supabase as any)
+        .from("production_orders")
+        .delete()
+        .in("id", deletable);
+      if (error) throw new Error(error.message);
+      affected = deletable.length;
+    }
+
+    let message: string | undefined;
+    if (blocked.size > 0) {
+      const { data: names } = await (supabase as any)
+        .from("production_orders")
+        .select("order_number")
+        .in("id", Array.from(blocked));
+      message = `Não apagadas (já com produção/stock): ${(names ?? []).map((n: any) => n.order_number).join(", ")}. Usa cancelar.`;
+    }
+    return { ok: true, affected, skipped: Array.from(blocked), message };
+  });
+
+/** Altera datas (entrada e/ou saída) de várias encomendas. */
+export const setOrdersDates = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      order_ids: z.array(z.string().uuid()).min(1).max(500),
+      entry_date: z.union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/), z.null()]).optional(),
+      due_date: z.union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/), z.null()]).optional(),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }): Promise<BulkResult> => {
+    await assertAdminOrOffice(context);
+    const patch: Record<string, unknown> = {};
+    if (data.entry_date !== undefined) patch["entry_date"] = data.entry_date;
+    if (data.due_date !== undefined) patch["due_date"] = data.due_date;
+    if (Object.keys(patch).length === 0) return { ok: true, affected: 0, skipped: [], message: "Nada a alterar" };
+
+    const { error } = await (context.supabase as any)
+      .from("production_orders")
+      .update(patch)
+      .in("id", data.order_ids)
+      .neq("status", "cancelada");
+    if (error) throw new Error(error.message);
+    return { ok: true, affected: data.order_ids.length, skipped: [] };
+  });
