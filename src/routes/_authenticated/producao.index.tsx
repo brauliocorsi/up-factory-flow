@@ -123,7 +123,10 @@ function ProducaoPage() {
 
   useRealtimeOrders([["production"], ...VISIBLE_STAGES.map((s) => ["production-colis", s])]);
 
-  const [activeStage, setActiveStage] = useState<Stage>("estofagem");
+  const search = Route.useSearch();
+  const [activeStage, setActiveStage] = useState<Stage>(
+    (search.stage as Stage | undefined) ?? "estofagem",
+  );
   const colisByStage = colisByStageMap[activeStage];
 
   const coliMutation = useMutation({
