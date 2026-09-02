@@ -17,6 +17,7 @@ import {
   listOperatorsWithStages, STAGES, VISIBLE_STAGES, type ProductionStageOrder, type Stage,
 } from "@/lib/production.functions";
 import { ConvergenceStatus } from "@/components/kanban/ConvergenceStatus";
+import { useAuth } from "@/hooks/useAuth";
 import { useRealtimeOrders } from "@/hooks/useRealtimeOrders";
 import { ReworkDialog } from "@/components/rework/ReworkDialog";
 import { QualityCheckDialog } from "@/components/quality/QualityCheckDialog";
