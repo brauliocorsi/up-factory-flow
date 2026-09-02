@@ -886,20 +886,25 @@ function ColiRow({ coli, canAct, operatorCode, pending, onAction }: {
               </Button>
             )}
             {running && (
-              <Button size="sm" variant="outline" disabled={pending} onClick={() => onAction("pausar")} className="h-8 gap-1">
+              <Button size="sm" variant="outline" disabled={pending || ownedByOther} onClick={() => onAction("pausar")} className="h-8 gap-1">
                 <Pause className="size-3" /> Pausar
               </Button>
             )}
             {paused && (
-              <Button size="sm" variant="outline" disabled={pending} onClick={() => onAction("retomar")} className="h-8 gap-1">
+              <Button size="sm" variant="outline" disabled={pending || ownedByOther} onClick={() => onAction("retomar")} className="h-8 gap-1">
                 <RotateCcw className="size-3" /> Retomar
               </Button>
             )}
             {coli.status === "em_curso" && (
-              <Button size="sm" disabled={pending} onClick={() => onAction("finalizar")}
+              <Button size="sm" disabled={pending || ownedByOther} onClick={() => onAction("finalizar")}
                 className="h-8 gap-1 bg-emerald-600 hover:bg-emerald-700">
                 <Check className="size-3" /> Finalizar
               </Button>
+            )}
+            {ownedByOther && (
+              <span className="text-[11px] text-muted-foreground inline-flex items-center gap-1">
+                <Lock className="size-3" /> Op {coli.operator_code}
+              </span>
             )}
           </>
         )}
