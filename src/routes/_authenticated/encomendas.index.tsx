@@ -252,9 +252,14 @@ function EncomendasPage() {
                 </div>
                 <div className="flex items-center justify-between pt-1">
                   <Badge>{STAGE_LABELS[o.current_stage]}</Badge>
-                  <Button size="sm" variant="ghost" className="gap-1 h-8" onClick={() => printOne(o.id)}>
-                    <Printer className="size-3" /> Etiqueta
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    {canEditPlanning && o.status !== "cancelada" && (
+                      <EditOrderDialog orderId={o.id} orderNumber={o.order_number} />
+                    )}
+                    <Button size="sm" variant="ghost" className="gap-1 h-8" onClick={() => printOne(o.id)}>
+                      <Printer className="size-3" /> Etiqueta
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
