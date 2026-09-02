@@ -374,11 +374,39 @@ export const sendPickingBatchToStock = createServerFn({ method: "POST" })
 
       await supabase.from("picking_dispatches").insert(inserts);
 
+      let concluded = 0;
+      if (response.ok) {
+        // Mark dispatched orders as completed
+        const { data: updated, error: updErr } = await supabase
+          .from("production_orders")
+          .update({ status: "concluida" as any })
+          .in("id", data.order_ids)
+          .neq("status", "cancelada")
+          .select("id");
+        if (updErr) {
+          return {
+            success: true,
+            status: response.status,
+            message: `Lote enviado, mas não foi possível marcar as encomendas como concluídas: ${updErr.message}`
+          };
+        }
+        concluded = updated?.length ?? 0;
+
+        // Mark finished goods as transferred (best effort)
+        await supabase
+          .from("finished_goods")
+          .update({ status: "transferido", ready_for_transfer: false, transferred_at: new Date().toISOString() })
+          .in("order_id", data.order_ids);
+      }
+
       return {
         success: response.ok,
         status: response.status,
-        message: response.ok ? "Lote enviado com sucesso!" : `Erro do servidor externo (${response.status}): ${responseBody}`
+        message: response.ok
+          ? `Lote enviado com sucesso! ${concluded} encomenda(s) marcada(s) como concluída(s).`
+          : `Erro do servidor externo (${response.status}): ${responseBody}`
       };
+
     } catch (e: any) {
       // Log failure in our DB too
       const inserts = data.order_ids.map(oid => ({
