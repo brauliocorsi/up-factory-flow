@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { bulkCancelOrders, bulkDeleteOrders, setOrdersDates, setOrdersPriority } from "@/lib/orders.functions";
 import { activateOrders } from "@/lib/planning.functions";
 import { CalendarDays, Flag, PlayCircle, Trash2, XCircle } from "lucide-react";
@@ -92,16 +92,19 @@ export function BulkOrderActions({ ids, canEdit, isAdmin, onDone }: Props) {
     <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/40 p-2">
       <span className="text-sm font-medium px-1">{ids.length} selecionada(s)</span>
 
-      <Select value="" onValueChange={(v) => prio.mutate(Number(v))}>
-        <SelectTrigger className="h-9 w-[190px]">
-          <span className="flex items-center gap-2 text-sm"><Flag className="size-4" /> Prioridade…</span>
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="3">Urgente</SelectItem>
-          <SelectItem value="2">Média</SelectItem>
-          <SelectItem value="1">Baixa</SelectItem>
-        </SelectContent>
-      </Select>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button size="sm" variant="outline" className="gap-2" disabled={prio.isPending}>
+            <Flag className="size-4" /> Prioridade
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          <DropdownMenuItem onSelect={() => prio.mutate(3)}>Urgente</DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => prio.mutate(2)}>Média</DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => prio.mutate(1)}>Baixa</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
 
       <Button size="sm" variant="outline" className="gap-2" disabled={activate.isPending} onClick={() => activate.mutate()}>
         <PlayCircle className="size-4" /> Deixar ativa
