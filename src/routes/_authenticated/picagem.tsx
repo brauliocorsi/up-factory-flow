@@ -103,7 +103,14 @@ function PicagemPage() {
   // Otherwise treat as coli scan and dispatch to whichever loaded order matches.
   const resolveMutation = useMutation({
     mutationFn: (code: string) => resolveOrderForPicking({ data: { code } }),
-    onSuccess: (order) => {
+    onSuccess: (order, code) => {
+      const existing = loaded[order.id];
+      if (existing && !existing.completed) {
+        // Re-scanning the order label picks the next pending coli.
+        scanMutation.mutate({ order_id: order.id, code });
+        setBarcodeInput("");
+        return;
+      }
       if (soundEnabled) playSound("success");
       setLoaded((prev) => prev[order.id] ? prev : {
         ...prev,
@@ -118,6 +125,7 @@ function PicagemPage() {
       setBarcodeInput("");
     },
   });
+
 
   const scanMutation = useMutation({
     mutationFn: async (vars: { order_id: string; code: string }) => {
@@ -177,16 +185,26 @@ function PicagemPage() {
     const code = barcodeInput.trim();
     if (!code) return;
 
+    const upper = code.toUpperCase();
     // First, try to match against any LOADED order's expected coli barcodes.
     for (const entry of Object.values(loaded)) {
-      const match = entry.order.packages.find((p) => p.expected_code === code);
+      const match = entry.order.packages.find((p) => (p.expected_code ?? "").toUpperCase() === upper);
       if (match) {
+        scanMutation.mutate({ order_id: entry.order.id, code });
+        return;
+      }
+    }
+    // Then, if the code is the ORDER label of an already loaded order, pick the next pending coli.
+    for (const entry of Object.values(loaded)) {
+      if (entry.completed) continue;
+      if (entry.order.order_number.toUpperCase() === upper) {
         scanMutation.mutate({ order_id: entry.order.id, code });
         return;
       }
     }
     // Otherwise resolve as an order_number/barcode (load it).
     resolveMutation.mutate(code);
+
   };
 
   const removeOrder = (orderId: string) => {
@@ -257,7 +275,7 @@ function PicagemPage() {
                 <p className="font-semibold text-foreground">Como funciona:</p>
                 <ul className="list-disc list-inside space-y-1">
                   <li>1º scan = código da encomenda → carrega a lista de colis.</li>
-                  <li>2º+ scans = códigos de cada coli individual.</li>
+                  <li>2º+ scans = código de cada coli, ou repete a etiqueta da encomenda para marcar o coli seguinte.</li>
                   <li>Quando todos os colis forem lidos, a encomenda passa a EM ARMAZÉM.</li>
                 </ul>
               </div>
