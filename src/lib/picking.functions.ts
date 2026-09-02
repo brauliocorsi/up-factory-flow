@@ -340,13 +340,6 @@ export const sendPickingBatchToStock = createServerFn({ method: "POST" })
       dispatched_at: new Date().toISOString()
     }));
 
-    // Find operator id
-    const { data: op } = await supabase
-      .from("operators")
-      .select("id")
-      .eq("code", data.operator_code)
-      .single();
-
     try {
       const response = await fetch(url, {
         method: "POST",
@@ -361,45 +354,29 @@ export const sendPickingBatchToStock = createServerFn({ method: "POST" })
       });
 
       const responseBody = await response.text();
-      const status = response.ok ? 'enviado' : 'erro';
+      const status = response.ok ? "enviado" : "erro";
 
-      // Record dispatch history
-      const inserts = data.order_ids.map(oid => ({
-        order_id: oid,
-        batch_id: batchId,
-        status: status as any,
-        response_code: response.status,
-        response_body: responseBody.slice(0, 1000), // safe truncation
-        operator_id: op?.id || null,
-        dispatched_at: new Date().toISOString()
-      }));
+      // Registo do envio + conclusão das encomendas via RPC seguro
+      // (permite que o picador feche o lote sem alargar as políticas de acesso).
+      const { data: res, error: rpcErr } = await (supabase as any).rpc("record_picking_dispatch", {
+        _batch_id: batchId,
+        _order_ids: data.order_ids,
+        _operator_code: data.operator_code,
+        _status: status,
+        _response_code: response.status,
+        _response_body: responseBody,
+      });
 
-      await supabase.from("picking_dispatches").insert(inserts);
-
-      let concluded = 0;
-      if (response.ok) {
-        // Mark dispatched orders as completed
-        const { data: updated, error: updErr } = await supabase
-          .from("production_orders")
-          .update({ status: "concluida" as any })
-          .in("id", data.order_ids)
-          .neq("status", "cancelada")
-          .select("id");
-        if (updErr) {
-          return {
-            success: true,
-            status: response.status,
-            message: `Lote enviado, mas não foi possível marcar as encomendas como concluídas: ${updErr.message}`
-          };
-        }
-        concluded = updated?.length ?? 0;
-
-        // Mark finished goods as transferred (best effort)
-        await supabase
-          .from("finished_goods")
-          .update({ status: "transferido", ready_for_transfer: false, transferred_at: new Date().toISOString() })
-          .in("order_id", data.order_ids);
+      if (rpcErr) {
+        return {
+          success: false,
+          message: response.ok
+            ? `Lote enviado, mas não foi possível registar a conclusão: ${rpcErr.message}`
+            : `Erro do servidor externo (${response.status}) e falha ao registar: ${rpcErr.message}`,
+        };
       }
+
+      const concluded = (res as any)?.concluded ?? 0;
 
       return {
         success: response.ok,
@@ -410,16 +387,15 @@ export const sendPickingBatchToStock = createServerFn({ method: "POST" })
       };
 
     } catch (e: any) {
-      // Log failure in our DB too
-      const inserts = data.order_ids.map(oid => ({
-        order_id: oid,
-        batch_id: batchId,
-        status: 'erro' as any,
-        response_body: e.message || "Network error",
-        operator_id: op?.id || null,
-        dispatched_at: new Date().toISOString()
-      }));
-      await supabase.from("picking_dispatches").insert(inserts);
+      // Registar a falha (best effort)
+      await (supabase as any).rpc("record_picking_dispatch", {
+        _batch_id: batchId,
+        _order_ids: data.order_ids,
+        _operator_code: data.operator_code,
+        _status: "erro",
+        _response_code: null,
+        _response_body: e?.message || "Network error",
+      });
 
       return {
         success: false,
