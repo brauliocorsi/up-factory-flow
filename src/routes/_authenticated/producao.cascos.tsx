@@ -224,14 +224,38 @@ function ActiveBatchCard({ batch, disabled, lockedReason, onPause, onResume, onF
       </div>
       <div className="mt-2 flex gap-1 flex-wrap">
         {batch.is_paused ? (
-          <Button size="sm" onClick={onResume} disabled={disabled} className="gap-1"><Play className="size-3.5" /> Retomar</Button>
+          <Button size="sm" onClick={onResume} disabled={blocked} className="gap-1"><Play className="size-3.5" /> Retomar</Button>
         ) : (
-          <Button size="sm" variant="secondary" onClick={onPause} disabled={disabled} className="gap-1"><Pause className="size-3.5" /> Pausar</Button>
+          <Button size="sm" variant="secondary" onClick={onPause} disabled={blocked} className="gap-1"><Pause className="size-3.5" /> Pausar</Button>
         )}
-        <Button size="sm" variant="default" onClick={onFinalize} disabled={disabled} className="gap-1 bg-emerald-600 hover:bg-emerald-700">
+        <Button size="sm" variant="default" onClick={() => setConfirmOpen(true)} disabled={blocked} className="gap-1 bg-emerald-600 hover:bg-emerald-700">
           <Check className="size-3.5" /> Finalizar
         </Button>
       </div>
+      {lockedReason && (
+        <p className="mt-1 text-[11px] text-muted-foreground">{lockedReason}</p>
+      )}
+
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Finalizar lote — {batch.shell_code}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Vais concluir {batch.quantity} casco(s). As encomendas à espera ficam com estrutura/branco concluídos e o
+            excedente entra em stock. Esta ação não pode ser desfeita.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmOpen(false)}>Cancelar</Button>
+            <Button
+              className="bg-emerald-600 hover:bg-emerald-700"
+              onClick={() => { setConfirmOpen(false); onFinalize(); }}
+            >
+              Confirmar e finalizar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
