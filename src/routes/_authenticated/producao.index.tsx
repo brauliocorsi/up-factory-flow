@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Lock, Play, Pause, Check, RotateCcw, Clock, UserCircle2, AlertTriangle, Boxes, Wrench, Search, ClipboardCheck, CheckCircle2, XCircle, ListTree } from "lucide-react";
+import { Lock, Play, Pause, Check, RotateCcw, Clock, UserCircle2, AlertTriangle, Boxes, Wrench, Search, ClipboardCheck, CheckCircle2, XCircle, ListTree, Layers } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Link } from "@tanstack/react-router";
 import { STAGE_LABELS } from "@/lib/format";
@@ -138,6 +138,7 @@ function ProducaoPage() {
     (search.stage as Stage | undefined) ?? "estofagem",
   );
   const colisByStage = colisByStageMap[activeStage];
+  const supportsGrouping = activeStage === "corte" || activeStage === "estrutura";
 
   const coliMutation = useMutation({
     mutationFn: (vars: { order_coli_stage_id: string; event: "iniciar"|"pausar"|"retomar"|"finalizar" }) => {
@@ -154,6 +155,7 @@ function ProducaoPage() {
     onError: (e: any) => toast.error(e?.message ?? "Erro ao registar"),
   });
 
+  const [groupMode, setGroupMode] = useState<boolean>(false);
   const [showPending, setShowPending] = useState<boolean>(true);
   const [showRunning, setShowRunning] = useState<boolean>(true);
   const [showDone, setShowDone] = useState<boolean>(true);
@@ -487,7 +489,7 @@ function ProducaoPage() {
               </Button>
             </div>
           )}
-          {supportsGrouping && groupMode ? (
+          {(activeStage === "corte" || activeStage === "estrutura") && groupMode ? (
             <StageGroupView
               stage={activeStage}
               canAct={canActOnStage(activeStage) && !!currentOp}
