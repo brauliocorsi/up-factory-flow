@@ -85,4 +85,5 @@ export const Route = createFileRoute("/_authenticated")({
       <Outlet />
     </AppShell>
   ),
+  errorComponent: AuthedErrorComponent,
 });
