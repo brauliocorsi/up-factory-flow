@@ -369,6 +369,29 @@ function NovaEncomendaPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <Field label="Nº Encomenda (vazio = automático)">
+              <Input value={form.order_number} onChange={(e) => set("order_number", e.target.value)} className="h-11" placeholder="auto" />
+            </Field>
+            <Field label="Quantidade (unidades)">
+              <Input
+                type="number"
+                min={1}
+                max={200}
+                value={form.quantity}
+                onChange={(e) => set("quantity", Math.max(1, Math.min(200, Number(e.target.value) || 1)))}
+                className="h-11"
+              />
+              <div className="text-xs text-muted-foreground mt-1">
+                {form.quantity > 1
+                  ? `Cria ${form.quantity} encomendas numeradas ${(form.order_number.trim() || "NNNN")}-01 … ${(form.order_number.trim() || "NNNN")}-${String(form.quantity).padStart(2, "0")}`
+                  : "1 unidade = 1 encomenda. Se o nº já existir, é numerado automaticamente (-01, -02, …)."}
+              </div>
+            </Field>
+          </div>
+
+
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <Field label="Categoria" highlight={missingSegments.has("category")}>
               <RefSelect items={cat?.categories ?? []} value={form.category_id} onChange={(v) => { set("category_id", v); set("model_id", ""); }} />
             </Field>
