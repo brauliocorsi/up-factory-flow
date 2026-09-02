@@ -29,6 +29,7 @@ import {
 import { useMySession } from "@/hooks/useMySession";
 import { StageGroupView } from "@/components/production/StageGroupView";
 import { StageQueuePanel } from "@/components/planning/StageQueuePanel";
+import { UrgentBar } from "@/components/production/UrgentBar";
 
 export const Route = createFileRoute("/_authenticated/producao/")({
   component: ProducaoPage,
