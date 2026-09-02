@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { assertAnyRole } from "@/lib/roleGuards";
+import { assertAnyRole, hasAnyRole } from "@/lib/roleGuards";
 import { z } from "zod";
 
 export type PickingColi = {
@@ -305,7 +305,12 @@ export const sendPickingBatchToStock = createServerFn({ method: "POST" })
     order_ids: z.array(z.string().uuid())
   }).parse(d))
   .handler(async ({ data, context }) => {
-    await assertAnyRole(context, ["admin", "escritorio", "picador"], "enviar lotes de picagem");
+    if (!(await hasAnyRole(context, ["admin", "escritorio", "picador"]))) {
+      return {
+        success: false,
+        message: "Sem permissão para enviar lotes de picagem. Pede a um admin para te atribuir a função de picador.",
+      };
+    }
     const { supabase } = context;
     const url = process.env.STOCK_INTAKE_URL;
     const token = process.env.STOCK_INTAKE_TOKEN;
