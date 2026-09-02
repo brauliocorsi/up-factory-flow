@@ -156,8 +156,9 @@ function PicagemPage() {
         };
       });
       if (res.completed) {
-        toast.success(`Encomenda EM ARMAZÉM (${res.done}/${res.total} colis lidos)`);
+        toast.success(`Encomenda picada (${res.done}/${res.total} colis lidos)`);
         queryClient.invalidateQueries({ queryKey: ["picking-queue"] });
+        queryClient.invalidateQueries({ queryKey: ["picking-pending-dispatch"] });
       } else {
         toast.info(`Coli ${res.coli_number} lido (${res.done}/${res.total})`);
       }
@@ -171,9 +172,14 @@ function PicagemPage() {
   });
 
   const sendBatchMutation = useMutation({
-    mutationFn: async () => {
-      const completedIds = Object.values(loaded).filter((s) => s.completed).map((s) => s.order.id);
-      if (completedIds.length === 0) throw new Error("Não há encomendas concluídas para enviar.");
+    mutationFn: async (ids?: string[]) => {
+      const completedIds = ids && ids.length > 0
+        ? ids
+        : Array.from(new Set([
+            ...Object.values(loaded).filter((s) => s.completed).map((s) => s.order.id),
+            ...pendingDispatch.map((p) => p.order_id),
+          ]));
+      if (completedIds.length === 0) throw new Error("Não há encomendas picadas para enviar.");
       return sendPickingBatchToStock({ data: { operator_code: operatorCode, order_ids: completedIds } });
     },
     onSuccess: (res) => {
@@ -185,6 +191,8 @@ function PicagemPage() {
           return next;
         });
       } else toast.error(res.message);
+      queryClient.invalidateQueries({ queryKey: ["picking-pending-dispatch"] });
+      queryClient.invalidateQueries({ queryKey: ["picking-queue"] });
     },
     onError: (err: any) => toast.error(err.message || "Erro ao enviar lote."),
   });
