@@ -128,7 +128,14 @@ function CascosBulkPage() {
               <ActiveBatchCard
                 key={b.id}
                 batch={b}
-                disabled={!operatorCode.trim()}
+                disabled={!operatorCode.trim() || !canProduceShells}
+                lockedReason={
+                  !operatorCode.trim() ? "Indica o teu código."
+                  : !canProduceShells ? "Precisas de estar vinculado a estrutura/branco."
+                  : b.operator_code && b.operator_code !== operatorCode.trim()
+                    ? `Lote do operador ${b.operator_code} — só ele pode continuar.`
+                    : null
+                }
                 onPause={() => eventFn({ data: { batch_id: b.id, operator_code: operatorCode.trim(), event: "pausar" } })
                   .then(() => qc.invalidateQueries({ queryKey: ["shell-batches-active"] }))
                   .catch((e: any) => toast.error(e?.message ?? "Erro"))}
@@ -192,10 +199,12 @@ function CascosBulkPage() {
   );
 }
 
-function ActiveBatchCard({ batch, disabled, onPause, onResume, onFinalize }: {
-  batch: ActiveBatch; disabled: boolean;
+function ActiveBatchCard({ batch, disabled, lockedReason, onPause, onResume, onFinalize }: {
+  batch: ActiveBatch; disabled: boolean; lockedReason?: string | null;
   onPause: () => void; onResume: () => void; onFinalize: () => void;
 }) {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const blocked = disabled || Boolean(lockedReason);
   // Tempo ao vivo: produtivo + delta desde último update
   const liveProd = batch.is_paused ? batch.productive_seconds
     : batch.productive_seconds + Math.max(0, Math.floor((Date.now() - new Date(batch.started_at ?? Date.now()).getTime()) / 1000) - batch.productive_seconds - batch.paused_seconds);
@@ -215,14 +224,38 @@ function ActiveBatchCard({ batch, disabled, onPause, onResume, onFinalize }: {
       </div>
       <div className="mt-2 flex gap-1 flex-wrap">
         {batch.is_paused ? (
-          <Button size="sm" onClick={onResume} disabled={disabled} className="gap-1"><Play className="size-3.5" /> Retomar</Button>
+          <Button size="sm" onClick={onResume} disabled={blocked} className="gap-1"><Play className="size-3.5" /> Retomar</Button>
         ) : (
-          <Button size="sm" variant="secondary" onClick={onPause} disabled={disabled} className="gap-1"><Pause className="size-3.5" /> Pausar</Button>
+          <Button size="sm" variant="secondary" onClick={onPause} disabled={blocked} className="gap-1"><Pause className="size-3.5" /> Pausar</Button>
         )}
-        <Button size="sm" variant="default" onClick={onFinalize} disabled={disabled} className="gap-1 bg-emerald-600 hover:bg-emerald-700">
+        <Button size="sm" variant="default" onClick={() => setConfirmOpen(true)} disabled={blocked} className="gap-1 bg-emerald-600 hover:bg-emerald-700">
           <Check className="size-3.5" /> Finalizar
         </Button>
       </div>
+      {lockedReason && (
+        <p className="mt-1 text-[11px] text-muted-foreground">{lockedReason}</p>
+      )}
+
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Finalizar lote — {batch.shell_code}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Vais concluir {batch.quantity} casco(s). As encomendas à espera ficam com estrutura/branco concluídos e o
+            excedente entra em stock. Esta ação não pode ser desfeita.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmOpen(false)}>Cancelar</Button>
+            <Button
+              className="bg-emerald-600 hover:bg-emerald-700"
+              onClick={() => { setConfirmOpen(false); onFinalize(); }}
+            >
+              Confirmar e finalizar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

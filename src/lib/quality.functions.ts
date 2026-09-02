@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { assertAnyRole } from "@/lib/roleGuards";
 import { z } from "zod";
 
 /**
@@ -170,6 +171,7 @@ export const submitQualityCheck = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => submitSchema.parse(d))
   .handler(async ({ data, context }) => {
+    await assertAnyRole(context, ["admin", "escritorio", "operador"], "registar conferências de qualidade");
     const sb = context.supabase as any;
 
     // Validar operador

@@ -557,6 +557,10 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
   // mantém-se contínuo entre montagens do componente (ex.: trocar de aba
   // de etapa e voltar) — não reinicia com base em Date.now() do mount.
   const running = item.status === "em_curso" && !item.is_paused;
+  // A etapa em curso pertence a outro operador → só ele pode pausar/finalizar (regra do servidor)
+  const ownedByOther = Boolean(
+    item.status === "em_curso" && item.operator_code && operatorCode && item.operator_code !== operatorCode
+  );
   const segmentStartMs = item.current_segment_started_at
     ? new Date(item.current_segment_started_at).getTime()
     : null;
@@ -743,6 +747,7 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
 
       {/* Ações */}
       <div className="flex gap-2 mt-3 flex-wrap">
+        {/* Bloqueio de propriedade: etapa iniciada por outro operador */}
         {!canAct ? (
           <div className="text-xs text-muted-foreground flex items-center gap-1">
             <Lock className="size-3" /> Não atribuído a esta etapa
@@ -762,19 +767,24 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
               </div>
             )}
             {!isQuality && !operateByColis && running && (
-              <Button size="lg" variant="outline" disabled={pending} onClick={() => onAction("pausar")} className="gap-2 h-12 flex-1 sm:flex-none">
+              <Button size="lg" variant="outline" disabled={pending || ownedByOther} onClick={() => onAction("pausar")} className="gap-2 h-12 flex-1 sm:flex-none">
                 <Pause className="size-4" /> Pausar
               </Button>
             )}
             {!isQuality && !operateByColis && paused && (
-              <Button size="lg" variant="outline" disabled={pending} onClick={() => onAction("retomar")} className="gap-2 h-12 flex-1 sm:flex-none">
+              <Button size="lg" variant="outline" disabled={pending || ownedByOther} onClick={() => onAction("retomar")} className="gap-2 h-12 flex-1 sm:flex-none">
                 <RotateCcw className="size-4" /> Retomar
               </Button>
             )}
             {!isQuality && !operateByColis && item.status === "em_curso" && (
-              <Button size="lg" variant="default" disabled={pending} onClick={() => onAction("finalizar")} className="gap-2 h-12 flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700">
+              <Button size="lg" variant="default" disabled={pending || ownedByOther} onClick={() => onAction("finalizar")} className="gap-2 h-12 flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700">
                 <Check className="size-4" /> Finalizar
               </Button>
+            )}
+            {!isQuality && !operateByColis && ownedByOther && (
+              <div className="text-xs text-muted-foreground flex items-center gap-1">
+                <Lock className="size-3" /> Iniciada pelo operador {item.operator_code} — só ele pode pausar/finalizar
+              </div>
             )}
             {!isQuality && !operateByColis && blocked && (
               <div className="text-xs text-destructive flex items-center gap-1">
@@ -816,6 +826,7 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
               key={c.id}
               coli={c}
               canAct={canAct}
+              operatorCode={operatorCode}
               pending={coliPending}
               onAction={(ev) => onColiAction(c.id, ev)}
             />
@@ -826,14 +837,18 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
   );
 }
 
-function ColiRow({ coli, canAct, pending, onAction }: {
+function ColiRow({ coli, canAct, operatorCode, pending, onAction }: {
   coli: ColiStageItem;
   canAct: boolean;
+  operatorCode?: string;
   pending: boolean;
   onAction: (event: "iniciar"|"pausar"|"retomar"|"finalizar") => void;
 }) {
   const running = coli.status === "em_curso" && !coli.is_paused;
   const paused = coli.is_paused;
+  const ownedByOther = Boolean(
+    coli.status === "em_curso" && coli.operator_code && operatorCode && coli.operator_code !== operatorCode
+  );
   const segStart = coli.last_resume_at ? new Date(coli.last_resume_at).getTime() : null;
   const live = running && segStart
     ? coli.productive_seconds + Math.max(0, Math.floor((Date.now() - segStart) / 1000))
@@ -871,20 +886,25 @@ function ColiRow({ coli, canAct, pending, onAction }: {
               </Button>
             )}
             {running && (
-              <Button size="sm" variant="outline" disabled={pending} onClick={() => onAction("pausar")} className="h-8 gap-1">
+              <Button size="sm" variant="outline" disabled={pending || ownedByOther} onClick={() => onAction("pausar")} className="h-8 gap-1">
                 <Pause className="size-3" /> Pausar
               </Button>
             )}
             {paused && (
-              <Button size="sm" variant="outline" disabled={pending} onClick={() => onAction("retomar")} className="h-8 gap-1">
+              <Button size="sm" variant="outline" disabled={pending || ownedByOther} onClick={() => onAction("retomar")} className="h-8 gap-1">
                 <RotateCcw className="size-3" /> Retomar
               </Button>
             )}
             {coli.status === "em_curso" && (
-              <Button size="sm" disabled={pending} onClick={() => onAction("finalizar")}
+              <Button size="sm" disabled={pending || ownedByOther} onClick={() => onAction("finalizar")}
                 className="h-8 gap-1 bg-emerald-600 hover:bg-emerald-700">
                 <Check className="size-3" /> Finalizar
               </Button>
+            )}
+            {ownedByOther && (
+              <span className="text-[11px] text-muted-foreground inline-flex items-center gap-1">
+                <Lock className="size-3" /> Op {coli.operator_code}
+              </span>
             )}
           </>
         )}
