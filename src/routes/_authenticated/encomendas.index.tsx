@@ -150,7 +150,15 @@ function EncomendasPage() {
         </Select>
       </div>
 
+      <BulkOrderActions
+        ids={Array.from(selected)}
+        canEdit={canEditPlanning}
+        isAdmin={role === "admin"}
+        onDone={() => setSelected(new Set())}
+      />
+
       <div className="hidden md:block">
+
         <Card className="overflow-hidden">
           <Table>
             <TableHeader>
