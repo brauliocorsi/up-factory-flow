@@ -425,3 +425,60 @@ export const sendPickingBatchToStock = createServerFn({ method: "POST" })
       };
     }
   });
+// Orders already fully picked (picagem concluída) but not yet dispatched to stock.
+// Prevents "lost" orders when the picker refreshes before pressing "Enviar lote".
+export type PendingDispatchOrder = {
+  order_id: string;
+  order_number: string;
+  product_description: string;
+  structure_type: string | null;
+  measure: string | null;
+  color: string | null;
+  coli_total: number;
+  picked_at: string | null;
+};
+
+export const listPendingDispatch = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<PendingDispatchOrder[]> => {
+    const { supabase } = context;
+    const { data: stages, error } = await supabase
+      .from("order_stages")
+      .select("order_id, finished_at, production_orders!inner(id, order_number, product_description, structure_type, measure, color, status)")
+      .eq("stage", "picagem")
+      .eq("status", "concluida")
+      .order("finished_at", { ascending: false })
+      .limit(200);
+    if (error) throw new Error(error.message);
+    const rows = ((stages ?? []) as any[]).filter((s) => s.production_orders?.status !== "cancelada");
+    const orderIds = rows.map((s) => s.order_id);
+    if (orderIds.length === 0) return [];
+
+    // Exclude anything already dispatched successfully
+    const { data: sent } = await supabase
+      .from("picking_dispatches")
+      .select("order_id, status")
+      .in("order_id", orderIds)
+      .eq("status", "enviado");
+    const sentSet = new Set(((sent ?? []) as any[]).map((d) => d.order_id));
+
+    const { data: colis } = await supabase
+      .from("order_colis")
+      .select("id, order_id")
+      .in("order_id", orderIds);
+    const totals = new Map<string, number>();
+    for (const c of (colis ?? []) as any[]) totals.set(c.order_id, (totals.get(c.order_id) ?? 0) + 1);
+
+    return rows
+      .filter((s) => !sentSet.has(s.order_id))
+      .map((s) => ({
+        order_id: s.order_id,
+        order_number: s.production_orders.order_number,
+        product_description: s.production_orders.product_description,
+        structure_type: s.production_orders.structure_type,
+        measure: s.production_orders.measure,
+        color: s.production_orders.color,
+        coli_total: totals.get(s.order_id) ?? 0,
+        picked_at: s.finished_at ?? null,
+      }));
+  });
