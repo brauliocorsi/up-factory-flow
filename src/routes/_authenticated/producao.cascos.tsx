@@ -128,7 +128,14 @@ function CascosBulkPage() {
               <ActiveBatchCard
                 key={b.id}
                 batch={b}
-                disabled={!operatorCode.trim()}
+                disabled={!operatorCode.trim() || !canProduceShells}
+                lockedReason={
+                  !operatorCode.trim() ? "Indica o teu código."
+                  : !canProduceShells ? "Precisas de estar vinculado a estrutura/branco."
+                  : b.operator_code && b.operator_code !== operatorCode.trim()
+                    ? `Lote do operador ${b.operator_code} — só ele pode continuar.`
+                    : null
+                }
                 onPause={() => eventFn({ data: { batch_id: b.id, operator_code: operatorCode.trim(), event: "pausar" } })
                   .then(() => qc.invalidateQueries({ queryKey: ["shell-batches-active"] }))
                   .catch((e: any) => toast.error(e?.message ?? "Erro"))}
