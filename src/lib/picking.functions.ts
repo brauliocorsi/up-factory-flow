@@ -305,6 +305,7 @@ export const sendPickingBatchToStock = createServerFn({ method: "POST" })
     order_ids: z.array(z.string().uuid())
   }).parse(d))
   .handler(async ({ data, context }) => {
+    await assertAnyRole(context, ["admin", "escritorio", "picador"], "enviar lotes de picagem");
     const { supabase } = context;
     const url = process.env.STOCK_INTAKE_URL;
     const token = process.env.STOCK_INTAKE_TOKEN;
