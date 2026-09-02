@@ -272,6 +272,8 @@ function ProducaoPage() {
         </div>
       </div>
 
+      <UrgentBar />
+
       {/* Painel pessoal do operador (login-only, sem código) */}
       {isOperatorOnly && currentOp && (
         <Card className="p-3 sm:p-4">
