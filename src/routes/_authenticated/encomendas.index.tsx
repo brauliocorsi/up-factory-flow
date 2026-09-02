@@ -20,6 +20,8 @@ import { Link } from "@tanstack/react-router";
 import { useRealtimeOrders } from "@/hooks/useRealtimeOrders";
 import { QualityCheckDialog } from "@/components/quality/QualityCheckDialog";
 import { EditOrderDialog } from "@/components/orders/EditOrderDialog";
+import { BulkOrderActions } from "@/components/orders/BulkOrderActions";
+
 
 export const Route = createFileRoute("/_authenticated/encomendas/")({
   component: EncomendasPage,
