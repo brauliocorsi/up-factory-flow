@@ -27,8 +27,10 @@ export const Route = createFileRoute("/_authenticated/encomendas/")({
 function EncomendasPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const { operator } = useMySession();
+  const { operator, role } = useMySession();
   const opCode = operator?.code ?? "";
+  const canEditPlanning = role === "admin" || role === "escritorio";
+  const [tab, setTab] = useState<"lista" | "planeamento">("lista");
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<string>("all");
   const [modelId, setModelId] = useState<string>("all");
