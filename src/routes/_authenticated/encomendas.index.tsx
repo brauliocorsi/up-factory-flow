@@ -149,7 +149,7 @@ function EncomendasPage() {
           <SelectContent>
             <SelectItem value="all">Todos os estados</SelectItem>
             {Object.entries(ORDER_STATUS_LABELS)
-              .filter(([v]) => v !== "concluida")
+              .filter(([v]) => v !== "concluida" && v !== "em_armazem")
               .map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
           </SelectContent>
         </Select>

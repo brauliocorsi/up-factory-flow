@@ -652,7 +652,7 @@ export const listPlanningOrders = createServerFn({ method: "GET" })
     const { data: orders, error } = await (supabase as any)
       .from("production_orders")
       .select("id, order_number, customer_order, product_description, measure, fabric_type, structure_type, entry_date, due_date, status, priority, models(name), order_stages(stage, started_at)")
-      .not("status", "in", "(cancelada,concluida)")
+      .not("status", "in", "(cancelada,concluida,em_armazem)")
       .order("priority", { ascending: false })
       .order("due_date", { ascending: true, nullsFirst: false });
     if (error) throw new Error(error.message);
