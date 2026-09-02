@@ -257,6 +257,7 @@ function EncomendasPage() {
           </Card>
         ))}
         {orderList.length === 0 && <div className="text-center text-sm text-muted-foreground py-8">Sem encomendas</div>}
+        </div>
         </TabsContent>
 
         <TabsContent value="planeamento" className="mt-4">
