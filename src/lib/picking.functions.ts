@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { assertAnyRole } from "@/lib/roleGuards";
 import { z } from "zod";
 
 export type PickingColi = {
