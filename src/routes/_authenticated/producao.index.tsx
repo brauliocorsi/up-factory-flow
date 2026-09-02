@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Lock, Play, Pause, Check, RotateCcw, Clock, UserCircle2, AlertTriangle, Boxes, Wrench, Search, ClipboardCheck, CheckCircle2, XCircle, ListTree } from "lucide-react";
+import { Lock, Play, Pause, Check, RotateCcw, Clock, UserCircle2, AlertTriangle, Boxes, Wrench, Search, ClipboardCheck, CheckCircle2, XCircle, ListTree, Layers } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Link } from "@tanstack/react-router";
 import { STAGE_LABELS } from "@/lib/format";
@@ -138,6 +138,7 @@ function ProducaoPage() {
     (search.stage as Stage | undefined) ?? "estofagem",
   );
   const colisByStage = colisByStageMap[activeStage];
+  const supportsGrouping = activeStage === "corte" || activeStage === "estrutura";
 
   const coliMutation = useMutation({
     mutationFn: (vars: { order_coli_stage_id: string; event: "iniciar"|"pausar"|"retomar"|"finalizar" }) => {
@@ -154,6 +155,7 @@ function ProducaoPage() {
     onError: (e: any) => toast.error(e?.message ?? "Erro ao registar"),
   });
 
+  const [groupMode, setGroupMode] = useState<boolean>(false);
   const [showPending, setShowPending] = useState<boolean>(true);
   const [showRunning, setShowRunning] = useState<boolean>(true);
   const [showDone, setShowDone] = useState<boolean>(true);
@@ -370,23 +372,30 @@ function ProducaoPage() {
       <div className="overflow-x-auto -mx-3 px-3 sm:-mx-4 sm:px-4">
         <div className="flex gap-1 min-w-max">
           {stageTabs.map((s) => {
-            const count = visibleItemsByStage[s]?.length ?? 0;
+            const stageItems = visibleItemsByStage[s] ?? [];
+            const openCount = stageItems.filter((it) => it.status !== "concluida").length;
+            const runningCount = stageItems.filter((it) => it.status === "em_curso").length;
             const linked = canActOnStage(s);
             const isActive = s === activeStage;
             return (
               <button
                 key={s}
                 onClick={() => setActiveStage(s)}
+                title={`${openCount} encomenda(s) em aberto · ${runningCount} a produzir`}
                 className={`flex items-center gap-1.5 px-3 py-2.5 rounded-md text-sm font-medium border transition ${
                   isActive ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-accent"
                 }`}
               >
                 {!linked && <Lock className="size-3 opacity-60" />}
                 {STAGE_LABELS[s]}
-                <span className={`text-[10px] rounded-full px-1.5 py-0.5 ${isActive ? "bg-primary-foreground/20" : "bg-muted"}`}>{count}</span>
+                <span className={`text-[10px] rounded-full px-1.5 py-0.5 ${isActive ? "bg-primary-foreground/20" : "bg-muted"}`}>{openCount}</span>
+                {runningCount > 0 && (
+                  <span className="text-[10px] rounded-full px-1.5 py-0.5 bg-emerald-600 text-white">{runningCount}</span>
+                )}
               </button>
             );
           })}
+
         </div>
       </div>
 
@@ -462,7 +471,25 @@ function ProducaoPage() {
       {/* Lista + Sidebar */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4 items-start">
         <div className="space-y-2 min-w-0">
-          {(activeStage === "corte" || activeStage === "estrutura") ? (
+          {supportsGrouping && (
+            <div className="flex items-center justify-between gap-2 bg-card border rounded-lg px-3 py-2">
+              <span className="text-xs text-muted-foreground">
+                {groupMode
+                  ? "Modo agrupamento: conclui várias encomendas do mesmo lote de uma vez."
+                  : "Cards normais, com pausa e tempos. Usa “Agrupar” para trabalhar por lote."}
+              </span>
+              <Button
+                size="sm"
+                variant={groupMode ? "default" : "outline"}
+                onClick={() => setGroupMode((v) => !v)}
+                className="gap-1 shrink-0"
+              >
+                <Layers className="size-4" />
+                {groupMode ? "Ver cards" : "Agrupar"}
+              </Button>
+            </div>
+          )}
+          {(activeStage === "corte" || activeStage === "estrutura") && groupMode ? (
             <StageGroupView
               stage={activeStage}
               canAct={canActOnStage(activeStage) && !!currentOp}
@@ -497,6 +524,7 @@ function ProducaoPage() {
     </div>
   );
 }
+
 
 function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinutes, colis, isMultiColiOrder, onColiAction, coliPending }: {
   item: ProductionStageOrder;
