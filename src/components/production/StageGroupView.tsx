@@ -14,6 +14,7 @@ import {
   finalizeStageGroup,
   type StageGroup,
 } from "@/lib/grouping.functions";
+import { useAuth } from "@/hooks/useAuth";
 
 function fmtDur(seconds: number) {
   const s = Math.max(0, Math.floor(seconds));
