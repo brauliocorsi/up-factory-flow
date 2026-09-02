@@ -2019,6 +2019,10 @@ export type Database = {
         Args: { _s: Database["public"]["Enums"]["production_stage"] }
         Returns: number
       }
+      stage_prerequisites: {
+        Args: { _stage: Database["public"]["Enums"]["production_stage"] }
+        Returns: Database["public"]["Enums"]["production_stage"][]
+      }
       start_shell_batch: {
         Args: { _operator_code: string; _quantity: number; _shell_id: string }
         Returns: string
