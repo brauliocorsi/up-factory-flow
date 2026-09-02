@@ -131,10 +131,11 @@ function EncomendasPage() {
         </div>
       </div>
 
-      <Tabs value={tab} onValueChange={(v) => setTab(v as "lista" | "planeamento")}>
+      <Tabs value={tab} onValueChange={(v) => setTab(v as "lista" | "planeamento" | "historico")}>
         <TabsList>
           <TabsTrigger value="lista">Lista</TabsTrigger>
           <TabsTrigger value="planeamento">Planeamento</TabsTrigger>
+          <TabsTrigger value="historico">Histórico</TabsTrigger>
         </TabsList>
         <TabsContent value="lista" className="mt-4 space-y-4">
           {/* Filtros Lista */}
@@ -147,9 +148,12 @@ function EncomendasPage() {
           <SelectTrigger className="h-11"><SelectValue placeholder="Estado" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos os estados</SelectItem>
-            {Object.entries(ORDER_STATUS_LABELS).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
+            {Object.entries(ORDER_STATUS_LABELS)
+              .filter(([v]) => v !== "concluida")
+              .map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
           </SelectContent>
         </Select>
+
         <Select value={modelId} onValueChange={setModelId}>
           <SelectTrigger className="h-11"><SelectValue placeholder="Modelo" /></SelectTrigger>
           <SelectContent>
