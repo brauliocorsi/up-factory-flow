@@ -51,6 +51,8 @@ export type ProductionStageOrder = {
    * componente é remontado (mudar de aba e voltar).
    */
   current_segment_started_at?: string | null;
+  /** Estado de todas as etapas da encomenda (rota completa). */
+  stage_states?: Array<{ stage: Stage; status: string }>;
 };
 
 export type ProductionData = {
@@ -73,6 +75,7 @@ export const getProductionData = createServerFn({ method: "GET" })
     const orderIds = Array.from(new Set(((data ?? []) as any[]).map((r) => r.production_orders.id)));
     const linesByOrder = new Map<string, ConvergenceLines>();
     const coliCountByOrder = new Map<string, number>();
+    const stageStatesByOrder = new Map<string, Array<{ stage: Stage; status: string }>>();
     if (orderIds.length > 0) {
       const { data: allStages } = await (supabase as any)
         .from("order_stages")
@@ -86,6 +89,13 @@ export const getProductionData = createServerFn({ method: "GET" })
       }
       for (const [oid, st] of stagesByOrder) {
         linesByOrder.set(oid, computeLines(st));
+        stageStatesByOrder.set(
+          oid,
+          [...st]
+            .filter((r) => STAGES.includes(r.stage))
+            .sort((a, b) => STAGES.indexOf(a.stage) - STAGES.indexOf(b.stage))
+            .map((r) => ({ stage: r.stage as Stage, status: r.status as string })),
+        );
       }
 
       const { data: colisRows } = await (supabase as any)
