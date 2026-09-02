@@ -170,7 +170,7 @@ function ProducaoPage() {
   const [groupMode, setGroupMode] = useState<boolean>(false);
   const [showPending, setShowPending] = useState<boolean>(true);
   const [showRunning, setShowRunning] = useState<boolean>(true);
-  const [showDone, setShowDone] = useState<boolean>(true);
+  const [showDone, setShowDone] = useState<boolean>(false);
   const [onlyMine, setOnlyMine] = useState<boolean>(!search.q);
   const [searchQuery, setSearchQuery] = useState<string>(search.q ?? "");
   useEffect(() => {
@@ -259,8 +259,8 @@ function ProducaoPage() {
     const rank = (it: ProductionStageOrder) => {
       if (it.status === "bloqueada") return 4;
       if (it.status === "concluida") return 3;
-      if (it.status === "em_curso") return 1;
-      return isReadyToStart(it) ? 0 : 2; // prontas a iniciar primeiro
+      if (it.status === "em_curso") return 0; // ativas sempre no topo
+      return isReadyToStart(it) ? 1 : 2;
     };
     return allItems
       .filter((it) => {
@@ -322,23 +322,6 @@ function ProducaoPage() {
 
       <UrgentBar />
 
-      {/* Painel pessoal do operador (login-only, sem código) */}
-      {isOperatorOnly && currentOp && (
-        <Card className="p-3 sm:p-4">
-          <div className="text-xs text-muted-foreground">Etapas atribuídas a ti</div>
-          <div className="mt-1.5 flex flex-wrap gap-1.5">
-            {myStages.length === 0 ? (
-              <span className="text-sm text-muted-foreground">
-                Ainda não tens etapas atribuídas. Fala com o responsável.
-              </span>
-            ) : myStages.map((s) => (
-              <Badge key={s} variant="secondary" className="text-xs">
-                {STAGE_LABELS[s]} · {visibleItemsByStage[s]?.length ?? 0}
-              </Badge>
-            ))}
-          </div>
-        </Card>
-      )}
 
       {/* Operador autenticado mas sem ficha ligada */}
       {isOperatorOnly && !currentOp && (
