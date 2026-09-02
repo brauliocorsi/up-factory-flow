@@ -469,7 +469,25 @@ function ProducaoPage() {
       {/* Lista + Sidebar */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4 items-start">
         <div className="space-y-2 min-w-0">
-          {(activeStage === "corte" || activeStage === "estrutura") ? (
+          {supportsGrouping && (
+            <div className="flex items-center justify-between gap-2 bg-card border rounded-lg px-3 py-2">
+              <span className="text-xs text-muted-foreground">
+                {groupMode
+                  ? "Modo agrupamento: conclui várias encomendas do mesmo lote de uma vez."
+                  : "Cards normais, com pausa e tempos. Usa “Agrupar” para trabalhar por lote."}
+              </span>
+              <Button
+                size="sm"
+                variant={groupMode ? "default" : "outline"}
+                onClick={() => setGroupMode((v) => !v)}
+                className="gap-1 shrink-0"
+              >
+                <Layers className="size-4" />
+                {groupMode ? "Ver cards" : "Agrupar"}
+              </Button>
+            </div>
+          )}
+          {supportsGrouping && groupMode ? (
             <StageGroupView
               stage={activeStage}
               canAct={canActOnStage(activeStage) && !!currentOp}
@@ -504,6 +522,7 @@ function ProducaoPage() {
     </div>
   );
 }
+
 
 function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinutes, colis, isMultiColiOrder, onColiAction, coliPending }: {
   item: ProductionStageOrder;
