@@ -257,7 +257,18 @@ function EncomendasPage() {
           </Card>
         ))}
         {orderList.length === 0 && <div className="text-center text-sm text-muted-foreground py-8">Sem encomendas</div>}
-      </div>
+        </TabsContent>
+
+        <TabsContent value="planeamento" className="mt-4">
+          {canEditPlanning ? (
+            <PlanningTable canEdit />
+          ) : (
+            <div className="text-center text-sm text-muted-foreground py-8 border border-dashed rounded-lg">
+              O planeamento está disponível para admin e escritório.
+            </div>
+          )}
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={!!cancelTarget} onOpenChange={(o) => !o && setCancelTarget(null)}>
         <DialogContent>
