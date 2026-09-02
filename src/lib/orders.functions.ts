@@ -414,6 +414,7 @@ export const cancelOrder = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
+    await assertAdminOrOffice(context);
     const { data: res, error } = await (context.supabase as any)
       .rpc("cancel_order_with_recovery", { _order_id: data.id });
     if (error) throw new Error(error.message);
