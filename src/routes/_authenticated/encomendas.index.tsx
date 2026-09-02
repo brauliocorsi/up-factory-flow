@@ -19,7 +19,6 @@ import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
 import { useRealtimeOrders } from "@/hooks/useRealtimeOrders";
 import { QualityCheckDialog } from "@/components/quality/QualityCheckDialog";
-import { useMySession } from "@/hooks/useMySession";
 
 export const Route = createFileRoute("/_authenticated/encomendas/")({
   component: EncomendasPage,
