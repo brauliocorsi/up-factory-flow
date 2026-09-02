@@ -273,9 +273,10 @@ function GroupCard({
           )}
           <Button
             size="sm"
-            disabled={!canAct || pending || visibleCount === 0}
+            disabled={!canAct || pending || visibleCount === 0 || notStarted.length === visibleCount}
             onClick={handleFinalize}
             className="gap-1"
+            title={notStarted.length === visibleCount ? "Inicia o grupo antes de concluir" : undefined}
           >
             <Check className="size-4" />
             Concluir grupo
