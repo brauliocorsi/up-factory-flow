@@ -345,8 +345,9 @@ function EncomendasPage() {
                     <TableCell>{o.measure ?? "—"}</TableCell>
                     <TableCell>{o.fabric_type ?? "—"}</TableCell>
                     <TableCell>{formatDatePT(o.due_date)}</TableCell>
-                    <TableCell>
+                    <TableCell className="space-x-1">
                       <Badge variant="secondary">{formatDatePT(o.completed_at)}</Badge>
+                      {o.picked_at ? <Badge variant="outline">Picada</Badge> : null}
                     </TableCell>
                     <TableCell>
                       <Button size="sm" variant="ghost" className="gap-1 h-8" onClick={() => printOne(o.id)}>
