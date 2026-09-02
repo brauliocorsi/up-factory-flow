@@ -1845,6 +1845,7 @@ export type Database = {
           structure_code: string
         }[]
       }
+      get_public_factory_panel: { Args: never; Returns: Json }
       get_stage_capacity_load: {
         Args: {
           _from: string
