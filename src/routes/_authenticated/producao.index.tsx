@@ -370,23 +370,30 @@ function ProducaoPage() {
       <div className="overflow-x-auto -mx-3 px-3 sm:-mx-4 sm:px-4">
         <div className="flex gap-1 min-w-max">
           {stageTabs.map((s) => {
-            const count = visibleItemsByStage[s]?.length ?? 0;
+            const stageItems = visibleItemsByStage[s] ?? [];
+            const openCount = stageItems.filter((it) => it.status !== "concluida").length;
+            const runningCount = stageItems.filter((it) => it.status === "em_curso").length;
             const linked = canActOnStage(s);
             const isActive = s === activeStage;
             return (
               <button
                 key={s}
                 onClick={() => setActiveStage(s)}
+                title={`${openCount} encomenda(s) em aberto · ${runningCount} a produzir`}
                 className={`flex items-center gap-1.5 px-3 py-2.5 rounded-md text-sm font-medium border transition ${
                   isActive ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-accent"
                 }`}
               >
                 {!linked && <Lock className="size-3 opacity-60" />}
                 {STAGE_LABELS[s]}
-                <span className={`text-[10px] rounded-full px-1.5 py-0.5 ${isActive ? "bg-primary-foreground/20" : "bg-muted"}`}>{count}</span>
+                <span className={`text-[10px] rounded-full px-1.5 py-0.5 ${isActive ? "bg-primary-foreground/20" : "bg-muted"}`}>{openCount}</span>
+                {runningCount > 0 && (
+                  <span className="text-[10px] rounded-full px-1.5 py-0.5 bg-emerald-600 text-white">{runningCount}</span>
+                )}
               </button>
             );
           })}
+
         </div>
       </div>
 
