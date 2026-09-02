@@ -25,7 +25,7 @@ function ProdutoFinalPage() {
     queryKey: ["finished-goods", status],
     queryFn: () => listFn({ data: { status } }),
   });
-  useRealtimeOrders([["finished-goods"]]);
+  useRealtimeOrders([["finished-goods"]], { tables: ["finished_goods", "production_orders", "stock_movements"] });
 
   const mut = useMutation({
     mutationFn: (id: string) => transferFn({ data: { id } }),

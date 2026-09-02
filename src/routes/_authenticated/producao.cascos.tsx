@@ -47,7 +47,9 @@ function CascosBulkPage() {
   const { data: operators } = useQuery({ queryKey: ["operators-stages"], queryFn: () => fetchOps() });
   const { data: settings } = useQuery({ queryKey: ["app-settings"], queryFn: () => fetchSettings() });
 
-  useRealtimeOrders([["shell-needs"], ["shell-batches-active"], ["production"], ["dashboard"]]);
+  useRealtimeOrders([["shell-needs"], ["shell-batches-active"], ["production"], ["dashboard"]], {
+    tables: ["shell_batches", "shell_batch_logs", "shells", "production_orders", "order_stages"],
+  });
 
   const [operatorCode, setOperatorCode] = useState<string>(() =>
     (typeof window !== "undefined" && sessionStorage.getItem("op_code")) || ""

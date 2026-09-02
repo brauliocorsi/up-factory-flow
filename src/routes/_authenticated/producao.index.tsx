@@ -121,7 +121,17 @@ function ProducaoPage() {
     enabled: orderStagePairs.length > 0,
   });
 
-  useRealtimeOrders([["production"], ...VISIBLE_STAGES.map((s) => ["production-colis", s])]);
+  useRealtimeOrders([["production"], ...VISIBLE_STAGES.map((s) => ["production-colis", s])], {
+    enabled: Boolean(session),
+    tables: [
+      "production_orders",
+      "order_stages",
+      "order_colis",
+      "order_coli_stages",
+      "stage_time_logs",
+      "operator_stages",
+    ],
+  });
 
   const search = Route.useSearch();
   const [activeStage, setActiveStage] = useState<Stage>(
