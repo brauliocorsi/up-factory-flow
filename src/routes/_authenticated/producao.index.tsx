@@ -837,14 +837,18 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
   );
 }
 
-function ColiRow({ coli, canAct, pending, onAction }: {
+function ColiRow({ coli, canAct, operatorCode, pending, onAction }: {
   coli: ColiStageItem;
   canAct: boolean;
+  operatorCode?: string;
   pending: boolean;
   onAction: (event: "iniciar"|"pausar"|"retomar"|"finalizar") => void;
 }) {
   const running = coli.status === "em_curso" && !coli.is_paused;
   const paused = coli.is_paused;
+  const ownedByOther = Boolean(
+    coli.status === "em_curso" && coli.operator_code && operatorCode && coli.operator_code !== operatorCode
+  );
   const segStart = coli.last_resume_at ? new Date(coli.last_resume_at).getTime() : null;
   const live = running && segStart
     ? coli.productive_seconds + Math.max(0, Math.floor((Date.now() - segStart) / 1000))
