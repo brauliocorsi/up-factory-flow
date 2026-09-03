@@ -6,10 +6,11 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, AlertTriangle, CheckCircle2, Ruler, PackageOpen, TrendingDown } from "lucide-react";
 import { listRolls, upsertRoll, deleteRoll } from "@/lib/stock.functions";
 import { getCatalogs } from "@/lib/catalog.functions";
 import { AdjustDialog } from "./stock.cascos";
@@ -24,20 +25,39 @@ function TecidosPage() {
   const { data: cat } = useQuery({ queryKey: ["catalogs"], queryFn: () => getCatalogs() });
   const [typeId, setTypeId] = useState<string>("");
   const [q, setQ] = useState("");
+  const [onlyLow, setOnlyLow] = useState(false);
+
   const refCodesForType = useMemo(() => {
     if (!typeId) return null;
     return new Set(((cat?.fabric_refs ?? []) as any[]).filter((r) => r.fabric_type_id === typeId).map((r) => r.code));
   }, [cat, typeId]);
+
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
     return (rows as any[]).filter((r) => {
       if (refCodesForType && !refCodesForType.has(r.fabric_ref_code)) return false;
+      if (onlyLow && Number(r.meters) > Number(r.min_meters ?? 0)) return false;
       if (!term) return true;
       return [r.name, r.fabric_ref_code, r.color_code, r.location]
         .filter(Boolean)
         .some((v: string) => String(v).toLowerCase().includes(term));
     });
-  }, [rows, refCodesForType, q]);
+  }, [rows, refCodesForType, q, onlyLow]);
+
+  // Aggregated stats
+  const stats = useMemo(() => {
+    const all = rows as any[];
+    const totalMeters = all.reduce((s, r) => s + Number(r.meters ?? 0), 0);
+    const lowCount = all.filter((r) => Number(r.meters) <= Number(r.min_meters ?? 0)).length;
+    const outCount = all.filter((r) => Number(r.meters) <= 0).length;
+    const byRef = new Map<string, number>();
+    for (const r of all) {
+      const k = r.fabric_ref_code ?? "—";
+      byRef.set(k, (byRef.get(k) ?? 0) + Number(r.meters ?? 0));
+    }
+    return { totalMeters, lowCount, outCount, refCount: byRef.size, rollCount: all.length };
+  }, [rows]);
+
   const refresh = () => qc.invalidateQueries({ queryKey: ["rolls"] });
   const del = useMutation({
     mutationFn: (id: string) => deleteRoll({ data: { id } }),
@@ -54,6 +74,27 @@ function TecidosPage() {
         </div>
         <UpsertRoll onDone={refresh} />
       </div>
+
+      {/* Summary cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <StatCard icon={Ruler} label="Total em stock" value={`${stats.totalMeters.toFixed(1)} m`} />
+        <StatCard icon={PackageOpen} label="Rolos" value={stats.rollCount} sub={`${stats.refCount} referências`} />
+        <StatCard
+          icon={TrendingDown}
+          label="Abaixo do mínimo"
+          value={stats.lowCount}
+          highlight={stats.lowCount > 0}
+        />
+        <StatCard
+          icon={AlertTriangle}
+          label="Esgotados"
+          value={stats.outCount}
+          highlight={stats.outCount > 0}
+          danger
+        />
+      </div>
+
+      {/* Filters */}
       <Card className="p-3 flex flex-wrap gap-3 items-end">
         <div className="space-y-1.5 min-w-52">
           <Label className="text-xs">Tipo de tecido</Label>
@@ -71,8 +112,21 @@ function TecidosPage() {
           <Label className="text-xs">Pesquisar</Label>
           <Input value={q} onChange={(e) => setQ(e.target.value)} className="h-11" placeholder="referência, cor, nome, localização" />
         </div>
+        <div className="flex items-center gap-2 pb-1">
+          <Button
+            variant={onlyLow ? "default" : "outline"}
+            size="sm"
+            className="h-11 gap-2"
+            onClick={() => setOnlyLow((v) => !v)}
+          >
+            <AlertTriangle className="size-4" />
+            Só baixo stock
+          </Button>
+        </div>
         <div className="text-xs text-muted-foreground pb-3">{filtered.length} rolo(s)</div>
       </Card>
+
+      {/* Table */}
       <Card className="p-2 overflow-x-auto">
         <Table>
           <TableHeader>
@@ -81,7 +135,7 @@ function TecidosPage() {
               <TableHead>Cor</TableHead>
               <TableHead>Nome</TableHead>
               <TableHead className="text-right">Metros</TableHead>
-              <TableHead className="text-right">Mínimo</TableHead>
+              <TableHead className="w-32">Nível</TableHead>
               <TableHead>Localização</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
@@ -90,14 +144,38 @@ function TecidosPage() {
             {isLoading && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-6">A carregar…</TableCell></TableRow>}
             {!isLoading && filtered.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-6">Sem rolos</TableCell></TableRow>}
             {filtered.map((r: any) => {
-              const low = Number(r.meters) <= Number(r.min_meters ?? 0);
+              const meters = Number(r.meters ?? 0);
+              const min = Number(r.min_meters ?? 0);
+              const pct = min > 0 ? Math.min(100, Math.round((meters / (min * 2)) * 100)) : meters > 0 ? 100 : 0;
+              const status = meters <= 0 ? "out" : meters <= min ? "low" : "ok";
               return (
-                <TableRow key={r.id} className={low ? "bg-destructive/5" : ""}>
+                <TableRow key={r.id} className={status !== "ok" ? "bg-destructive/5" : ""}>
                   <TableCell className="font-mono text-xs">{r.fabric_ref_code ?? "—"}</TableCell>
                   <TableCell className="font-mono text-xs">{r.color_code ?? "—"}</TableCell>
-                  <TableCell>{r.name}</TableCell>
-                  <TableCell className={`text-right font-semibold ${low ? "text-destructive" : ""}`}>{Number(r.meters).toFixed(1)} m</TableCell>
-                  <TableCell className="text-right text-muted-foreground">{Number(r.min_meters).toFixed(1)} m</TableCell>
+                  <TableCell className="font-medium">{r.name}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="font-semibold">{meters.toFixed(1)} m</div>
+                    <div className="text-[11px] text-muted-foreground">mín. {min.toFixed(1)} m</div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden min-w-12">
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            status === "out" ? "bg-destructive" : status === "low" ? "bg-warning" : "bg-emerald-500"
+                          }`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      {status === "ok" ? (
+                        <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
+                      ) : status === "low" ? (
+                        <AlertTriangle className="size-4 text-warning shrink-0" />
+                      ) : (
+                        <AlertTriangle className="size-4 text-destructive shrink-0" />
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell className="text-xs">{r.location ?? "—"}</TableCell>
                   <TableCell className="text-right space-x-1 whitespace-nowrap">
                     <AdjustDialog itemType="fabric" itemId={r.id} label={r.name} onDone={refresh} />
@@ -113,6 +191,18 @@ function TecidosPage() {
         </Table>
       </Card>
     </div>
+  );
+}
+
+function StatCard({ icon: Icon, label, value, sub, highlight, danger }: any) {
+  return (
+    <Card className={`p-4 ${highlight ? (danger ? "border-destructive/40 bg-destructive/5" : "border-warning bg-warning/5") : ""}`}>
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <Icon className={`size-4 ${highlight ? (danger ? "text-destructive" : "text-warning") : ""}`} /> {label}
+      </div>
+      <div className="text-2xl font-bold mt-1">{value}</div>
+      {sub && <div className="text-[11px] text-muted-foreground mt-0.5">{sub}</div>}
+    </Card>
   );
 }
 
