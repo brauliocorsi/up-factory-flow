@@ -811,25 +811,8 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
                 <AlertTriangle className="size-3" /> Aguarda etapas anteriores
               </div>
             )}
-            {item.stage === "corte" && (
-              <>
-                {fabricConsumption ? (
-                  <Badge variant="secondary" className="h-12 px-3 flex items-center gap-1 text-xs">
-                    Tecido consumido: {Number(fabricConsumption.meters).toFixed(1)} m
-                    <span className="font-mono">
-                      ({fabricConsumption.fabric_ref_code ?? "—"} / {fabricConsumption.color_code ?? "—"})
-                    </span>
-                  </Badge>
-                ) : null}
-                <ConsumeFabricDialog
-                  orderId={item.order_id}
-                  orderNumber={item.order_number}
-                  operatorCode={operatorCode}
-                  canUndo={Boolean(canUndoFabric)}
-                />
-              </>
-            )}
             {item.stage !== "estrutura" && (
+
               <ReworkDialog
                 orderId={item.order_id}
                 orderNumber={item.order_number}
