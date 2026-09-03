@@ -51,6 +51,9 @@ const groups: NavGroup[] = [
     icon: Package,
     items: [
       { to: "/stock", label: "Stock geral", icon: Boxes },
+      { to: "/stock/cascos", label: "Cascos", icon: Boxes },
+      { to: "/stock/capas", label: "Capas", icon: Layers },
+      { to: "/stock/tecidos", label: "Tecidos", icon: Scissors },
       { to: "/stock/produto-final", label: "Produto final", icon: PackageCheck },
     ],
   },
