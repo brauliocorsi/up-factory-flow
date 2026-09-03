@@ -289,3 +289,96 @@ export const completeStockProduction = createServerFn({ method: "POST" })
     if (error) return { ok: false as const, message: error.message };
     return { ok: true as const };
   });
+// ============ CONSUMO MANUAL DE TECIDO (etapa de Corte) ============
+
+/** Contexto para o diálogo "Consumir tecido": metros do modelo + rolos disponíveis. */
+export const getFabricConsumeContext = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ order_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const s = context.supabase as any;
+    const { data: order, error: oErr } = await s
+      .from("production_orders")
+      .select("id, order_number, model_id, fabric_ref, color, fabric_type")
+      .eq("id", data.order_id)
+      .maybeSingle();
+    if (oErr) throw new Error(oErr.message);
+    if (!order) return { ok: false as const, message: "Encomenda não encontrada." };
+
+    const [modelRes, rollsRes, typesRes, refsRes, colorsRes, consRes] = await Promise.all([
+      order.model_id
+        ? s.from("models").select("id, code, name, meters_per_unit").eq("id", order.model_id).maybeSingle()
+        : Promise.resolve({ data: null }),
+      s.from("fabric_rolls").select("id, name, fabric_ref_code, color_code, meters").eq("active", true).order("name"),
+      s.from("ref_fabric_types").select("id, code, name").eq("active", true).order("code"),
+      s.from("ref_fabric_refs").select("id, code, name, fabric_type_id").eq("active", true).order("code"),
+      s.from("ref_colors").select("id, code, name").eq("active", true).order("code"),
+      s.from("fabric_consumptions").select("*").eq("order_id", data.order_id).maybeSingle(),
+    ]);
+
+    return {
+      ok: true as const,
+      order,
+      model: modelRes?.data ?? null,
+      meters_per_unit: modelRes?.data?.meters_per_unit ?? null,
+      rolls: rollsRes.data ?? [],
+      fabric_types: typesRes.data ?? [],
+      fabric_refs: refsRes.data ?? [],
+      colors: colorsRes.data ?? [],
+      consumption: consRes?.data ?? null,
+    };
+  });
+
+/** Consumos já registados para um conjunto de encomendas (badge no card). */
+export const listFabricConsumptions = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ order_ids: z.array(z.string().uuid()).max(500) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    if (data.order_ids.length === 0) return [];
+    const { data: rows, error } = await (context.supabase as any)
+      .from("fabric_consumptions")
+      .select("order_id, roll_id, fabric_ref_code, color_code, meters, created_at")
+      .in("order_id", data.order_ids.slice(0, 500));
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
+export const consumeFabric = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        order_id: z.string().uuid(),
+        roll_id: z.string().uuid(),
+        meters: z.number().positive().max(10000),
+        operator_code: z.string().trim().max(32).optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: res, error } = await (context.supabase as any).rpc("consume_fabric_for_order", {
+      _order_id: data.order_id,
+      _roll_id: data.roll_id,
+      _meters: data.meters,
+      _operator_code: data.operator_code ?? null,
+    });
+    if (error) return { ok: false as const, message: error.message };
+    const r = (res ?? {}) as { ok?: boolean; message?: string };
+    if (!r.ok) return { ok: false as const, message: r.message ?? "Não foi possível consumir o tecido." };
+    return { ok: true as const, result: res };
+  });
+
+export const undoFabricConsumption = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ order_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: res, error } = await (context.supabase as any).rpc("undo_fabric_consumption", {
+      _order_id: data.order_id,
+    });
+    if (error) return { ok: false as const, message: error.message };
+    const r = (res ?? {}) as { ok?: boolean; message?: string };
+    if (!r.ok) return { ok: false as const, message: r.message ?? "Não foi possível anular o consumo." };
+    return { ok: true as const };
+  });
