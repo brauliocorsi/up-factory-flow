@@ -546,6 +546,7 @@ function ProducaoPage() {
               coliPending={coliMutation.isPending}
               fabricConsumption={consumptionByOrder[it.order_id] ?? null}
               canUndoFabric={isStaff}
+              canQuality={canActOnStage("qualidade")}
             />
           ))}
         </div>
@@ -558,7 +559,8 @@ function ProducaoPage() {
 }
 
 
-function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinutes, colis, isMultiColiOrder, onColiAction, coliPending, fabricConsumption, canUndoFabric }: {
+function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinutes, colis, isMultiColiOrder, onColiAction, coliPending, fabricConsumption, canUndoFabric, canQuality = false }: {
+  canQuality?: boolean;
   item: ProductionStageOrder;
   canAct: boolean;
   onAction: (event: "iniciar"|"pausar"|"retomar"|"finalizar") => void;
@@ -820,7 +822,7 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
                 operatorCode={operatorCode}
               />
             )}
-            {(isQuality || isPacking) && (
+            {(isQuality || (isPacking && canQuality)) && (
               <QualityCheckDialog
                 orderId={item.order_id}
                 orderStageId={isQuality ? item.id : ""}
