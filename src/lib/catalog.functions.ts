@@ -33,6 +33,8 @@ export type RefRow = {
   fabric_type_id?: string | null;
   /** Apenas para structures: modelos vinculados. */
   model_ids?: string[];
+  /** Apenas para models: metros de tecido a consumir por unidade. */
+  meters_per_unit?: number | null;
 };
 
 const kindSchema = z.enum([
@@ -51,7 +53,7 @@ export const listRef = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<RefRow[]> => {
     const cols =
       data.kind === "models"
-        ? "id, code, name, active, category_id"
+        ? "id, code, name, active, category_id, meters_per_unit"
         : data.kind === "fabric_types"
           ? "id, code, name, active, directional"
           : data.kind === "fabric_refs"
@@ -90,6 +92,7 @@ const upsertSchema = z.object({
   directional: z.boolean().optional(),
   fabric_type_id: z.string().uuid().nullable().optional(),
   model_ids: z.array(z.string().uuid()).optional(),
+  meters_per_unit: z.number().min(0).nullable().optional(),
 });
 
 export const upsertRef = createServerFn({ method: "POST" })
@@ -98,7 +101,10 @@ export const upsertRef = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const row: any = { code: data.code, name: data.name };
     if (data.active !== undefined) row.active = data.active;
-    if (data.kind === "models") row.category_id = data.category_id ?? null;
+    if (data.kind === "models") {
+      row.category_id = data.category_id ?? null;
+      if (data.meters_per_unit !== undefined) row.meters_per_unit = data.meters_per_unit;
+    }
     if (data.kind === "fabric_types" && data.directional !== undefined) {
       row.directional = data.directional;
     }
@@ -198,7 +204,7 @@ export const getCatalogs = createServerFn({ method: "GET" })
     const s = context.supabase as any;
     const [cats, models, structures, measures, fts, frs, colors] = await Promise.all([
       s.from("ref_categories").select("id, code, name, active").eq("active", true).order("code"),
-      s.from("models").select("id, code, name, active, category_id").eq("active", true).order("code"),
+      s.from("models").select("id, code, name, active, category_id, meters_per_unit").eq("active", true).order("code"),
       s.from("ref_structures").select("id, code, name, active").eq("active", true).order("code"),
       s.from("ref_measures").select("id, code, name, active").eq("active", true).order("code"),
       s.from("ref_fabric_types").select("id, code, name, active").eq("active", true).order("code"),
