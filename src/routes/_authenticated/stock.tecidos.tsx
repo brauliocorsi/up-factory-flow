@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
@@ -21,6 +21,23 @@ export const Route = createFileRoute("/_authenticated/stock/tecidos")({
 function TecidosPage() {
   const qc = useQueryClient();
   const { data: rows = [], isLoading } = useQuery({ queryKey: ["rolls"], queryFn: () => listRolls() });
+  const { data: cat } = useQuery({ queryKey: ["catalogs"], queryFn: () => getCatalogs() });
+  const [typeId, setTypeId] = useState<string>("");
+  const [q, setQ] = useState("");
+  const refCodesForType = useMemo(() => {
+    if (!typeId) return null;
+    return new Set(((cat?.fabric_refs ?? []) as any[]).filter((r) => r.fabric_type_id === typeId).map((r) => r.code));
+  }, [cat, typeId]);
+  const filtered = useMemo(() => {
+    const term = q.trim().toLowerCase();
+    return (rows as any[]).filter((r) => {
+      if (refCodesForType && !refCodesForType.has(r.fabric_ref_code)) return false;
+      if (!term) return true;
+      return [r.name, r.fabric_ref_code, r.color_code, r.location]
+        .filter(Boolean)
+        .some((v: string) => String(v).toLowerCase().includes(term));
+    });
+  }, [rows, refCodesForType, q]);
   const refresh = () => qc.invalidateQueries({ queryKey: ["rolls"] });
   const del = useMutation({
     mutationFn: (id: string) => deleteRoll({ data: { id } }),
@@ -37,6 +54,25 @@ function TecidosPage() {
         </div>
         <UpsertRoll onDone={refresh} />
       </div>
+      <Card className="p-3 flex flex-wrap gap-3 items-end">
+        <div className="space-y-1.5 min-w-52">
+          <Label className="text-xs">Tipo de tecido</Label>
+          <Select value={typeId || "__all__"} onValueChange={(v) => setTypeId(v === "__all__" ? "" : v)}>
+            <SelectTrigger className="h-11"><SelectValue placeholder="— todos —" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">— todos —</SelectItem>
+              {((cat?.fabric_types ?? []) as any[]).map((t) => (
+                <SelectItem key={t.id} value={t.id}>{t.code} · {t.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5 flex-1 min-w-52">
+          <Label className="text-xs">Pesquisar</Label>
+          <Input value={q} onChange={(e) => setQ(e.target.value)} className="h-11" placeholder="referência, cor, nome, localização" />
+        </div>
+        <div className="text-xs text-muted-foreground pb-3">{filtered.length} rolo(s)</div>
+      </Card>
       <Card className="p-2 overflow-x-auto">
         <Table>
           <TableHeader>
@@ -52,8 +88,8 @@ function TecidosPage() {
           </TableHeader>
           <TableBody>
             {isLoading && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-6">A carregar…</TableCell></TableRow>}
-            {!isLoading && rows.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-6">Sem rolos</TableCell></TableRow>}
-            {rows.map((r: any) => {
+            {!isLoading && filtered.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-6">Sem rolos</TableCell></TableRow>}
+            {filtered.map((r: any) => {
               const low = Number(r.meters) <= Number(r.min_meters ?? 0);
               return (
                 <TableRow key={r.id} className={low ? "bg-destructive/5" : ""}>
@@ -83,6 +119,7 @@ function TecidosPage() {
 function UpsertRoll({ editing, onDone }: { editing?: any; onDone: () => void }) {
   const [open, setOpen] = useState(false);
   const { data: cat } = useQuery({ queryKey: ["catalogs"], queryFn: () => getCatalogs(), enabled: open });
+  const [typeFilter, setTypeFilter] = useState<string>("");
   const [f, setF] = useState<any>({
     name: editing?.name ?? "",
     fabric_ref_code: editing?.fabric_ref_code ?? "",
@@ -104,10 +141,19 @@ function UpsertRoll({ editing, onDone }: { editing?: any; onDone: () => void }) 
       <DialogContent>
         <DialogHeader><DialogTitle>{editing ? "Editar" : "Novo"} rolo</DialogTitle></DialogHeader>
         <div className="grid grid-cols-2 gap-3">
+          <Fld label="Tipo de tecido (filtro)" cls="col-span-2">
+            <Select value={typeFilter || "__all__"} onValueChange={(v) => setTypeFilter(v === "__all__" ? "" : v)}>
+              <SelectTrigger className="h-11"><SelectValue placeholder="— todos —" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">— todos —</SelectItem>
+                {((cat?.fabric_types ?? []) as any[]).map((t: any) => <SelectItem key={t.id} value={t.id}>{t.code} · {t.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </Fld>
           <Fld label="Ref. Tecido">
             <Select value={f.fabric_ref_code || undefined} onValueChange={(v) => setF({ ...f, fabric_ref_code: v })}>
               <SelectTrigger className="h-11"><SelectValue placeholder="—" /></SelectTrigger>
-              <SelectContent>{(cat?.fabric_refs ?? []).map((m: any) => <SelectItem key={m.id} value={m.code}><span className="font-mono text-xs mr-2">{m.code}</span>{m.name}</SelectItem>)}</SelectContent>
+              <SelectContent>{((cat?.fabric_refs ?? []) as any[]).filter((m: any) => !typeFilter || m.fabric_type_id === typeFilter).map((m: any) => <SelectItem key={m.id} value={m.code}><span className="font-mono text-xs mr-2">{m.code}</span>{m.name}</SelectItem>)}</SelectContent>
             </Select>
           </Fld>
           <Fld label="Cor">

@@ -95,6 +95,61 @@ export type Database = {
         }
         Relationships: []
       }
+      fabric_consumptions: {
+        Row: {
+          color_code: string | null
+          created_at: string
+          fabric_ref_code: string | null
+          id: string
+          meters: number
+          operator_id: string | null
+          order_id: string
+          roll_id: string | null
+        }
+        Insert: {
+          color_code?: string | null
+          created_at?: string
+          fabric_ref_code?: string | null
+          id?: string
+          meters: number
+          operator_id?: string | null
+          order_id: string
+          roll_id?: string | null
+        }
+        Update: {
+          color_code?: string | null
+          created_at?: string
+          fabric_ref_code?: string | null
+          id?: string
+          meters?: number
+          operator_id?: string | null
+          order_id?: string
+          roll_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fabric_consumptions_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fabric_consumptions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "production_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fabric_consumptions_roll_id_fkey"
+            columns: ["roll_id"]
+            isOneToOne: false
+            referencedRelation: "fabric_rolls"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fabric_rolls: {
         Row: {
           active: boolean
@@ -283,6 +338,7 @@ export type Database = {
           code: string
           created_at: string
           id: string
+          meters_per_unit: number | null
           name: string
           updated_at: string
         }
@@ -292,6 +348,7 @@ export type Database = {
           code: string
           created_at?: string
           id?: string
+          meters_per_unit?: number | null
           name: string
           updated_at?: string
         }
@@ -301,6 +358,7 @@ export type Database = {
           code?: string
           created_at?: string
           id?: string
+          meters_per_unit?: number | null
           name?: string
           updated_at?: string
         }
@@ -1786,6 +1844,15 @@ export type Database = {
         Returns: Json
       }
       complete_stock_production: { Args: { _order_id: string }; Returns: Json }
+      consume_fabric_for_order: {
+        Args: {
+          _meters: number
+          _operator_code?: string
+          _order_id: string
+          _roll_id: string
+        }
+        Returns: Json
+      }
       count_backlog_batches: { Args: never; Returns: Json }
       create_order_colis: { Args: { _order_id: string }; Returns: Json }
       finalize_shell_batch: {
@@ -2035,6 +2102,7 @@ export type Database = {
         Returns: undefined
       }
       try_reserve_for_order: { Args: { _order_id: string }; Returns: Json }
+      undo_fabric_consumption: { Args: { _order_id: string }; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "operador" | "escritorio" | "picador"

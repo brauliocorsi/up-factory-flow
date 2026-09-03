@@ -105,7 +105,7 @@ function RefTable({ kind, hint, hasCategory }: { kind: RefKind; hint: string; ha
     onError: (e: any) => toast.error(e.message),
   });
   const toggle = useMutation({
-    mutationFn: (r: RefRow) => upsertRef({ data: { kind, id: r.id, code: r.code, name: r.name, active: !r.active, category_id: r.category_id ?? null, model_ids: r.model_ids } }),
+    mutationFn: (r: RefRow) => upsertRef({ data: { kind, id: r.id, code: r.code, name: r.name, active: !r.active, category_id: r.category_id ?? null, model_ids: r.model_ids, meters_per_unit: r.meters_per_unit ?? null } }),
     onSuccess: refresh,
   });
   const toggleDirectional = useMutation({
@@ -115,6 +115,7 @@ function RefTable({ kind, hint, hasCategory }: { kind: RefKind; hint: string; ha
   });
 
   const showDirectional = kind === "fabric_types";
+  const showMeters = kind === "models";
 
   return (
     <Card className="p-4 space-y-3">
@@ -139,6 +140,7 @@ function RefTable({ kind, hint, hasCategory }: { kind: RefKind; hint: string; ha
               {hasCategory && <TableHead>Categoria</TableHead>}
               {showFabricType && <TableHead>Tipo de Tecido</TableHead>}
               {showModels && <TableHead>Modelos vinculados</TableHead>}
+              {showMeters && <TableHead className="w-32 text-right">Metros/unid.</TableHead>}
               {showDirectional && <TableHead className="w-32">Sentido do veio</TableHead>}
               <TableHead className="w-24">Ativo</TableHead>
               <TableHead className="w-32 text-right">Ações</TableHead>
@@ -186,6 +188,15 @@ function RefTable({ kind, hint, hasCategory }: { kind: RefKind; hint: string; ha
                     )}
                   </TableCell>
                 )}
+                {showMeters && (
+                  <TableCell className="text-right">
+                    {r.meters_per_unit != null ? (
+                      <span className="font-semibold">{Number(r.meters_per_unit).toFixed(1)} m</span>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                )}
                 {showDirectional && (
                   <TableCell>
                     <Switch
@@ -219,8 +230,12 @@ function UpsertDialog({ kind, hasCategory, cats, fabricTypes = [], modelsAll = [
   const [categoryId, setCategoryId] = useState<string>(editing?.category_id ?? "");
   const [fabricTypeId, setFabricTypeId] = useState<string>(editing?.fabric_type_id ?? "");
   const [modelIds, setModelIds] = useState<string[]>(editing?.model_ids ?? []);
+  const [metersPerUnit, setMetersPerUnit] = useState<string>(
+    editing?.meters_per_unit != null ? String(editing.meters_per_unit) : "",
+  );
   const showFabricType = kind === "fabric_refs";
   const showModels = kind === "structures";
+  const showMeters = kind === "models";
 
   const mut = useMutation({
     mutationFn: () =>
@@ -233,13 +248,16 @@ function UpsertDialog({ kind, hasCategory, cats, fabricTypes = [], modelsAll = [
           category_id: categoryId || null,
           fabric_type_id: showFabricType ? (fabricTypeId || null) : undefined,
           model_ids: showModels ? modelIds : undefined,
+          meters_per_unit: showMeters
+            ? (metersPerUnit.trim() === "" ? null : Number(metersPerUnit))
+            : undefined,
         },
       }),
     onSuccess: () => {
       toast.success(editing ? "Atualizado" : "Adicionado");
       setOpen(false);
       onDone();
-      if (!editing) { setCode(""); setName(""); setCategoryId(""); setFabricTypeId(""); setModelIds([]); }
+      if (!editing) { setCode(""); setName(""); setCategoryId(""); setFabricTypeId(""); setModelIds([]); setMetersPerUnit(""); }
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -273,6 +291,21 @@ function UpsertDialog({ kind, hasCategory, cats, fabricTypes = [], modelsAll = [
                   {cats.map((c) => <SelectItem key={c.id} value={c.id}>{c.code} · {c.name}</SelectItem>)}
                 </SelectContent>
               </Select>
+            </div>
+          )}
+          {showMeters && (
+            <div className="space-y-1.5">
+              <Label className="text-xs">Metros de tecido por unidade</Label>
+              <Input
+                type="number"
+                min={0}
+                step="0.1"
+                value={metersPerUnit}
+                onChange={(e) => setMetersPerUnit(e.target.value)}
+                className="h-11"
+                placeholder="ex: 12.5"
+              />
+              <p className="text-xs text-muted-foreground">Usado no botão “Consumir tecido” na etapa de Corte.</p>
             </div>
           )}
           {showFabricType && (

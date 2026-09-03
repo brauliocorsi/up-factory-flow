@@ -31,6 +31,8 @@ import { useMySession } from "@/hooks/useMySession";
 import { StageGroupView } from "@/components/production/StageGroupView";
 import { StageQueuePanel } from "@/components/planning/StageQueuePanel";
 import { UrgentBar } from "@/components/production/UrgentBar";
+import { ConsumeFabricDialog } from "@/components/app/ConsumeFabricDialog";
+import { listFabricConsumptions } from "@/lib/stock.functions";
 
 export const Route = createFileRoute("/_authenticated/producao/")({
   validateSearch: (search: Record<string, unknown>): { q?: string; stage?: string } => {
@@ -208,6 +210,24 @@ function ProducaoPage() {
     if (!currentOp) return false;
     return currentOp.stages.includes(stage);
   };
+
+  // Consumos de tecido já registados (etapa de Corte)
+  const fetchConsumptions = useServerFn(listFabricConsumptions);
+  const corteOrderIds = useMemo(
+    () => Array.from(new Set((visibleItemsByStage["corte"] ?? []).map((i) => i.order_id))),
+    [visibleItemsByStage],
+  );
+  const { data: fabricConsumptions } = useQuery({
+    queryKey: ["fabric-consumptions", corteOrderIds.join(",")],
+    queryFn: () => fetchConsumptions({ data: { order_ids: corteOrderIds } }),
+    enabled: authed && corteOrderIds.length > 0,
+  });
+  const consumptionByOrder = useMemo(() => {
+    const m: Record<string, any> = {};
+    for (const c of ((fabricConsumptions ?? []) as any[])) m[c.order_id] = c;
+    return m;
+  }, [fabricConsumptions]);
+  const isStaff = role === "admin" || role === "escritorio";
 
   const mutation = useMutation({
     mutationFn: (vars: { order_stage_id: string; event: "iniciar"|"pausar"|"retomar"|"finalizar" }) => {
@@ -524,6 +544,8 @@ function ProducaoPage() {
                 coliMutation.mutate({ order_coli_stage_id: coli_stage_id, event })
               }
               coliPending={coliMutation.isPending}
+              fabricConsumption={consumptionByOrder[it.order_id] ?? null}
+              canUndoFabric={isStaff}
             />
           ))}
         </div>
@@ -536,7 +558,7 @@ function ProducaoPage() {
 }
 
 
-function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinutes, colis, isMultiColiOrder, onColiAction, coliPending }: {
+function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinutes, colis, isMultiColiOrder, onColiAction, coliPending, fabricConsumption, canUndoFabric }: {
   item: ProductionStageOrder;
   canAct: boolean;
   onAction: (event: "iniciar"|"pausar"|"retomar"|"finalizar") => void;
@@ -547,6 +569,8 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
   isMultiColiOrder: boolean;
   onColiAction: (coli_stage_id: string, event: "iniciar"|"pausar"|"retomar"|"finalizar") => void;
   coliPending: boolean;
+  fabricConsumption?: { meters: number; fabric_ref_code: string | null; color_code: string | null } | null;
+  canUndoFabric?: boolean;
 }) {
   // Contador "live": usa como âncora o instante em que o segmento ativo
   // começou (último `iniciar`/`retomar`, vindo do servidor). Assim o tempo
@@ -788,6 +812,7 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
               </div>
             )}
             {item.stage !== "estrutura" && (
+
               <ReworkDialog
                 orderId={item.order_id}
                 orderNumber={item.order_number}
@@ -809,7 +834,26 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
             )}
           </>
         )}
+        {item.stage === "corte" && (
+          <>
+            {fabricConsumption ? (
+              <Badge variant="secondary" className="h-12 px-3 flex items-center gap-1 text-xs">
+                Tecido consumido: {Number(fabricConsumption.meters).toFixed(1)} m
+                <span className="font-mono">
+                  ({fabricConsumption.fabric_ref_code ?? "—"} / {fabricConsumption.color_code ?? "—"})
+                </span>
+              </Badge>
+            ) : null}
+            <ConsumeFabricDialog
+              orderId={item.order_id}
+              orderNumber={item.order_number}
+              operatorCode={operatorCode}
+              canUndo={Boolean(canUndoFabric)}
+            />
+          </>
+        )}
       </div>
+
 
       {/* Lista de colis (quando há mais do que um) */}
       {operateByColis && (
