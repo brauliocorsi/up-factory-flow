@@ -235,6 +235,19 @@ function PicagemPage() {
     setLoaded((prev) => { const n = { ...prev }; delete n[orderId]; return n; });
   };
 
+  // Marca todos os colis restantes, um a um (mesmo fluxo do scan).
+  const completeOrder = async (orderId: string, code: string, remaining: number) => {
+    if (!operatorCode) { toast.error("Selecione primeiro o operador."); return; }
+    for (let i = 0; i < remaining; i++) {
+      try {
+        await scanMutation.mutateAsync({ order_id: orderId, code });
+      } catch {
+        break;
+      }
+    }
+  };
+
+
   const loadedList = Object.values(loaded);
   const completedCount = loadedList.filter((s) => s.completed).length;
   const isScanning = scanMutation.isPending || resolveMutation.isPending;
