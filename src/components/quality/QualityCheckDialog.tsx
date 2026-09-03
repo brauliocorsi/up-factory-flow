@@ -44,13 +44,16 @@ export function QualityCheckDialog({
 
   // Inicializa itens quando o template carrega
   useEffect(() => {
-    if (tpl && items.length === 0) {
-      setItems(tpl.items.map((i) => ({
-        template_item_id: i.id, label: i.label, status: null, photo_url: null,
-      })));
-    }
+    if (!open || !tpl) return;
+    setItems((prev) =>
+      prev.length > 0
+        ? prev
+        : tpl.items.map((i) => ({
+            template_item_id: i.id, label: i.label, status: null, photo_url: null,
+          })),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tpl]);
+  }, [tpl, open]);
 
   function setItem(i: number, patch: Partial<ItemState>) {
     setItems((arr) => arr.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
