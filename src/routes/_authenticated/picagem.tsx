@@ -399,12 +399,32 @@ function PicagemPage() {
                               <span className="text-2xl font-black block">{done}/{total}</span>
                               <span className="text-[10px] uppercase text-muted-foreground">Colis</span>
                             </div>
+                            <Button
+                              size="icon"
+                              variant="outline"
+                              className="h-9 w-9"
+                              title="Marcar o coli seguinte"
+                              disabled={completed || !operatorCode || isScanning}
+                              onClick={() => scanMutation.mutate({ order_id: order.id, code: order.order_number })}
+                            >
+                              <Plus className="size-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              className="h-9 gap-1"
+                              disabled={completed || !operatorCode || isScanning}
+                              onClick={() => completeOrder(order.id, order.order_number, total - done)}
+                            >
+                              <CheckCircle2 className="size-4" /> Completar
+                            </Button>
                             <Button variant="ghost" size="icon" onClick={() => removeOrder(order.id)} className="h-8 w-8 text-muted-foreground hover:text-destructive"><Trash2 className="size-4" /></Button>
                           </div>
                         </div>
                         <div className="w-full bg-accent h-2 rounded-full overflow-hidden mb-2">
                           <div className={`h-full transition-all duration-300 ${completed ? "bg-green-500" : "bg-primary"}`} style={{ width: `${(done / total) * 100}%` }} />
                         </div>
+
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                           {order.packages.map((pkg) => {
                             const isRead = pickedColis.has(pkg.package_number);
