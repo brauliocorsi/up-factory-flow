@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Barcode, User, ArrowRight, CheckCircle2, Box, Send, ListCheck, Trash2, Volume2, VolumeX, Loader2, PackageCheck } from "lucide-react";
+import { Barcode, User, ArrowRight, CheckCircle2, Box, Send, ListCheck, Trash2, Volume2, VolumeX, Loader2, PackageCheck, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
