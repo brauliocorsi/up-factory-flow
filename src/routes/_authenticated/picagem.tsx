@@ -144,6 +144,12 @@ function PicagemPage() {
       });
     },
     onSuccess: (res, vars) => {
+      if (!res.ok) {
+        if (soundEnabled) playSound("error");
+        toast.error(res.message || "Coli inválido");
+        setBarcodeInput("");
+        return;
+      }
       if (soundEnabled) playSound(res.completed ? "complete" : "success");
       setLoaded((prev) => {
         const cur = prev[vars.order_id];

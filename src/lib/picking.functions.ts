@@ -245,9 +245,22 @@ export const scanPickingColi = createServerFn({ method: "POST" })
       _scanned_code: data.code,
       _operator_code: data.operator_code,
     });
-    if (error) throw new Error(error.message);
-    return res as {
+    // Erros esperados (coli já lido, código inválido, etc.) devolvem uma
+    // resposta suave para a UI mostrar um toast em vez de ecrã branco.
+    if (error) {
+      return {
+        ok: false as const,
+        message: error.message,
+        coli_number: 0,
+        coli_name: "",
+        done: 0,
+        total: 0,
+        completed: false,
+      };
+    }
+    return { ok: true as const, message: null as string | null, ...(res as any) } as {
       ok: boolean;
+      message: string | null;
       coli_number: number;
       coli_name: string;
       done: number;
