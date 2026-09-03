@@ -119,6 +119,7 @@ function TecidosPage() {
 function UpsertRoll({ editing, onDone }: { editing?: any; onDone: () => void }) {
   const [open, setOpen] = useState(false);
   const { data: cat } = useQuery({ queryKey: ["catalogs"], queryFn: () => getCatalogs(), enabled: open });
+  const [typeFilter, setTypeFilter] = useState<string>("");
   const [f, setF] = useState<any>({
     name: editing?.name ?? "",
     fabric_ref_code: editing?.fabric_ref_code ?? "",
@@ -140,10 +141,19 @@ function UpsertRoll({ editing, onDone }: { editing?: any; onDone: () => void }) 
       <DialogContent>
         <DialogHeader><DialogTitle>{editing ? "Editar" : "Novo"} rolo</DialogTitle></DialogHeader>
         <div className="grid grid-cols-2 gap-3">
+          <Fld label="Tipo de tecido (filtro)" cls="col-span-2">
+            <Select value={typeFilter || "__all__"} onValueChange={(v) => setTypeFilter(v === "__all__" ? "" : v)}>
+              <SelectTrigger className="h-11"><SelectValue placeholder="— todos —" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">— todos —</SelectItem>
+                {((cat?.fabric_types ?? []) as any[]).map((t: any) => <SelectItem key={t.id} value={t.id}>{t.code} · {t.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </Fld>
           <Fld label="Ref. Tecido">
             <Select value={f.fabric_ref_code || undefined} onValueChange={(v) => setF({ ...f, fabric_ref_code: v })}>
               <SelectTrigger className="h-11"><SelectValue placeholder="—" /></SelectTrigger>
-              <SelectContent>{(cat?.fabric_refs ?? []).map((m: any) => <SelectItem key={m.id} value={m.code}><span className="font-mono text-xs mr-2">{m.code}</span>{m.name}</SelectItem>)}</SelectContent>
+              <SelectContent>{((cat?.fabric_refs ?? []) as any[]).filter((m: any) => !typeFilter || m.fabric_type_id === typeFilter).map((m: any) => <SelectItem key={m.id} value={m.code}><span className="font-mono text-xs mr-2">{m.code}</span>{m.name}</SelectItem>)}</SelectContent>
             </Select>
           </Fld>
           <Fld label="Cor">
