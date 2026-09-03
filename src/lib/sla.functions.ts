@@ -165,14 +165,16 @@ export const upsertProductSla = createServerFn({ method: "POST" })
  */
 export const getExpectedForOrders = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) =>
-    z.object({
+  .inputValidator((d: unknown) => {
+    const parsed = z.object({
       orders: z.array(z.object({
         order_id: z.string().uuid(),
         stage: z.enum(STAGES),
-      })).max(500),
-    }).parse(d),
-  )
+      })),
+    }).parse(d);
+    // Defensivo: em vez de rejeitar listas grandes, trunca para um limite seguro.
+    return { orders: parsed.orders.slice(0, 500) };
+  })
   .handler(async ({ data, context }): Promise<Record<string, Partial<Record<Stage, number | null>>>> => {
     const sb = context.supabase as any;
     const out: Record<string, Partial<Record<Stage, number | null>>> = {};
