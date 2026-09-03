@@ -43,7 +43,7 @@ function toDraft(o: EditableOrder): Draft {
     finishing: o.finishing ?? "",
     entry_date: o.entry_date ?? "",
     due_date: o.due_date ?? "",
-    priority: o.priority ?? 1,
+    priority: [1, 2, 3].includes(Number(o.priority)) ? Number(o.priority) : 1,
     notes: o.notes ?? "",
     observation: o.observation ?? "",
   };
