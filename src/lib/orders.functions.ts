@@ -867,7 +867,11 @@ const updateOrderSchema = z.object({
   finishing: textOrNull,
   entry_date: dateOrNull,
   due_date: dateOrNull,
-  priority: z.coerce.number().int().min(1).max(3).optional(),
+  priority: z.coerce
+    .number()
+    .int()
+    .transform((n) => Math.min(3, Math.max(1, n)))
+    .optional(),
   notes: textOrNull,
   observation: textOrNull,
 });
