@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Barcode, User, ArrowRight, CheckCircle2, Box, Send, ListCheck, Trash2, Volume2, VolumeX, Loader2, PackageCheck } from "lucide-react";
+import { Barcode, User, ArrowRight, CheckCircle2, Box, Send, ListCheck, Trash2, Volume2, VolumeX, Loader2, PackageCheck, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -235,6 +235,19 @@ function PicagemPage() {
     setLoaded((prev) => { const n = { ...prev }; delete n[orderId]; return n; });
   };
 
+  // Marca todos os colis restantes, um a um (mesmo fluxo do scan).
+  const completeOrder = async (orderId: string, code: string, remaining: number) => {
+    if (!operatorCode) { toast.error("Selecione primeiro o operador."); return; }
+    for (let i = 0; i < remaining; i++) {
+      try {
+        await scanMutation.mutateAsync({ order_id: orderId, code });
+      } catch {
+        break;
+      }
+    }
+  };
+
+
   const loadedList = Object.values(loaded);
   const completedCount = loadedList.filter((s) => s.completed).length;
   const isScanning = scanMutation.isPending || resolveMutation.isPending;
@@ -399,12 +412,32 @@ function PicagemPage() {
                               <span className="text-2xl font-black block">{done}/{total}</span>
                               <span className="text-[10px] uppercase text-muted-foreground">Colis</span>
                             </div>
+                            <Button
+                              size="icon"
+                              variant="outline"
+                              className="h-9 w-9"
+                              title="Marcar o coli seguinte"
+                              disabled={completed || !operatorCode || isScanning}
+                              onClick={() => scanMutation.mutate({ order_id: order.id, code: order.order_number })}
+                            >
+                              <Plus className="size-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              className="h-9 gap-1"
+                              disabled={completed || !operatorCode || isScanning}
+                              onClick={() => completeOrder(order.id, order.order_number, total - done)}
+                            >
+                              <CheckCircle2 className="size-4" /> Completar
+                            </Button>
                             <Button variant="ghost" size="icon" onClick={() => removeOrder(order.id)} className="h-8 w-8 text-muted-foreground hover:text-destructive"><Trash2 className="size-4" /></Button>
                           </div>
                         </div>
                         <div className="w-full bg-accent h-2 rounded-full overflow-hidden mb-2">
                           <div className={`h-full transition-all duration-300 ${completed ? "bg-green-500" : "bg-primary"}`} style={{ width: `${(done / total) * 100}%` }} />
                         </div>
+
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                           {order.packages.map((pkg) => {
                             const isRead = pickedColis.has(pkg.package_number);

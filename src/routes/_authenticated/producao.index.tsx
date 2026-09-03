@@ -425,6 +425,19 @@ function ProducaoPage() {
             {showDone ? "✓ " : ""}Concluídas hoje
           </button>
           <button
+            onClick={() => {
+              const onlyDone = showDone && !showPending && !showRunning;
+              if (onlyDone) { setShowPending(true); setShowRunning(true); setShowDone(false); }
+              else { setShowPending(false); setShowRunning(false); setShowDone(true); }
+            }}
+            className={`text-xs font-medium px-2.5 py-1.5 rounded-md border transition ${
+              showDone && !showPending && !showRunning ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-accent"
+            }`}
+          >
+            {showDone && !showPending && !showRunning ? "✓ " : ""}Só concluídas
+          </button>
+          <button
+
             hidden={isOperatorOnly}
             onClick={() => setOnlyMine((v) => !v)}
             className={`text-xs font-medium px-2.5 py-1.5 rounded-md border transition ${
