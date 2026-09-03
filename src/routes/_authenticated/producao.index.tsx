@@ -214,8 +214,8 @@ function ProducaoPage() {
   // Consumos de tecido já registados (etapa de Corte)
   const fetchConsumptions = useServerFn(listFabricConsumptions);
   const corteOrderIds = useMemo(
-    () => Array.from(new Set(((data ?? []) as ProductionStageOrder[]).filter((i) => i.stage === "corte").map((i) => i.order_id))),
-    [data],
+    () => Array.from(new Set((visibleItemsByStage["corte"] ?? []).map((i) => i.order_id))),
+    [visibleItemsByStage],
   );
   const { data: fabricConsumptions } = useQuery({
     queryKey: ["fabric-consumptions", corteOrderIds.join(",")],
