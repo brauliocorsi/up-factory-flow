@@ -204,7 +204,8 @@ export function QualityCheckDialog({
                 <XCircle className="size-4" /> Reprovar
               </Button>
               <Button onClick={() => mut.mutate("aprovado")}
-                disabled={mut.isPending || !allAnswered}
+                disabled={mut.isPending || !allAnswered || hasNok}
+                title={hasNok ? "Não é possível aprovar com itens NOK" : undefined}
                 className="bg-emerald-600 hover:bg-emerald-700 gap-1">
                 <CheckCircle2 className="size-4" /> Aprovar
               </Button>
