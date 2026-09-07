@@ -30,19 +30,42 @@ Ensaios: operador de qualidade vê o checklist certo; operador de corte vê rolo
 
 ## Fase 2 — Volumes e etapas (F01, F07)
 
-- Definir a autoridade de cada etapa: quais pertencem à ordem e quais a cada volume (decisão em aberto abaixo).
+### 2.1 Modelo de produção por volume (coli)
+
+Regra de negócio a implementar: cada volume avança **sozinho** pela sua linha. O coli 1 nunca espera pelo coli 2 em nenhuma etapa de fabrico. Só a **conclusão da encomenda** exige que todos os volumes tenham chegado ao fim.
+
+- Cada volume tem a sua própria fila de etapas: estrutura, corte, costura, branco, estofagem, qualidade, embalagem — de acordo com a rota da sua estrutura.
+- As dependências (estrutura → branco, corte → costura, os quatro → estofagem, depois qualidade → embalagem) aplicam-se **dentro do mesmo volume**, nunca entre volumes.
+- A etapa da ordem passa a ser um resumo derivado: pendente enquanto nenhum volume começou, em curso quando pelo menos um está em curso, concluída só quando **todos** os volumes concluíram essa etapa.
+- Picagem e conclusão da encomenda: `concluida` só quando todos os volumes terminam embalagem. Um volume atrasado mantém a encomenda em produção e fora da lista de finalizados.
+- No ecrã do posto, cada volume é um cartão próprio, identificado como "Volume 1 de 2", com tempo, pausa e operador próprios.
+- Ordens de um único volume continuam a comportar-se exatamente como hoje.
+
+### 2.2 Reparação e configuração
+
 - Impedir ativar uma configuração de rota sem etapas; falha de criação passa a ser erro visível, nunca "concluído".
 - Migração que acrescenta **apenas** o que falta aos 251 volumes existentes, preservando identificadores, etiquetas e histórico, repetível sem efeitos extra.
-- Resumo da ordem passa a derivar dos volumes quando o trabalho é por volume, para os dois lados nunca discordarem.
-- Retrabalho reabre também as etapas dos volumes e retira o produto da disponibilidade para transferência, usando as dependências reais (as duas linhas paralelas), não uma lista linear.
+- Retrabalho reabre também as etapas do volume afetado e retira o produto da disponibilidade para transferência, usando as dependências reais, não uma lista linear.
 
-Ensaios: ordens com 2, 3 e 4 volumes; retrabalho de um volume após qualidade/embalagem; picar cada volume das ordens de teste.
+Ensaios: ordem com 2 volumes onde o coli 1 chega à embalagem enquanto o coli 2 está em costura (nada bloqueia, encomenda continua em produção); ordens com 3 e 4 volumes; retrabalho de um volume após qualidade/embalagem.
+
+## Fase 2B — Etiqueta no posto de embalagem
+
+- Botão de impressão no cartão de embalagem, para etiquetar o produto no momento em que é embalado.
+- A etiqueta identifica o volume: número da ordem, produto, modelo/medida/tecido, "Volume N de M" e o código de barras único do volume (o mesmo que a picagem lê).
+- Reutiliza a etiqueta já existente do sistema, acrescentando os dados do volume; sem novo sistema de impressão.
+- Reimpressão permitida e registada, para etiquetas danificadas.
+
+Ensaios: imprimir no posto, ler a etiqueta na picagem e ver o volume correto marcado; reimpressão não altera contagens.
 
 ## Fase 3 — Estados, qualidade e stock (F05, F08, F09, F10)
 
 - Transições permitidas explícitas: não iniciar o que já está em curso, não concluir o que já está concluído; repetição de pedido devolve o resultado anterior em vez de mexer no tempo ou no responsável.
 - Qualidade gravada numa só operação: conferência, itens e conclusão da etapa juntos; sem submeter com fotografias a meio; validação no servidor de que a etapa é a de qualidade daquela ordem e que o checklist está completo.
+- **Qualidade por categoria de produto:** cada categoria tem o seu template único e obrigatório — "Cama" tem o seu conjunto de itens, "Sofá" o seu, e assim por diante. O template é escolhido pela categoria da ordem, não por um genérico. O genérico atual passa a ser apenas o modelo de arranque para criar uma categoria nova, e o posto avisa claramente "categoria sem template configurado" em vez de mostrar checklist vazio.
+- Gestão dos templates por categoria na administração de qualidade: criar, duplicar de outra categoria, editar itens e ordená-los, com um só template ativo por categoria.
 - Aprovação com item NOK passa a exigir motivo e perfil autorizado (decisão em aberto).
+
 - Stock: anulação de consumo uma única vez; reserva de capa só se ainda houver saldo; movimento registado igual à variação real do saldo.
 - Ordem "pendente" deixa de poder ser iniciada no posto (decisão em aberto); mensagem clara "Aguarda libertação do escritório".
 
