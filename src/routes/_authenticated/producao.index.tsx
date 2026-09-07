@@ -91,7 +91,7 @@ function ProducaoPage() {
   });
   const colisByStageMap = Object.fromEntries(
     VISIBLE_STAGES.map((stage, index) => [stage, colisQueries[index]?.data]),
-  ) as Partial<Record<Stage, { byOrder: Record<string, ColiStageItem[]>; multiColiOrderIds: string[] }>>;
+  ) as Partial<Record<Stage, { byOrder: Record<string, ColiStageItem[]>; multiColiOrderIds: string[]; coliCountByOrder?: Record<string, number> }>>;
 
   // Lista de (order_id, stage) visíveis em todas as etapas para resolver SLA em lote
   const visibleItemsByStage = useMemo(() => {
@@ -540,6 +540,7 @@ function ProducaoPage() {
               expectedMinutes={expectedMap?.[it.order_id]?.[it.stage] ?? null}
               colis={colisByStage?.byOrder?.[it.order_id] ?? []}
               isMultiColiOrder={activeStage !== "estrutura" && activeStage !== "corte" && (colisByStage?.multiColiOrderIds ?? []).includes(it.order_id)}
+              coliTotal={colisByStage?.coliCountByOrder?.[it.order_id] ?? 0}
               onColiAction={(coli_stage_id, event) =>
                 coliMutation.mutate({ order_coli_stage_id: coli_stage_id, event })
               }
@@ -559,16 +560,17 @@ function ProducaoPage() {
 }
 
 
-function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinutes, colis, isMultiColiOrder, onColiAction, coliPending, fabricConsumption, canUndoFabric, canQuality = false }: {
-  canQuality?: boolean;
+function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinutes, colis, isMultiColiOrder, coliTotal = 0, onColiAction, coliPending, fabricConsumption, canUndoFabric, canQuality = false }: {
   item: ProductionStageOrder;
   canAct: boolean;
   onAction: (event: "iniciar"|"pausar"|"retomar"|"finalizar") => void;
   pending: boolean;
   operatorCode: string;
-  expectedMinutes: number | null;
+  expectedMinutes?: number | null;
   colis: ColiStageItem[];
+  canQuality?: boolean;
   isMultiColiOrder: boolean;
+  coliTotal?: number;
   onColiAction: (coli_stage_id: string, event: "iniciar"|"pausar"|"retomar"|"finalizar") => void;
   coliPending: boolean;
   fabricConsumption?: { meters: number; fabric_ref_code: string | null; color_code: string | null } | null;
@@ -861,12 +863,14 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
       {operateByColis && (
         <div className="mt-3 border-t pt-3 space-y-2">
           <div className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
-            <Boxes className="size-3" /> Colis nesta etapa ({colis.length})
+            <Boxes className="size-3" /> Volumes nesta etapa ({colis.length}
+            {coliTotal > 0 ? ` de ${coliTotal}` : ""})
           </div>
           {colis.map((c) => (
             <ColiRow
               key={c.id}
               coli={c}
+              coliTotal={coliTotal}
               canAct={canAct}
               operatorCode={operatorCode}
               pending={coliPending}
@@ -879,8 +883,9 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
   );
 }
 
-function ColiRow({ coli, canAct, operatorCode, pending, onAction }: {
+function ColiRow({ coli, coliTotal, canAct, operatorCode, pending, onAction }: {
   coli: ColiStageItem;
+  coliTotal?: number;
   canAct: boolean;
   operatorCode?: string;
   pending: boolean;
@@ -904,7 +909,11 @@ function ColiRow({ coli, canAct, operatorCode, pending, onAction }: {
     }`}>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs font-mono bg-muted rounded px-1.5 py-0.5">#{coli.coli_number}</span>
+          <span className="text-xs font-mono bg-muted rounded px-1.5 py-0.5">
+            {coliTotal && coliTotal > 1
+              ? `Volume ${coli.coli_number} de ${coliTotal}`
+              : `#${coli.coli_number}`}
+          </span>
           <span className="text-sm font-medium">{coli.coli_name}</span>
           {running && <Badge className="bg-emerald-600 text-white text-[10px]">A PRODUZIR</Badge>}
           {paused && <Badge className="bg-warning text-warning-foreground text-[10px]">EM PAUSA</Badge>}

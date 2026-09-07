@@ -73,6 +73,11 @@ export const upsertColiRoute = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => upsertSchema.parse(d))
   .handler(async ({ data, context }) => {
     const sb = context.supabase as any;
+    // Fase 2: uma rota de volume sem etapas incluídas cria volumes que nunca
+    // avançam. Recusar em vez de gravar configuração inútil.
+    if (!data.stages.some((s) => s.included)) {
+      throw new Error("Escolha pelo menos uma etapa para este volume.");
+    }
     let routeId = data.id;
     if (routeId) {
       const { error } = await sb

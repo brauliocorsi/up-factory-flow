@@ -1824,6 +1824,13 @@ export type Database = {
         }
         Returns: Json
       }
+      assert_coli_previous_stages_done: {
+        Args: {
+          _order_coli_id: string
+          _stage: Database["public"]["Enums"]["production_stage"]
+        }
+        Returns: undefined
+      }
       assert_office_or_admin: { Args: { _action: string }; Returns: undefined }
       assert_operator_is_session: {
         Args: { _op: Database["public"]["Tables"]["operators"]["Row"] }
@@ -2031,6 +2038,7 @@ export type Database = {
         }
         Returns: Json
       }
+      repair_missing_coli_stages: { Args: never; Returns: Json }
       resolve_order_recipe: {
         Args: { _order_id: string }
         Returns: {
