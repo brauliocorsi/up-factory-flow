@@ -130,6 +130,7 @@ export const getColisByStage = createServerFn({ method: "POST" })
     // todos menos um coli, o cartão colapsa para a vista antiga.
     const orderIds = Object.keys(byOrder);
     const multiColiOrderIds: string[] = [];
+    const coliCountByOrder: Record<string, number> = {};
     if (orderIds.length > 0) {
       const { data: allColis, error: e2 } = await sb
         .from("order_colis")
@@ -141,10 +142,11 @@ export const getColisByStage = createServerFn({ method: "POST" })
         counts.set(r.order_id, (counts.get(r.order_id) ?? 0) + 1);
       }
       for (const [oid, n] of counts) {
+        coliCountByOrder[oid] = n;
         if (n > 1) multiColiOrderIds.push(oid);
       }
     }
-    return { byOrder, multiColiOrderIds };
+    return { byOrder, multiColiOrderIds, coliCountByOrder };
   });
 
 /** Resumo dos colis duma encomenda (para mostrar "Cabeceira ✓ · Ilhargas em curso"). */
