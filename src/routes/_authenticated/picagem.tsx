@@ -237,6 +237,7 @@ function PicagemPage() {
       } else toast.error(res.message);
       queryClient.invalidateQueries({ queryKey: ["picking-pending-dispatch"] });
       queryClient.invalidateQueries({ queryKey: ["picking-queue"] });
+      queryClient.invalidateQueries({ queryKey: ["picking-uncertain-dispatch"] });
     },
     onError: (err: any) => toast.error(err.message || "Erro ao enviar lote."),
   });
@@ -295,7 +296,7 @@ function PicagemPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-4">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight">Picar — Posto de Picagem</h1>
-          <p className="text-sm text-muted-foreground">Lê o código de cada coli. Quando todos os colis forem lidos, a encomenda fica EM ARMAZÉM.</p>
+          <p className="text-sm text-muted-foreground">Lê o código de cada coli. Quando todos os volumes forem lidos, a encomenda fica picada e pronta a enviar para o stock.</p>
         </div>
         <Button variant="outline" size="sm" onClick={() => setSoundEnabled(!soundEnabled)} className="gap-2">
           {soundEnabled ? <Volume2 className="size-4 text-green-500" /> : <VolumeX className="size-4 text-muted-foreground" />}
@@ -349,9 +350,9 @@ function PicagemPage() {
               <div className="rounded-lg bg-muted p-3 text-xs text-muted-foreground space-y-1">
                 <p className="font-semibold text-foreground">Como funciona:</p>
                 <ul className="list-disc list-inside space-y-1">
-                  <li>1º scan = código da encomenda → carrega a lista de colis.</li>
-                  <li>2º+ scans = código de cada coli, ou repete a etiqueta da encomenda para marcar o coli seguinte.</li>
-                  <li>Quando todos os colis forem lidos, a encomenda passa a EM ARMAZÉM.</li>
+                  <li>1º scan = código da encomenda → carrega a lista de volumes.</li>
+                  <li>2º+ scans = código de cada volume, ou repete a etiqueta da encomenda para marcar o volume seguinte.</li>
+                  <li>Quando todos os volumes forem lidos, a encomenda fica pronta a enviar para o stock.</li>
                 </ul>
               </div>
             </CardContent>
@@ -376,7 +377,7 @@ function PicagemPage() {
           <Card className={pendingDispatch.length > 0 ? "border-2 border-amber-500/40" : ""}>
             <CardHeader className="flex flex-row items-center justify-between gap-2">
               <CardTitle className="text-sm flex items-center gap-2">
-                <PackageCheck className="size-4" /> Picadas à espera de envio ({pendingDispatch.length})
+                <PackageCheck className="size-4" /> Picadas à espera de envio ({pendingTotal})
               </CardTitle>
               <Button
                 size="sm"
@@ -440,7 +441,7 @@ function PicagemPage() {
                           <div>
                             <div className="flex items-center gap-2">
                               <span className="font-mono font-bold text-lg">{order.order_number}</span>
-                              {completed && <span className="inline-flex items-center gap-1 rounded bg-green-500/20 text-green-700 dark:text-green-300 text-xs px-2 py-0.5 font-medium"><CheckCircle2 className="size-3" /> EM ARMAZÉM</span>}
+                              {completed && <span className="inline-flex items-center gap-1 rounded bg-green-500/20 text-green-700 dark:text-green-300 text-xs px-2 py-0.5 font-medium"><CheckCircle2 className="size-3" /> PICADA</span>}
                             </div>
                             <p className="text-sm font-medium">{order.product_description}</p>
                             <p className="text-xs text-muted-foreground">{order.structure_type} | {order.measure} | {order.color}</p>
