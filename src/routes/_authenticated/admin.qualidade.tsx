@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   listQualityTemplates, upsertQualityTemplate, setTemplateItems,
+  listQualityCategories, duplicateQualityTemplate,
   type QualityTemplate,
 } from "@/lib/quality.functions";
 
@@ -23,10 +24,16 @@ function AdminQualidadePage() {
   const listFn = useServerFn(listQualityTemplates);
   const upsertFn = useServerFn(upsertQualityTemplate);
   const setItemsFn = useServerFn(setTemplateItems);
+  const catsFn = useServerFn(listQualityCategories);
+  const dupFn = useServerFn(duplicateQualityTemplate);
 
   const { data: templates } = useQuery({
     queryKey: ["quality-templates"],
     queryFn: () => listFn(),
+  });
+  const { data: categories } = useQuery({
+    queryKey: ["quality-categories"],
+    queryFn: () => catsFn(),
   });
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -44,6 +51,22 @@ function AdminQualidadePage() {
     },
     onError: (e: any) => toast.error(e?.message ?? "Erro"),
   });
+
+  const dupMut = useMutation({
+    mutationFn: (vars: { source_template_id: string; category_code: string; name: string }) =>
+      dupFn({ data: vars }),
+    onSuccess: () => {
+      toast.success("Template duplicado");
+      qc.invalidateQueries({ queryKey: ["quality-templates"] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Erro"),
+  });
+
+  const activeByCat = new Set(
+    (templates ?? []).filter((t) => t.active).map((t) => t.category_code),
+  );
+  const missing = (categories ?? []).filter((c) => !activeByCat.has(c.code));
+
 
   return (
     <div className="max-w-5xl mx-auto p-4 space-y-4">
