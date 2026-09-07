@@ -15,8 +15,11 @@ import {
   sendPickingBatchToStock,
   listPickingQueue,
   listPendingDispatch,
+  listUncertainDispatches,
+  reconcileDispatchBatch,
   type PickingOrder,
 } from "@/lib/picking.functions";
+
 import { useMySession } from "@/hooks/useMySession";
 
 export const Route = createFileRoute("/_authenticated/picagem")({
@@ -102,11 +105,35 @@ function PicagemPage() {
 
   // Picadas que ainda não foram enviadas para o stock (sobrevive a refresh da página)
   const pendingFn = useServerFn(listPendingDispatch);
-  const { data: pendingDispatch = [] } = useQuery({
+  const { data: pendingData } = useQuery({
     queryKey: ["picking-pending-dispatch"],
-    queryFn: () => pendingFn(),
+    queryFn: () => pendingFn({ data: { limit: 200 } }),
     refetchInterval: 15_000,
   });
+  const pendingDispatch = pendingData?.rows ?? [];
+  const pendingTotal = pendingData?.total ?? 0;
+
+  // Envios sem resposta clara do stock — precisam de confirmação do escritório
+  const uncertainFn = useServerFn(listUncertainDispatches);
+  const { data: uncertain = [] } = useQuery({
+    queryKey: ["picking-uncertain-dispatch"],
+    queryFn: () => uncertainFn(),
+    refetchInterval: 30_000,
+  });
+  const reconcileFn = useServerFn(reconcileDispatchBatch);
+  const reconcileMutation = useMutation({
+    mutationFn: (vars: { batch_id: string; outcome: "confirmado" | "falhado" }) =>
+      reconcileFn({ data: { ...vars, operator_code: operatorCode } }),
+    onSuccess: (res) => {
+      if (res.ok) toast.success(res.message);
+      else toast.error(res.message);
+      queryClient.invalidateQueries({ queryKey: ["picking-uncertain-dispatch"] });
+      queryClient.invalidateQueries({ queryKey: ["picking-pending-dispatch"] });
+      queryClient.invalidateQueries({ queryKey: ["picking-queue"] });
+    },
+    onError: (err: any) => toast.error(err.message || "Erro ao reconciliar o lote."),
+  });
+
 
 
   // Try resolving by order_number first (when operator scans the order barcode).
@@ -122,12 +149,23 @@ function PicagemPage() {
         return;
       }
       if (soundEnabled) playSound("success");
+      // Reconstrói a picagem parcial já registada (retomar noutro dispositivo).
+      const already = new Set(order.packages.filter((p) => p.picked).map((p) => p.package_number));
       setLoaded((prev) => prev[order.id] ? prev : {
         ...prev,
-        [order.id]: { order, pickedColis: new Set(), completed: false },
+        [order.id]: {
+          order,
+          pickedColis: already,
+          completed: already.size >= order.package_total,
+        },
       });
-      toast.success(`Encomenda ${order.order_number} carregada (${order.package_total} colis).`);
+      toast.success(
+        already.size > 0
+          ? `Encomenda ${order.order_number} retomada (${already.size}/${order.package_total} volumes já lidos).`
+          : `Encomenda ${order.order_number} carregada (${order.package_total} volumes).`,
+      );
       setBarcodeInput("");
+
     },
     onError: (err: any) => {
       if (soundEnabled) playSound("error");
@@ -199,6 +237,7 @@ function PicagemPage() {
       } else toast.error(res.message);
       queryClient.invalidateQueries({ queryKey: ["picking-pending-dispatch"] });
       queryClient.invalidateQueries({ queryKey: ["picking-queue"] });
+      queryClient.invalidateQueries({ queryKey: ["picking-uncertain-dispatch"] });
     },
     onError: (err: any) => toast.error(err.message || "Erro ao enviar lote."),
   });
@@ -257,7 +296,7 @@ function PicagemPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-4">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight">Picar — Posto de Picagem</h1>
-          <p className="text-sm text-muted-foreground">Lê o código de cada coli. Quando todos os colis forem lidos, a encomenda fica EM ARMAZÉM.</p>
+          <p className="text-sm text-muted-foreground">Lê o código de cada coli. Quando todos os volumes forem lidos, a encomenda fica picada e pronta a enviar para o stock.</p>
         </div>
         <Button variant="outline" size="sm" onClick={() => setSoundEnabled(!soundEnabled)} className="gap-2">
           {soundEnabled ? <Volume2 className="size-4 text-green-500" /> : <VolumeX className="size-4 text-muted-foreground" />}
@@ -311,9 +350,9 @@ function PicagemPage() {
               <div className="rounded-lg bg-muted p-3 text-xs text-muted-foreground space-y-1">
                 <p className="font-semibold text-foreground">Como funciona:</p>
                 <ul className="list-disc list-inside space-y-1">
-                  <li>1º scan = código da encomenda → carrega a lista de colis.</li>
-                  <li>2º+ scans = código de cada coli, ou repete a etiqueta da encomenda para marcar o coli seguinte.</li>
-                  <li>Quando todos os colis forem lidos, a encomenda passa a EM ARMAZÉM.</li>
+                  <li>1º scan = código da encomenda → carrega a lista de volumes.</li>
+                  <li>2º+ scans = código de cada volume, ou repete a etiqueta da encomenda para marcar o volume seguinte.</li>
+                  <li>Quando todos os volumes forem lidos, a encomenda fica pronta a enviar para o stock.</li>
                 </ul>
               </div>
             </CardContent>
@@ -329,16 +368,22 @@ function PicagemPage() {
               ) : queue.map((q) => (
                 <div key={q.order_id} className="flex justify-between items-center py-1 border-b last:border-0">
                   <span className="font-mono">{q.order_number}</span>
-                  <span className="text-xs text-muted-foreground">{q.coli_picked}/{q.coli_total}</span>
+                  <span className="flex items-center gap-2">
+                    <span className={`text-[10px] uppercase px-1.5 py-0.5 rounded ${q.state === "parcial" ? "bg-amber-500/20 text-amber-700 dark:text-amber-300" : q.state === "picada" ? "bg-green-500/20 text-green-700 dark:text-green-300" : "bg-muted text-muted-foreground"}`}>
+                      {q.state === "parcial" ? "Parcial" : q.state === "picada" ? "Picada" : "Por picar"}
+                    </span>
+                    <span className="text-xs text-muted-foreground">{q.coli_picked}/{q.coli_total}</span>
+                  </span>
                 </div>
               ))}
+
             </CardContent>
           </Card>
 
           <Card className={pendingDispatch.length > 0 ? "border-2 border-amber-500/40" : ""}>
             <CardHeader className="flex flex-row items-center justify-between gap-2">
               <CardTitle className="text-sm flex items-center gap-2">
-                <PackageCheck className="size-4" /> Picadas à espera de envio ({pendingDispatch.length})
+                <PackageCheck className="size-4" /> Picadas à espera de envio ({pendingTotal})
               </CardTitle>
               <Button
                 size="sm"
@@ -375,7 +420,58 @@ function PicagemPage() {
               ))}
             </CardContent>
           </Card>
+
+          {uncertain.length > 0 && (
+            <Card className="border-2 border-destructive/40">
+              <CardHeader>
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <PackageCheck className="size-4" /> Envios a reconciliar ({uncertain.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm space-y-3 max-h-[300px] overflow-y-auto">
+                <p className="text-xs text-muted-foreground">
+                  Estes lotes não tiveram resposta clara do stock. Confirma se chegaram lá ou marca como falhado para enviar outra vez.
+                </p>
+                {uncertain.map((b) => (
+                  <div key={b.batch_id} className="border rounded p-2 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-muted">{b.status}</span>
+                      <span className="text-[11px] text-muted-foreground">
+                        {new Date(b.dispatched_at).toLocaleString("pt-PT")}
+                      </span>
+                    </div>
+                    <div className="font-mono text-xs break-words">{b.order_numbers.join(", ")}</div>
+                    {b.response_body && (
+                      <div className="text-[11px] text-muted-foreground truncate">{b.response_body}</div>
+                    )}
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 gap-1"
+                        disabled={!operatorCode || reconcileMutation.isPending}
+                        onClick={() => reconcileMutation.mutate({ batch_id: b.batch_id, outcome: "confirmado" })}
+                      >
+                        <CheckCircle2 className="size-3" /> Chegou ao stock
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 gap-1"
+                        disabled={!operatorCode || reconcileMutation.isPending}
+                        onClick={() => reconcileMutation.mutate({ batch_id: b.batch_id, outcome: "falhado" })}
+                      >
+                        <Trash2 className="size-3" /> Não chegou
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
         </div>
+
+
 
         <div className="lg:col-span-7 space-y-6">
           <Card className="min-h-[400px]">
@@ -402,7 +498,7 @@ function PicagemPage() {
                           <div>
                             <div className="flex items-center gap-2">
                               <span className="font-mono font-bold text-lg">{order.order_number}</span>
-                              {completed && <span className="inline-flex items-center gap-1 rounded bg-green-500/20 text-green-700 dark:text-green-300 text-xs px-2 py-0.5 font-medium"><CheckCircle2 className="size-3" /> EM ARMAZÉM</span>}
+                              {completed && <span className="inline-flex items-center gap-1 rounded bg-green-500/20 text-green-700 dark:text-green-300 text-xs px-2 py-0.5 font-medium"><CheckCircle2 className="size-3" /> PICADA</span>}
                             </div>
                             <p className="text-sm font-medium">{order.product_description}</p>
                             <p className="text-xs text-muted-foreground">{order.structure_type} | {order.measure} | {order.color}</p>

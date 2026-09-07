@@ -626,6 +626,7 @@ export type Database = {
       picking_dispatches: {
         Row: {
           batch_id: string
+          confirmed_at: string | null
           created_at: string
           dispatched_at: string
           id: string
@@ -638,6 +639,7 @@ export type Database = {
         }
         Insert: {
           batch_id: string
+          confirmed_at?: string | null
           created_at?: string
           dispatched_at?: string
           id?: string
@@ -650,6 +652,7 @@ export type Database = {
         }
         Update: {
           batch_id?: string
+          confirmed_at?: string | null
           created_at?: string
           dispatched_at?: string
           id?: string
@@ -1849,6 +1852,10 @@ export type Database = {
           _op: Database["public"]["Tables"]["operators"]["Row"]
         }
         Returns: undefined
+      }
+      begin_picking_dispatch: {
+        Args: { _operator_code: string; _order_ids: string[] }
+        Returns: Json
       }
       cancel_order_with_recovery: { Args: { _order_id: string }; Returns: Json }
       cancel_order_with_recovery_impl: {
