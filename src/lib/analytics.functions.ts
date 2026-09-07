@@ -139,8 +139,9 @@ export const getOperatorEfficiency = createServerFn({ method: "POST" })
     const to = data.to ? new Date(data.to) : new Date();
 
     let q = sb.from("order_stages")
-      .select("operator_id, stage, productive_seconds, order_id, finished_at, operators(code, name)")
+      .select("operator_id, stage, productive_seconds, order_id, finished_at, operators(code, name), production_orders!inner(is_test)")
       .eq("status", "concluida")
+      .eq("production_orders.is_test", false)
       .not("operator_id", "is", null)
       .gte("finished_at", from.toISOString())
       .lte("finished_at", to.toISOString());
