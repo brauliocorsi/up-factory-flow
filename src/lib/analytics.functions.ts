@@ -202,3 +202,145 @@ export const getOperatorEfficiency = createServerFn({ method: "POST" })
 
     return result.sort((a, b) => (b.eficiencia_pct ?? -1) - (a.eficiencia_pct ?? -1));
   });
+
+// ============================================================
+// Fase 6 — indicadores fiáveis e operações esquecidas
+// ============================================================
+
+export type OperatorTimeBreakdown = {
+  operator_id: string;
+  operator_code: string;
+  operator_name: string;
+  operacoes: number;
+  processo_min: number; // do início ao fim (relógio de parede)
+  mao_de_obra_min: number; // tempo efectivamente a trabalhar
+  espera_min: number; // pausas e paragens
+};
+
+/**
+ * Tempo por pessoa no período, separando duração do processo, mão de obra e
+ * espera. Baseia-se nos volumes (order_coli_stages) e ignora encomendas
+ * marcadas como teste.
+ */
+export const getOperatorTimeBreakdown = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => rangeSchema.parse(d))
+  .handler(async ({ data, context }): Promise<OperatorTimeBreakdown[]> => {
+    const sb = context.supabase as any;
+    const from = data.from ? new Date(data.from) : (() => { const d = new Date(); d.setDate(d.getDate() - 30); d.setHours(0, 0, 0, 0); return d; })();
+    const to = data.to ? new Date(data.to) : new Date();
+
+    const { data: rows, error } = await sb
+      .from("order_coli_stages")
+      .select("operator_id, started_at, finished_at, productive_seconds, paused_seconds, operators(code, name), production_orders!inner(is_test)")
+      .eq("status", "concluida")
+      .eq("production_orders.is_test", false)
+      .not("operator_id", "is", null)
+      .gte("finished_at", from.toISOString())
+      .lte("finished_at", to.toISOString());
+    if (error) throw new Error(error.message);
+
+    const acc = new Map<string, OperatorTimeBreakdown>();
+    for (const r of (rows ?? []) as any[]) {
+      const op = r.operators;
+      if (!op) continue;
+      const cur = acc.get(r.operator_id) ?? {
+        operator_id: r.operator_id,
+        operator_code: op.code,
+        operator_name: op.name,
+        operacoes: 0,
+        processo_min: 0,
+        mao_de_obra_min: 0,
+        espera_min: 0,
+      };
+      const labourSec = Math.max(0, r.productive_seconds ?? 0);
+      let processSec = labourSec;
+      if (r.started_at && r.finished_at) {
+        const diff = (new Date(r.finished_at).getTime() - new Date(r.started_at).getTime()) / 1000;
+        if (Number.isFinite(diff) && diff > 0) processSec = diff;
+      }
+      const waitSec = Math.max(0, processSec - labourSec);
+      cur.operacoes += 1;
+      cur.processo_min += processSec / 60;
+      cur.mao_de_obra_min += labourSec / 60;
+      cur.espera_min += waitSec / 60;
+      acc.set(r.operator_id, cur);
+    }
+
+    return Array.from(acc.values())
+      .map((o) => ({
+        ...o,
+        processo_min: Math.round(o.processo_min),
+        mao_de_obra_min: Math.round(o.mao_de_obra_min),
+        espera_min: Math.round(o.espera_min),
+      }))
+      .sort((a, b) => b.mao_de_obra_min - a.mao_de_obra_min);
+  });
+
+export type ForgottenStage = {
+  order_coli_stage_id: string;
+  order_id: string;
+  order_number: string;
+  coli_number: number;
+  total_colis: number;
+  stage: string;
+  operator_code: string | null;
+  operator_name: string | null;
+  started_at: string | null;
+  hours_running: number;
+  is_test: boolean;
+};
+
+export const listForgottenStages = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ min_hours: z.number().min(0).max(720).optional() }).parse(d ?? {}))
+  .handler(async ({ data, context }): Promise<{ ok: true; items: ForgottenStage[] } | { ok: false; message: string }> => {
+    const { data: rows, error } = await (context.supabase as any).rpc("list_forgotten_stages", {
+      _min_hours: data.min_hours ?? 12,
+    });
+    if (error) return { ok: false, message: error.message };
+    return {
+      ok: true,
+      items: ((rows ?? []) as any[]).map((r) => ({
+        order_coli_stage_id: r.order_coli_stage_id,
+        order_id: r.order_id,
+        order_number: r.order_number,
+        coli_number: r.coli_number,
+        total_colis: r.total_colis,
+        stage: r.stage,
+        operator_code: r.operator_code ?? null,
+        operator_name: r.operator_name ?? null,
+        started_at: r.started_at ?? null,
+        hours_running: Number(r.hours_running ?? 0),
+        is_test: Boolean(r.is_test),
+      })),
+    };
+  });
+
+export const pauseForgottenStage = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ order_coli_stage_id: z.string().uuid(), reason: z.string().trim().max(300).optional() }).parse(d)
+  )
+  .handler(async ({ data, context }) => {
+    const { data: res, error } = await (context.supabase as any).rpc("admin_pause_forgotten_stage", {
+      _order_coli_stage_id: data.order_coli_stage_id,
+      _reason: data.reason ?? null,
+    });
+    if (error) return { ok: false as const, message: error.message };
+    return res as { ok: boolean; message: string };
+  });
+
+export const setOrdersTestFlag = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ order_ids: z.array(z.string().uuid()).min(1).max(500), is_test: z.boolean() }).parse(d)
+  )
+  .handler(async ({ data, context }) => {
+    const { data: res, error } = await (context.supabase as any).rpc("set_orders_test_flag", {
+      _order_ids: data.order_ids,
+      _is_test: data.is_test,
+    });
+    if (error) return { ok: false as const, message: error.message };
+    return { ok: true as const, updated: Number(res ?? 0) };
+  });
