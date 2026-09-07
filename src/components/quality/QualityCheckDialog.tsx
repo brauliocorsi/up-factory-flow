@@ -189,7 +189,7 @@ export function QualityCheckDialog({
 
             {hasNok && (
               <div className="text-xs bg-amber-50 border border-amber-300 text-amber-900 rounded p-2">
-                Há itens NOK. Podes aprovar (segue para embalagem) ou reprovar e enviar para retrabalho.
+                Há itens NOK. Esta encomenda não pode ser aprovada: reprova e envia para retrabalho.
               </div>
             )}
           </>
