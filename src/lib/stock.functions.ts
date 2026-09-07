@@ -160,6 +160,12 @@ export const adjustStock = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => adjustSchema.parse(d))
   .handler(async ({ data, context }) => {
+    // Perfil obrigatório no servidor (F02) — a base de dados valida de novo.
+    const { hasAnyRole } = await import("./roleGuards");
+    const allowed = await hasAnyRole(context, ["admin", "escritorio"]);
+    if (!allowed) {
+      return { ok: false as const, message: "Sem permissão para ajustar stock." };
+    }
     // Atomic: single UPDATE + movement inside one DB function (no read-modify-write)
     const { error } = await (context.supabase as any).rpc("adjust_stock_atomic", {
       _item_type: data.item_type,
@@ -296,7 +302,10 @@ export const getFabricConsumeContext = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ order_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const s = context.supabase as any;
+    // Leitura autorizada: o posto de corte precisa de ver modelo, rolos e
+    // referências mesmo com perfil "apenas operador" (F04).
+    const { operationalReader } = await import("./operationalRead.server");
+    const s = await operationalReader(context as any);
     const { data: order, error: oErr } = await s
       .from("production_orders")
       .select("id, order_number, model_id, fabric_ref, color, fabric_type")
@@ -316,12 +325,16 @@ export const getFabricConsumeContext = createServerFn({ method: "POST" })
       s.from("fabric_consumptions").select("*").eq("order_id", data.order_id).maybeSingle(),
     ]);
 
+    const rolls = rollsRes.data ?? [];
     return {
       ok: true as const,
       order,
       model: modelRes?.data ?? null,
       meters_per_unit: modelRes?.data?.meters_per_unit ?? null,
-      rolls: rollsRes.data ?? [],
+      rolls,
+      // Distinguir "sem configuração" de "sem stock" (F04).
+      no_rolls: rolls.length === 0,
+      no_meters_configured: (modelRes?.data?.meters_per_unit ?? null) === null,
       fabric_types: typesRes.data ?? [],
       fabric_refs: refsRes.data ?? [],
       colors: colorsRes.data ?? [],

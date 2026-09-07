@@ -15,5 +15,9 @@ export default defineConfig({
   },
   vite: {
     plugins: [mcpPlugin()],
+    define: {
+      // Fase 0: versão visível na aplicação, para saber sempre o que está publicado.
+      __APP_BUILD__: JSON.stringify(new Date().toISOString().slice(0, 16).replace("T", " ")),
+    },
   },
 });

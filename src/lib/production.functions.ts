@@ -191,7 +191,11 @@ export const recordStageEvent = createServerFn({ method: "POST" })
 export const getAppSettings = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
+    // Leitura autorizada: o posto precisa de saber o modo de identificação
+    // mesmo com perfil "apenas operador" (F04) — nunca cair em modo errado.
+    const { operationalReader } = await import("./operationalRead.server");
+    const sb = await operationalReader(context as any);
+    const { data, error } = await sb
       .from("app_settings")
       .select("identification_mode")
       .eq("id", 1)
@@ -279,26 +283,37 @@ export const upsertOperator = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const sb = context.supabase as any;
+    // Exigir administrador ANTES de tocar em contas ou cadastro (F03).
+    const { assertAnyRole } = await import("./roleGuards");
+    await assertAnyRole(context, ["admin"], "gerir operadores");
+
     if (data.id) {
-      // Se o código mudou e o operador tem login, atualizar o email sintético no Auth
       const { data: existing } = await sb
         .from("operators")
         .select("code, user_id")
         .eq("id", data.id)
         .maybeSingle();
-      if (existing?.user_id && existing.code !== data.code) {
+      if (!existing) throw new Error("Operador não encontrado");
+
+      // Primeiro o cadastro; só depois a conta de login. Se o login falhar,
+      // o cadastro volta ao código anterior — nunca fica meio alterado.
+      const { error } = await sb.from("operators").update({
+        code: data.code, name: data.name, active: data.active ?? true,
+      }).eq("id", data.id);
+      if (error) throw new Error(error.message);
+
+      if (existing.user_id && existing.code !== data.code) {
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
         const newEmail = `op-${data.code.trim().toLowerCase()}@upmoveis.local`;
         const { error: authErr } = await supabaseAdmin.auth.admin.updateUserById(
           existing.user_id,
           { email: newEmail, email_confirm: true }
         );
-        if (authErr) throw new Error(`Falha a atualizar email do login: ${authErr.message}`);
+        if (authErr) {
+          await sb.from("operators").update({ code: existing.code }).eq("id", data.id);
+          throw new Error(`Falha a atualizar email do login: ${authErr.message}`);
+        }
       }
-      const { error } = await sb.from("operators").update({
-        code: data.code, name: data.name, active: data.active ?? true,
-      }).eq("id", data.id);
-      if (error) throw new Error(error.message);
       return { id: data.id };
     }
     const { data: inserted, error } = await sb.from("operators").insert({
