@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { bulkImportSimpleOrders } from "@/lib/orders.functions";
+import { bulkImportSimpleOrders, previewSimpleImport, type ImportPreview } from "@/lib/orders.functions";
 import { getCatalogs } from "@/lib/catalog.functions";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -232,6 +232,31 @@ function ImportarSimplesPage() {
     };
   }
 
+  const previewQ = useQuery({
+    queryKey: ["import-preview", decoded.filter((r) => r.ok).map((r) => `${r.customer_order}:${r.barcode_base}:${r.quantity}`).join(",")],
+    queryFn: () =>
+      previewSimpleImport({
+        data: {
+          rows: decoded.filter((r) => r.ok).map((r) => ({
+            customer_order: r.customer_order,
+            quantity: r.quantity,
+            due_date: r.due_date,
+            product_description: r.product_description,
+            model_id: r.model_id,
+            measure: r.measure,
+            fabric_type: r.fabric_type,
+            fabric_ref: r.fabric_ref,
+            color: r.color,
+            structure_type: r.structure_type,
+            finishing: r.finishing,
+            barcode_base: r.barcode_base,
+          })),
+        },
+      }) as Promise<ImportPreview>,
+    enabled: step === 3 && decoded.some((r) => r.ok),
+    staleTime: 30_000,
+  });
+
   function validate() {
     if (!cat) { toast.error("Catálogo a carregar"); return; }
     if (!mapping.code || !mapping.qty || !mapping.customer_order) {
@@ -359,6 +384,36 @@ function ImportarSimplesPage() {
 
       {step === 3 && (
         <div className="space-y-4">
+          {previewQ.data && previewQ.data.existing_total > 0 && (
+            <Card className="p-3 border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700/60">
+              <div className="flex items-start gap-3 text-sm">
+                <AlertCircle className="size-5 text-amber-600 mt-0.5" />
+                <div>
+                  <div className="font-semibold mb-1">
+                    Já existem {previewQ.data.existing_total} encomenda(s) para estes números de cliente
+                  </div>
+                  <ul className="text-xs space-y-0.5">
+                    {previewQ.data.per_customer
+                      .filter((p) => p.existing > 0)
+                      .slice(0, 8)
+                      .map((p) => (
+                        <li key={p.customer_order}>
+                          <b>{p.customer_order}</b>: {p.existing} já no sistema · +{p.to_create} a criar
+                          {p.duplicate_signature > 0 && (
+                            <span className="text-amber-700 dark:text-amber-400">
+                              {" "}· {p.duplicate_signature} linha(s) com produto igual ao já existente
+                            </span>
+                          )}
+                        </li>
+                      ))}
+                  </ul>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Se este ficheiro já foi importado, importar outra vez vai acrescentar unidades.
+                  </div>
+                </div>
+              </div>
+            </Card>
+          )}
           <Card className="p-4 flex flex-wrap items-center gap-x-6 gap-y-2">
             <div><span className="text-2xl font-bold">{decoded.length}</span> <span className="text-sm text-muted-foreground">linhas</span></div>
             <div><span className="text-2xl font-bold text-success">{validCount}</span> <span className="text-sm text-muted-foreground">válidas → {totalUnits} unidade(s)</span></div>
