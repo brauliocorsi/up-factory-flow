@@ -334,7 +334,7 @@ export const submitQualityCheck = createServerFn({ method: "POST" })
       if (rpcErr) throw new Error(rpcErr.message);
     }
 
-    return { ok: true, check_id: check.id, has_nok };
+    return { ok: true as const, check_id: check.id, has_nok };
   });
 
 export type QualityCheckHistoryRow = {
