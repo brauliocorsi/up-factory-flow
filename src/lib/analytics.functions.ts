@@ -27,10 +27,18 @@ export const getProductionKpis = createServerFn({ method: "GET" })
     const isoToday = today.toISOString();
 
     const [stagesAtivas, concluidasHoje, retrabalhos] = await Promise.all([
-      sb.from("order_stages").select("id, status, is_paused, operator_id").in("status", ["em_curso", "bloqueada"]),
-      sb.from("order_stages").select("id, productive_seconds").eq("status", "concluida").gte("finished_at", isoToday),
+      sb.from("order_stages")
+        .select("id, status, is_paused, operator_id, production_orders!inner(is_test)")
+        .in("status", ["em_curso", "bloqueada"])
+        .eq("production_orders.is_test", false),
+      sb.from("order_stages")
+        .select("id, productive_seconds, production_orders!inner(is_test)")
+        .eq("status", "concluida")
+        .eq("production_orders.is_test", false)
+        .gte("finished_at", isoToday),
       sb.from("rework_events").select("id", { count: "exact", head: true }).eq("status", "aberto"),
     ]);
+
 
     const rows = (stagesAtivas.data ?? []) as any[];
     const ativos = new Set<string>();
