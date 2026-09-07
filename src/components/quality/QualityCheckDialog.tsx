@@ -97,7 +97,11 @@ export function QualityCheckDialog({
         })),
       }});
     },
-    onSuccess: (_, result) => {
+    onSuccess: (res: any, result) => {
+      if (res && res.ok === false) {
+        toast.error(res.message ?? "Não foi possível guardar a conferência");
+        return;
+      }
       setOpen(false);
       setItems([]); setNotes("");
       toast.success(result === "aprovado"
