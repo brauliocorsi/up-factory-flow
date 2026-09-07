@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { assertAnyRole, hasAnyRole } from "@/lib/roleGuards";
+import { hasAnyRole } from "@/lib/roleGuards";
 import { z } from "zod";
 
 export type PickingColi = {
@@ -11,6 +11,8 @@ export type PickingColi = {
   picked: boolean;
 };
 
+/** por_picar = nenhum volume lido | parcial = alguns | picada = todos | enviada = já transferida */
+export type PickingState = "por_picar" | "parcial" | "picada" | "enviada";
 
 export type PickingOrder = {
   id: string;
@@ -25,13 +27,27 @@ export type PickingOrder = {
   stage_id: string;
   stage_status: string;
   package_total: number;
+  package_picked: number;
+  state: PickingState;
   packages: PickingColi[];
+};
+
+export type PickingQueueRow = {
+  order_id: string;
+  order_number: string;
+  product_description: string;
+  structure_type: string | null;
+  measure: string | null;
+  color: string | null;
+  coli_total: number;
+  coli_picked: number;
+  state: PickingState;
 };
 
 // List orders eligible for picking (embalagem concluida, picagem nao concluida)
 export const listPickingQueue = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .handler(async ({ context }): Promise<PickingQueueRow[]> => {
     const { supabase } = context;
     const { data: stages, error } = await supabase
       .from("order_stages")
@@ -41,7 +57,7 @@ export const listPickingQueue = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     const rows = (stages ?? []) as any[];
     const orderIds = rows.map((s) => s.order_id);
-    if (orderIds.length === 0) return [] as Array<{ order_id: string; order_number: string; product_description: string; structure_type: string|null; measure: string|null; color: string|null; coli_total: number; coli_picked: number; }>;
+    if (orderIds.length === 0) return [];
     const { data: emb } = await supabase
       .from("order_stages")
       .select("order_id, status")
@@ -54,10 +70,8 @@ export const listPickingQueue = createServerFn({ method: "GET" })
       .select("id, order_id")
       .in("order_id", orderIds);
     const totals = new Map<string, number>();
-
     for (const c of (colis ?? []) as any[]) {
       totals.set(c.order_id, (totals.get(c.order_id) ?? 0) + 1);
-
     }
     // picked = coli_stages picagem concluidas
     const picked = new Map<string, number>();
@@ -72,16 +86,22 @@ export const listPickingQueue = createServerFn({ method: "GET" })
     }
     return rows
       .filter((s) => embMap.get(s.order_id) === "concluida" && (totals.get(s.order_id) ?? 0) > 0 && s.production_orders.status !== "cancelada")
-      .map((s) => ({
-        order_id: s.order_id,
-        order_number: s.production_orders.order_number,
-        product_description: s.production_orders.product_description,
-        structure_type: s.production_orders.structure_type,
-        measure: s.production_orders.measure,
-        color: s.production_orders.color,
-        coli_total: totals.get(s.order_id) ?? 0,
-        coli_picked: picked.get(s.order_id) ?? 0,
-      }));
+      .map((s) => {
+        const total = totals.get(s.order_id) ?? 0;
+        const done = picked.get(s.order_id) ?? 0;
+        const state: PickingState = done === 0 ? "por_picar" : done < total ? "parcial" : "picada";
+        return {
+          order_id: s.order_id,
+          order_number: s.production_orders.order_number,
+          product_description: s.production_orders.product_description,
+          structure_type: s.production_orders.structure_type,
+          measure: s.production_orders.measure,
+          color: s.production_orders.color,
+          coli_total: total,
+          coli_picked: done,
+          state,
+        };
+      });
   });
 
 // History of what I picked
@@ -175,7 +195,7 @@ export const resolveOrderForPicking = createServerFn({ method: "POST" })
       throw new Error(`A encomenda "${order.order_number}" está cancelada.`);
     }
 
-    // 2. Load stages: embalagem must be concluded; picagem must NOT be concluded.
+    // 2. Load stages: embalagem must be concluded.
     const { data: stages, error: stagesErr } = await supabase
       .from("order_stages")
       .select("id, stage, status")
@@ -191,14 +211,12 @@ export const resolveOrderForPicking = createServerFn({ method: "POST" })
     if (!embalagem || embalagem.status !== "concluida") {
       throw new Error(`Encomenda ainda não foi embalada na fábrica.`);
     }
-    if (picagem.status === "concluida") {
-      throw new Error(`A encomenda "${order.order_number}" já terminou a etapa de Picagem.`);
-    }
 
-    // 3. Real colis from order_colis
+    // 3. Real colis from order_colis, com o estado de picagem já registado
+    //    (permite retomar uma picagem parcial noutro dispositivo).
     const { data: colis, error: colisErr } = await supabase
       .from("order_colis")
-      .select("coli_number, coli_name, coli_barcode")
+      .select("id, coli_number, coli_name, coli_barcode")
       .eq("order_id", order.id)
       .order("coli_number", { ascending: true });
     if (colisErr) throw new Error(colisErr.message);
@@ -206,13 +224,43 @@ export const resolveOrderForPicking = createServerFn({ method: "POST" })
       throw new Error(`Encomenda sem colis gerados. Conclua a etapa de Embalagem primeiro.`);
     }
 
+    const { data: coliStages } = await supabase
+      .from("order_coli_stages")
+      .select("order_coli_id, status")
+      .eq("order_id", order.id)
+      .eq("stage", "picagem");
+    const pickedColiIds = new Set(
+      ((coliStages ?? []) as any[]).filter((c) => c.status === "concluida").map((c) => c.order_coli_id),
+    );
+
+    const { data: sent } = await supabase
+      .from("picking_dispatches")
+      .select("order_id")
+      .eq("order_id", order.id)
+      .eq("status", "enviado")
+      .limit(1);
+
     const package_total = colis.length;
     const packagesList: PickingColi[] = colis.map((c) => ({
       package_number: c.coli_number,
       package_total,
       package_name: c.coli_name ?? `Coli ${c.coli_number}`,
       expected_code: c.coli_barcode,
+      picked: pickedColiIds.has(c.id),
     }));
+    const package_picked = packagesList.filter((p) => p.picked).length;
+    const state: PickingState =
+      (sent ?? []).length > 0
+        ? "enviada"
+        : package_picked === 0
+          ? "por_picar"
+          : package_picked < package_total
+            ? "parcial"
+            : "picada";
+
+    if (state === "enviada") {
+      throw new Error(`A encomenda "${order.order_number}" já foi enviada para o stock.`);
+    }
 
     return {
       id: order.id,
@@ -227,6 +275,8 @@ export const resolveOrderForPicking = createServerFn({ method: "POST" })
       stage_id: picagem.id,
       stage_status: picagem.status,
       package_total,
+      package_picked,
+      state,
       packages: packagesList
     };
   });
@@ -312,12 +362,19 @@ export const finalizePickingStage = createServerFn({ method: "POST" })
     return res;
   });
 
+type DispatchIntent = {
+  ok: boolean;
+  batch_id: string | null;
+  eligible: string[];
+  rejected: Array<{ order_id: string; order_number: string; reason: string }>;
+};
+
 // Send picking batch to Contagem Stock UP (if settings are configured)
 export const sendPickingBatchToStock = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({
     operator_code: z.string().trim(),
-    order_ids: z.array(z.string().uuid())
+    order_ids: z.array(z.string().uuid()).min(1)
   }).parse(d))
   .handler(async ({ data, context }) => {
     if (!(await hasAnyRole(context, ["admin", "escritorio", "picador"]))) {
@@ -331,26 +388,41 @@ export const sendPickingBatchToStock = createServerFn({ method: "POST" })
     const token = process.env.STOCK_INTAKE_TOKEN;
 
     if (!url || !token) {
-      return { 
-        success: false, 
-        message: "Configuração ausente. Introduza o STOCK_INTAKE_URL e STOCK_INTAKE_TOKEN nas definições do Lovable para enviar stock." 
+      return {
+        success: false,
+        message: "Configuração ausente. Introduza o STOCK_INTAKE_URL e STOCK_INTAKE_TOKEN nas definições do Lovable para enviar stock."
       };
     }
 
-    // Fetch orders details
+    // 1. Registar a intenção de transferência e validar elegibilidade no servidor.
+    //    O identificador do lote é estável: se falhar, a nova tentativa reutiliza-o.
+    const { data: intentRaw, error: intentErr } = await (supabase as any).rpc("begin_picking_dispatch", {
+      _order_ids: data.order_ids,
+      _operator_code: data.operator_code,
+    });
+    if (intentErr) return { success: false, message: intentErr.message };
+    const intent = intentRaw as DispatchIntent;
+    const rejectedNote = intent.rejected.length
+      ? " Não enviadas: " + intent.rejected.map((r) => `${r.order_number} (${r.reason})`).join("; ")
+      : "";
+    if (!intent.ok || !intent.batch_id || intent.eligible.length === 0) {
+      return { success: false, message: `Nenhuma encomenda elegível para envio.${rejectedNote}` };
+    }
+
+    const batchId = intent.batch_id;
+    const eligibleIds = intent.eligible;
+
+    // 2. Detalhes das encomendas elegíveis
     const { data: orders, error } = await supabase
       .from("production_orders")
       .select("id, order_number, barcode, product_description, measure, fabric_type, fabric_ref, color, models(code)")
-      .in("id", data.order_ids);
-
+      .in("id", eligibleIds);
     if (error) throw new Error(error.message);
 
-    // Build batch payload
-    const batchId = crypto.randomUUID();
     const items = (orders ?? []).map(o => ({
       order_number: o.order_number,
       product_code: (o as any).models?.code ?? o.product_description,
-      barcode: o.barcode || o.order_number || "", // Ensures it's a string, not null
+      barcode: o.barcode || o.order_number || "",
       product_description: o.product_description,
       measure: o.measure,
       fabric_type: o.fabric_type,
@@ -376,11 +448,10 @@ export const sendPickingBatchToStock = createServerFn({ method: "POST" })
       const responseBody = await response.text();
       const status = response.ok ? "enviado" : "erro";
 
-      // Registo do envio + conclusão das encomendas via RPC seguro
-      // (permite que o picador feche o lote sem alargar as políticas de acesso).
+      // 3. Confirmação: só com resposta positiva as encomendas ficam transferidas.
       const { data: res, error: rpcErr } = await (supabase as any).rpc("record_picking_dispatch", {
         _batch_id: batchId,
-        _order_ids: data.order_ids,
+        _order_ids: eligibleIds,
         _operator_code: data.operator_code,
         _status: status,
         _response_code: response.status,
@@ -402,27 +473,29 @@ export const sendPickingBatchToStock = createServerFn({ method: "POST" })
         success: response.ok,
         status: response.status,
         message: response.ok
-          ? `Lote enviado com sucesso! ${concluded} encomenda(s) marcada(s) como concluída(s).`
-          : `Erro do servidor externo (${response.status}): ${responseBody}`
+          ? `Lote enviado com sucesso! ${concluded} encomenda(s) transferida(s) para o stock.${rejectedNote}`
+          : `Erro do servidor externo (${response.status}): ${responseBody}${rejectedNote}`
       };
 
     } catch (e: any) {
-      // Registar a falha (best effort)
+      // Resposta desconhecida: pode ter chegado ao destino. Fica "incerto"
+      // para reconciliação, mantendo o mesmo identificador de lote.
       await (supabase as any).rpc("record_picking_dispatch", {
         _batch_id: batchId,
-        _order_ids: data.order_ids,
+        _order_ids: eligibleIds,
         _operator_code: data.operator_code,
-        _status: "erro",
+        _status: "incerto",
         _response_code: null,
-        _response_body: e?.message || "Network error",
+        _response_body: e?.message || "Sem resposta do sistema de stock",
       });
 
       return {
         success: false,
-        message: `Falha na ligação de rede com o stock: ${e.message}`
+        message: `Sem resposta do sistema de stock (${e.message}). O lote ficou marcado como incerto para confirmares em "Envios a reconciliar".`
       };
     }
   });
+
 // Orders already fully picked (picagem concluída) but not yet dispatched to stock.
 // Prevents "lost" orders when the picker refreshes before pressing "Enviar lote".
 export type PendingDispatchOrder = {
@@ -438,27 +511,38 @@ export type PendingDispatchOrder = {
 
 export const listPendingDispatch = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<PendingDispatchOrder[]> => {
+  .inputValidator((d: unknown) => z.object({
+    limit: z.number().int().min(1).max(500).optional(),
+    offset: z.number().int().min(0).optional(),
+  }).parse(d ?? {}))
+  .handler(async ({ data, context }): Promise<{ rows: PendingDispatchOrder[]; total: number }> => {
     const { supabase } = context;
+    const limit = data.limit ?? 100;
+    const offset = data.offset ?? 0;
+
+    // Filtrar primeiro (nada é escondido por um limite cego): as já enviadas
+    // saem da lista antes da paginação.
+    const { data: sentRows } = await supabase
+      .from("picking_dispatches")
+      .select("order_id")
+      .eq("status", "enviado");
+    const sentSet = new Set(((sentRows ?? []) as any[]).map((d) => d.order_id));
+
     const { data: stages, error } = await supabase
       .from("order_stages")
       .select("order_id, finished_at, production_orders!inner(id, order_number, product_description, structure_type, measure, color, status)")
       .eq("stage", "picagem")
       .eq("status", "concluida")
-      .order("finished_at", { ascending: false })
-      .limit(200);
+      .order("finished_at", { ascending: false });
     if (error) throw new Error(error.message);
-    const rows = ((stages ?? []) as any[]).filter((s) => s.production_orders?.status !== "cancelada");
-    const orderIds = rows.map((s) => s.order_id);
-    if (orderIds.length === 0) return [];
 
-    // Exclude anything already dispatched successfully
-    const { data: sent } = await supabase
-      .from("picking_dispatches")
-      .select("order_id, status")
-      .in("order_id", orderIds)
-      .eq("status", "enviado");
-    const sentSet = new Set(((sent ?? []) as any[]).map((d) => d.order_id));
+    const rows = ((stages ?? []) as any[]).filter(
+      (s) => s.production_orders?.status !== "cancelada" && !sentSet.has(s.order_id),
+    );
+    const total = rows.length;
+    const page = rows.slice(offset, offset + limit);
+    const orderIds = page.map((s) => s.order_id);
+    if (orderIds.length === 0) return { rows: [], total };
 
     const { data: colis } = await supabase
       .from("order_colis")
@@ -467,9 +551,9 @@ export const listPendingDispatch = createServerFn({ method: "GET" })
     const totals = new Map<string, number>();
     for (const c of (colis ?? []) as any[]) totals.set(c.order_id, (totals.get(c.order_id) ?? 0) + 1);
 
-    return rows
-      .filter((s) => !sentSet.has(s.order_id))
-      .map((s) => ({
+    return {
+      total,
+      rows: page.map((s) => ({
         order_id: s.order_id,
         order_number: s.production_orders.order_number,
         product_description: s.production_orders.product_description,
@@ -478,5 +562,87 @@ export const listPendingDispatch = createServerFn({ method: "GET" })
         color: s.production_orders.color,
         coli_total: totals.get(s.order_id) ?? 0,
         picked_at: s.finished_at ?? null,
-      }));
+      })),
+    };
+  });
+
+// ---- Reconciliação de envios com resposta incerta ----
+export type UncertainBatch = {
+  batch_id: string;
+  status: string;
+  dispatched_at: string;
+  response_body: string | null;
+  order_ids: string[];
+  order_numbers: string[];
+};
+
+export const listUncertainDispatches = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<UncertainBatch[]> => {
+    const { supabase } = context;
+    const { data, error } = await supabase
+      .from("picking_dispatches")
+      .select("batch_id, order_id, status, dispatched_at, response_body, production_orders!inner(order_number)")
+      .in("status", ["incerto", "erro", "pendente"])
+      .order("dispatched_at", { ascending: false });
+    if (error) throw new Error(error.message);
+
+    const byBatch = new Map<string, UncertainBatch>();
+    for (const r of (data ?? []) as any[]) {
+      const cur = byBatch.get(r.batch_id);
+      if (cur) {
+        cur.order_ids.push(r.order_id);
+        cur.order_numbers.push(r.production_orders?.order_number ?? "—");
+      } else {
+        byBatch.set(r.batch_id, {
+          batch_id: r.batch_id,
+          status: r.status,
+          dispatched_at: r.dispatched_at,
+          response_body: r.response_body ?? null,
+          order_ids: [r.order_id],
+          order_numbers: [r.production_orders?.order_number ?? "—"],
+        });
+      }
+    }
+    return Array.from(byBatch.values());
+  });
+
+/** Fecha manualmente um lote incerto: confirmado (chegou ao stock) ou falhado (repetir). */
+export const reconcileDispatchBatch = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({
+    batch_id: z.string().uuid(),
+    operator_code: z.string().trim().min(1),
+    outcome: z.enum(["confirmado", "falhado"]),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    if (!(await hasAnyRole(context, ["admin", "escritorio"]))) {
+      return { ok: false as const, message: "Só administração ou escritório podem reconciliar envios." };
+    }
+    const { data: rows, error } = await supabase
+      .from("picking_dispatches")
+      .select("order_id")
+      .eq("batch_id", data.batch_id);
+    if (error) return { ok: false as const, message: error.message };
+    const orderIds = ((rows ?? []) as any[]).map((r) => r.order_id);
+    if (orderIds.length === 0) return { ok: false as const, message: "Lote não encontrado." };
+
+    const { error: rpcErr } = await (supabase as any).rpc("record_picking_dispatch", {
+      _batch_id: data.batch_id,
+      _order_ids: orderIds,
+      _operator_code: data.operator_code,
+      _status: data.outcome === "confirmado" ? "enviado" : "erro",
+      _response_code: null,
+      _response_body: data.outcome === "confirmado"
+        ? "Confirmado manualmente pelo escritório"
+        : "Marcado como falhado pelo escritório (repetir envio)",
+    });
+    if (rpcErr) return { ok: false as const, message: rpcErr.message };
+    return {
+      ok: true as const,
+      message: data.outcome === "confirmado"
+        ? "Lote confirmado como transferido para o stock."
+        : "Lote marcado como falhado. Podes enviar outra vez.",
+    };
   });
