@@ -125,6 +125,18 @@ export function BulkOrderActions({ ids, canEdit, isAdmin, onDone }: Props) {
         <CalendarDays className="size-4" /> Alterar datas
       </Button>
 
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button size="sm" variant="outline" className="gap-2" disabled={testFlag.isPending}>
+            <FlaskConical className="size-4" /> Teste
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          <DropdownMenuItem onSelect={() => testFlag.mutate(true)}>Marcar como teste</DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => testFlag.mutate(false)}>Retirar marca de teste</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
       <Button size="sm" variant="outline" className="gap-2 text-destructive" onClick={() => setDialog("cancel")}>
         <XCircle className="size-4" /> Cancelar
       </Button>
