@@ -496,12 +496,70 @@ export type BulkSimpleResult = {
   batch_hints: Array<{ kind: "corte" | "estrutura"; label: string; count: number }>;
 };
 
+/**
+ * Fase 4: pré-visualização da importação. Diz, por nº de encomenda do cliente,
+ * quantas unidades já existem no sistema e quantas seriam acrescentadas, para
+ * que o mesmo ficheiro não seja importado duas vezes sem intenção.
+ */
+export type ImportPreview = {
+  per_customer: Array<{
+    customer_order: string;
+    existing: number;
+    to_create: number;
+    duplicate_signature: number;
+  }>;
+  existing_total: number;
+  to_create_total: number;
+};
+
+export const previewSimpleImport = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ rows: z.array(simpleRowSchema).min(1).max(2000) }).parse(d),
+  )
+  .handler(async ({ data, context }): Promise<ImportPreview> => {
+    await assertAdminOrOffice(context);
+    const cos = Array.from(new Set(data.rows.map((r) => r.customer_order)));
+    const { data: existing, error } = await (context.supabase as any)
+      .from("production_orders")
+      .select("customer_order, barcode, status")
+      .in("customer_order", cos);
+    if (error) throw new Error(error.message);
+
+    const existingByCO = new Map<string, number>();
+    const sigByCO = new Map<string, Set<string>>();
+    for (const e of (existing ?? []) as any[]) {
+      if (e.status === "cancelada") continue;
+      existingByCO.set(e.customer_order, (existingByCO.get(e.customer_order) ?? 0) + 1);
+      const set = sigByCO.get(e.customer_order) ?? new Set<string>();
+      // barcode = `${barcode_base}-${order_number}` — extraímos o código do produto
+      const base = String(e.barcode ?? "").split("-")[0];
+      if (base) set.add(base);
+      sigByCO.set(e.customer_order, set);
+    }
+
+    const per_customer = cos.map((co) => {
+      const rows = data.rows.filter((r) => r.customer_order === co);
+      const to_create = rows.reduce((a, r) => a + r.quantity, 0);
+      const sigs = sigByCO.get(co) ?? new Set<string>();
+      const duplicate_signature = rows.filter((r) => sigs.has(r.barcode_base)).length;
+      return { customer_order: co, existing: existingByCO.get(co) ?? 0, to_create, duplicate_signature };
+    });
+
+    return {
+      per_customer,
+      existing_total: per_customer.reduce((a, p) => a + p.existing, 0),
+      to_create_total: per_customer.reduce((a, p) => a + p.to_create, 0),
+    };
+  });
+
 export const bulkImportSimpleOrders = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z.object({ rows: z.array(simpleRowSchema).min(1).max(2000) }).parse(d),
   )
   .handler(async ({ data, context }): Promise<BulkSimpleResult> => {
+    await assertAdminOrOffice(context);
     const { supabase, userId } = context;
 
     // Agrupa por customer_order (preserva ordem de chegada).
@@ -835,7 +893,31 @@ export type EditableOrder = {
   notes: string | null;
   observation: string | null;
   status: string;
+  /** Fase 4: identidade do produto já não pode mudar (produção começou). */
+  identity_locked?: boolean;
 };
+
+/** Campos que definem a identidade do produto (Fase 4). */
+const IDENTITY_FIELDS = [
+  "product_description",
+  "model_id",
+  "measure",
+  "fabric_type",
+  "fabric_ref",
+  "color",
+  "structure_type",
+  "finishing",
+] as const;
+
+/** true quando alguma etapa (ordem ou volume) já arrancou. */
+async function productionStarted(context: any, orderId: string): Promise<boolean> {
+  const sb = context.supabase as any;
+  const [os, ocs] = await Promise.all([
+    sb.from("order_stages").select("id").eq("order_id", orderId).not("started_at", "is", null).limit(1),
+    sb.from("order_coli_stages").select("id").eq("order_id", orderId).not("started_at", "is", null).limit(1),
+  ]);
+  return ((os.data ?? []).length > 0) || ((ocs.data ?? []).length > 0);
+}
 
 export const getOrderForEdit = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -848,7 +930,8 @@ export const getOrderForEdit = createServerFn({ method: "POST" })
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!o) throw new Error("Encomenda não encontrada");
-    return o as EditableOrder;
+    const identity_locked = await productionStarted(context, data.id);
+    return { ...(o as EditableOrder), identity_locked };
   });
 
 const dateOrNull = z.union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/), z.literal(""), z.null()]).optional();
@@ -886,26 +969,46 @@ export const updateOrder = createServerFn({ method: "POST" })
 
     const { data: existing, error: exErr } = await (context.supabase as any)
       .from("production_orders")
-      .select("id, status")
+      .select("id, status, product_description, model_id, measure, fabric_type, fabric_ref, color, structure_type, finishing")
       .eq("id", id)
       .maybeSingle();
     if (exErr) throw new Error(exErr.message);
     if (!existing) throw new Error("Encomenda não encontrada");
-    if (existing.status === "cancelada") throw new Error("Encomenda cancelada — não é possível editar");
+    if (existing.status === "cancelada") {
+      return { ok: false as const, updated: false, message: "Encomenda cancelada — não é possível editar" };
+    }
 
     const patch: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(rest)) {
       if (v === undefined) continue;
       patch[k] = v === "" ? null : v;
     }
-    if (Object.keys(patch).length === 0) return { ok: true, updated: false };
+
+    // Fase 4: a identidade do produto só muda antes do primeiro início.
+    const identityChanged = IDENTITY_FIELDS.filter(
+      (f) => f in patch && (patch[f] ?? null) !== (existing[f] ?? null),
+    );
+    if (identityChanged.length > 0) {
+      if (await productionStarted(context, id)) {
+        return {
+          ok: false as const,
+          updated: false,
+          message:
+            "A produção desta encomenda já começou: modelo, medida, estrutura, tecido, cor e acabamento não podem ser alterados. Cancela e cria uma nova encomenda, ou altera apenas prazo, prioridade e observações.",
+        };
+      }
+    } else {
+      for (const f of IDENTITY_FIELDS) delete patch[f];
+    }
+
+    if (Object.keys(patch).length === 0) return { ok: true as const, updated: false };
 
     const { error } = await (context.supabase as any)
       .from("production_orders")
       .update(patch)
       .eq("id", id);
     if (error) throw new Error(error.message);
-    return { ok: true, updated: true };
+    return { ok: true as const, updated: true };
   });
 
 // ============================================================
