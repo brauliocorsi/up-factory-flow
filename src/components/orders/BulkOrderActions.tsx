@@ -8,7 +8,8 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogD
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { bulkCancelOrders, bulkDeleteOrders, setOrdersDates, setOrdersPriority } from "@/lib/orders.functions";
 import { activateOrders } from "@/lib/planning.functions";
-import { CalendarDays, Flag, PlayCircle, Trash2, XCircle } from "lucide-react";
+import { setOrdersTestFlag } from "@/lib/analytics.functions";
+import { CalendarDays, FlaskConical, Flag, PlayCircle, Trash2, XCircle } from "lucide-react";
 
 type Props = {
   ids: string[];
@@ -86,6 +87,16 @@ export function BulkOrderActions({ ids, canEdit, isAdmin, onDone }: Props) {
     onError: (e: any) => toast.error(e?.message ?? "Erro ao apagar"),
   });
 
+  const testFlag = useMutation({
+    mutationFn: (is_test: boolean) => setOrdersTestFlag({ data: { order_ids: ids, is_test } }),
+    onSuccess: (r: any) => {
+      if (r?.ok === false) { toast.error(r.message); return; }
+      toast.success(`${r?.updated ?? 0} encomenda(s) atualizada(s)`);
+      refresh();
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Erro ao marcar como teste"),
+  });
+
   if (!canEdit || ids.length === 0) return null;
 
   return (
@@ -113,6 +124,18 @@ export function BulkOrderActions({ ids, canEdit, isAdmin, onDone }: Props) {
       <Button size="sm" variant="outline" className="gap-2" onClick={() => setDialog("dates")}>
         <CalendarDays className="size-4" /> Alterar datas
       </Button>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button size="sm" variant="outline" className="gap-2" disabled={testFlag.isPending}>
+            <FlaskConical className="size-4" /> Teste
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          <DropdownMenuItem onSelect={() => testFlag.mutate(true)}>Marcar como teste</DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => testFlag.mutate(false)}>Retirar marca de teste</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       <Button size="sm" variant="outline" className="gap-2 text-destructive" onClick={() => setDialog("cancel")}>
         <XCircle className="size-4" /> Cancelar

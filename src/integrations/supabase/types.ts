@@ -747,6 +747,7 @@ export type Database = {
           finishing: string | null
           id: string
           is_stock_production: boolean
+          is_test: boolean
           measure: string | null
           model_id: string | null
           notes: string | null
@@ -777,6 +778,7 @@ export type Database = {
           finishing?: string | null
           id?: string
           is_stock_production?: boolean
+          is_test?: boolean
           measure?: string | null
           model_id?: string | null
           notes?: string | null
@@ -807,6 +809,7 @@ export type Database = {
           finishing?: string | null
           id?: string
           is_stock_production?: boolean
+          is_test?: boolean
           measure?: string | null
           model_id?: string | null
           notes?: string | null
@@ -1827,6 +1830,10 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_pause_forgotten_stage: {
+        Args: { _order_coli_stage_id: string; _reason?: string }
+        Returns: Json
+      }
       assert_coli_previous_stages_done: {
         Args: {
           _order_coli_id: string
@@ -1997,6 +2004,23 @@ export type Database = {
       }
       is_operator_only: { Args: { _user_id: string }; Returns: boolean }
       is_picker_only: { Args: { _user_id: string }; Returns: boolean }
+      list_forgotten_stages: {
+        Args: { _min_hours?: number }
+        Returns: {
+          coli_number: number
+          hours_running: number
+          is_test: boolean
+          operator_code: string
+          operator_id: string
+          operator_name: string
+          order_coli_stage_id: string
+          order_id: string
+          order_number: string
+          stage: Database["public"]["Enums"]["production_stage"]
+          started_at: string
+          total_colis: number
+        }[]
+      }
       list_my_picked_orders: {
         Args: { _limit?: number }
         Returns: {
@@ -2087,6 +2111,10 @@ export type Database = {
           _target_stage: Database["public"]["Enums"]["production_stage"]
         }
         Returns: Json
+      }
+      set_orders_test_flag: {
+        Args: { _is_test: boolean; _order_ids: string[] }
+        Returns: number
       }
       shell_needs_grouped: {
         Args: never
