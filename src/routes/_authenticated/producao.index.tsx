@@ -540,6 +540,7 @@ function ProducaoPage() {
               expectedMinutes={expectedMap?.[it.order_id]?.[it.stage] ?? null}
               colis={colisByStage?.byOrder?.[it.order_id] ?? []}
               isMultiColiOrder={activeStage !== "estrutura" && activeStage !== "corte" && (colisByStage?.multiColiOrderIds ?? []).includes(it.order_id)}
+              coliTotal={colisByStage?.coliCountByOrder?.[it.order_id] ?? 0}
               onColiAction={(coli_stage_id, event) =>
                 coliMutation.mutate({ order_coli_stage_id: coli_stage_id, event })
               }
