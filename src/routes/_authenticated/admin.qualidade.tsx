@@ -75,7 +75,20 @@ function AdminQualidadePage() {
         <h1 className="text-2xl font-bold">Templates de Qualidade</h1>
       </div>
 
-      <NewTemplateCard onCreate={(v) => createMut.mutate(v)} pending={createMut.isPending} />
+      {missing.length > 0 && (
+        <Card className="p-3 bg-amber-50 border-amber-300 text-amber-900 text-sm">
+          Sem conferência própria configurada: <strong>{missing.map((c) => c.name).join(", ")}</strong>.
+          Nestas categorias o posto usa a conferência geral e avisa o operador.
+        </Card>
+      )}
+
+      <NewTemplateCard
+        categories={categories ?? []}
+        templates={templates ?? []}
+        onCreate={(v) => createMut.mutate(v)}
+        onDuplicate={(v) => dupMut.mutate(v)}
+        pending={createMut.isPending || dupMut.isPending}
+      />
 
       <div className="grid md:grid-cols-[260px_1fr] gap-4">
         <Card className="p-2">
