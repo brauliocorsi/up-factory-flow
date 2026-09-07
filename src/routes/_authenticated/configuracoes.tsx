@@ -1,4 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
+
+declare const __APP_BUILD__: string | undefined;
+
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
