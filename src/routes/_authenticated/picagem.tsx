@@ -149,12 +149,23 @@ function PicagemPage() {
         return;
       }
       if (soundEnabled) playSound("success");
+      // Reconstrói a picagem parcial já registada (retomar noutro dispositivo).
+      const already = new Set(order.packages.filter((p) => p.picked).map((p) => p.package_number));
       setLoaded((prev) => prev[order.id] ? prev : {
         ...prev,
-        [order.id]: { order, pickedColis: new Set(), completed: false },
+        [order.id]: {
+          order,
+          pickedColis: already,
+          completed: already.size >= order.package_total,
+        },
       });
-      toast.success(`Encomenda ${order.order_number} carregada (${order.package_total} colis).`);
+      toast.success(
+        already.size > 0
+          ? `Encomenda ${order.order_number} retomada (${already.size}/${order.package_total} volumes já lidos).`
+          : `Encomenda ${order.order_number} carregada (${order.package_total} volumes).`,
+      );
       setBarcodeInput("");
+
     },
     onError: (err: any) => {
       if (soundEnabled) playSound("error");
