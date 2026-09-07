@@ -253,7 +253,42 @@ export const submitQualityCheck = createServerFn({ method: "POST" })
 
     const has_nok = data.items.some((i) => i.status === "nok");
 
+    // Fase 3: aprovar com item NOK não é permitido a ninguém.
+    if (data.result === "aprovado" && has_nok) {
+      return {
+        ok: false as const,
+        message: "Há itens NOK: a encomenda não pode ser aprovada. Reprova e envia para retrabalho.",
+      };
+    }
+
+    // Fase 3: a etapa indicada tem de ser a qualidade desta encomenda.
+    if (data.order_stage_id) {
+      const { data: stg } = await sb.from("order_stages")
+        .select("id, order_id, stage").eq("id", data.order_stage_id).maybeSingle();
+      if (!stg || stg.order_id !== data.order_id || stg.stage !== "qualidade") {
+        return { ok: false as const, message: "Etapa de qualidade inválida para esta encomenda." };
+      }
+    }
+
+    // Fase 3: checklist completo — todos os itens do template têm de vir respondidos.
+    if (data.template_id) {
+      const { data: tItems } = await sb.from("quality_template_items")
+        .select("id").eq("template_id", data.template_id);
+      const expected = new Set(((tItems ?? []) as any[]).map((t) => t.id as string));
+      const answered = new Set(
+        data.items.map((i) => i.template_item_id).filter((v): v is string => !!v),
+      );
+      const missing = [...expected].filter((id) => !answered.has(id)).length;
+      if (missing > 0) {
+        return {
+          ok: false as const,
+          message: `Faltam ${missing} item(ns) do checklist por responder.`,
+        };
+      }
+    }
+
     const { data: check, error: cErr } = await sb.from("quality_checks").insert({
+
       order_id: data.order_id,
       template_id: data.template_id ?? null,
       operator_id: op.id,
