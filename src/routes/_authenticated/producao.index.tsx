@@ -909,7 +909,11 @@ function ColiRow({ coli, coliTotal, canAct, operatorCode, pending, onAction }: {
     }`}>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs font-mono bg-muted rounded px-1.5 py-0.5">#{coli.coli_number}</span>
+          <span className="text-xs font-mono bg-muted rounded px-1.5 py-0.5">
+            {coliTotal && coliTotal > 1
+              ? `Volume ${coli.coli_number} de ${coliTotal}`
+              : `#${coli.coli_number}`}
+          </span>
           <span className="text-sm font-medium">{coli.coli_name}</span>
           {running && <Badge className="bg-emerald-600 text-white text-[10px]">A PRODUZIR</Badge>}
           {paused && <Badge className="bg-warning text-warning-foreground text-[10px]">EM PAUSA</Badge>}
