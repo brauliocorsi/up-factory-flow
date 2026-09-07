@@ -45,7 +45,10 @@ export const getTemplateForOrder = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ order_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }): Promise<QualityTemplate | null> => {
-    const sb = context.supabase as any;
+    // Leitura autorizada: o posto de qualidade tem de ver o checklist da sua
+    // categoria mesmo com perfil "apenas operador" (F04).
+    const { operationalReader } = await import("./operationalRead.server");
+    const sb = await operationalReader(context as any);
     const norm = (s: unknown) => (typeof s === "string" ? s.trim().toUpperCase() : "");
 
     // 1) Buscar dados mínimos da encomenda (defensivo — qualquer falha é ignorada,

@@ -1824,6 +1824,11 @@ export type Database = {
         }
         Returns: Json
       }
+      assert_office_or_admin: { Args: { _action: string }; Returns: undefined }
+      assert_operator_is_session: {
+        Args: { _op: Database["public"]["Tables"]["operators"]["Row"] }
+        Returns: undefined
+      }
       assert_previous_stages_done: {
         Args: {
           _order_id: string
