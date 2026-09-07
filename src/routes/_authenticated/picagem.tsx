@@ -368,9 +368,15 @@ function PicagemPage() {
               ) : queue.map((q) => (
                 <div key={q.order_id} className="flex justify-between items-center py-1 border-b last:border-0">
                   <span className="font-mono">{q.order_number}</span>
-                  <span className="text-xs text-muted-foreground">{q.coli_picked}/{q.coli_total}</span>
+                  <span className="flex items-center gap-2">
+                    <span className={`text-[10px] uppercase px-1.5 py-0.5 rounded ${q.state === "parcial" ? "bg-amber-500/20 text-amber-700 dark:text-amber-300" : q.state === "picada" ? "bg-green-500/20 text-green-700 dark:text-green-300" : "bg-muted text-muted-foreground"}`}>
+                      {q.state === "parcial" ? "Parcial" : q.state === "picada" ? "Picada" : "Por picar"}
+                    </span>
+                    <span className="text-xs text-muted-foreground">{q.coli_picked}/{q.coli_total}</span>
+                  </span>
                 </div>
               ))}
+
             </CardContent>
           </Card>
 
