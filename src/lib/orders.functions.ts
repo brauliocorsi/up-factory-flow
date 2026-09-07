@@ -893,7 +893,31 @@ export type EditableOrder = {
   notes: string | null;
   observation: string | null;
   status: string;
+  /** Fase 4: identidade do produto já não pode mudar (produção começou). */
+  identity_locked?: boolean;
 };
+
+/** Campos que definem a identidade do produto (Fase 4). */
+const IDENTITY_FIELDS = [
+  "product_description",
+  "model_id",
+  "measure",
+  "fabric_type",
+  "fabric_ref",
+  "color",
+  "structure_type",
+  "finishing",
+] as const;
+
+/** true quando alguma etapa (ordem ou volume) já arrancou. */
+async function productionStarted(context: any, orderId: string): Promise<boolean> {
+  const sb = context.supabase as any;
+  const [os, ocs] = await Promise.all([
+    sb.from("order_stages").select("id").eq("order_id", orderId).not("started_at", "is", null).limit(1),
+    sb.from("order_coli_stages").select("id").eq("order_id", orderId).not("started_at", "is", null).limit(1),
+  ]);
+  return ((os.data ?? []).length > 0) || ((ocs.data ?? []).length > 0);
+}
 
 export const getOrderForEdit = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -906,7 +930,8 @@ export const getOrderForEdit = createServerFn({ method: "POST" })
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!o) throw new Error("Encomenda não encontrada");
-    return o as EditableOrder;
+    const identity_locked = await productionStarted(context, data.id);
+    return { ...(o as EditableOrder), identity_locked };
   });
 
 const dateOrNull = z.union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/), z.literal(""), z.null()]).optional();
