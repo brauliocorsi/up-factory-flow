@@ -564,7 +564,7 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
   canAct: boolean;
   onAction: (event: "iniciar"|"pausar"|"retomar"|"finalizar") => void;
   pending: boolean;
-  operatorCode?: string;
+  operatorCode: string;
   expectedMinutes?: number | null;
   colis: ColiStageItem[];
   canQuality?: boolean;
