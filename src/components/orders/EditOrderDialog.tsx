@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PrioritySelect } from "@/components/planning/PrioritySelect";
-import { Pencil } from "lucide-react";
+import { Pencil, Lock } from "lucide-react";
 
 type Draft = {
   customer_order: string;
@@ -98,7 +98,11 @@ export function EditOrderDialog({
         },
       });
     },
-    onSuccess: () => {
+    onSuccess: (res: any) => {
+      if (res && res.ok === false) {
+        toast.error(res.message ?? "Não foi possível guardar");
+        return;
+      }
       toast.success(`Encomenda ${orderNumber} atualizada`);
       setOpen(false);
       qc.invalidateQueries({ queryKey: ["orders"] });
@@ -108,6 +112,8 @@ export function EditOrderDialog({
     },
     onError: (e: any) => toast.error(e?.message ?? "Erro ao guardar"),
   });
+
+  const locked = !!order?.identity_locked;
 
   function set<K extends keyof Draft>(k: K, v: Draft[K]) {
     setDraft((d) => (d ? { ...d, [k]: v } : d));
@@ -139,6 +145,15 @@ export function EditOrderDialog({
           <div className="py-8 text-center text-sm text-muted-foreground">A carregar…</div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {locked && (
+              <div className="md:col-span-2 flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-xs dark:border-amber-700/60 dark:bg-amber-950/30">
+                <Lock className="size-4 mt-0.5 text-amber-600" />
+                <div>
+                  <b>Produção já começou.</b> Modelo, medida, estrutura, tecido, cor, acabamento e
+                  descrição ficam fixos. Podes alterar prazo, prioridade, observações e notas.
+                </div>
+              </div>
+            )}
             <datalist id="dl-measures">
               {(cat?.measures ?? []).map((m: any) => <option key={m.id} value={m.name} />)}
             </datalist>
@@ -158,6 +173,7 @@ export function EditOrderDialog({
             <div className="md:col-span-2 space-y-1">
               <Label>Descrição do produto</Label>
               <Input
+                disabled={locked}
                 value={draft.product_description}
                 onChange={(e) => set("product_description", e.target.value)}
               />
@@ -170,7 +186,7 @@ export function EditOrderDialog({
 
             <div className="space-y-1">
               <Label>Modelo</Label>
-              <Select value={draft.model_id} onValueChange={(v) => set("model_id", v)}>
+              <Select value={draft.model_id} onValueChange={(v) => set("model_id", v)} disabled={locked}>
                 <SelectTrigger><SelectValue placeholder="Sem modelo" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Sem modelo</SelectItem>
@@ -183,27 +199,27 @@ export function EditOrderDialog({
 
             <div className="space-y-1">
               <Label>Medida</Label>
-              <Input list="dl-measures" value={draft.measure} onChange={(e) => set("measure", e.target.value)} />
+              <Input list="dl-measures" disabled={locked} value={draft.measure} onChange={(e) => set("measure", e.target.value)} />
             </div>
             <div className="space-y-1">
               <Label>Estrutura</Label>
-              <Input list="dl-structures" value={draft.structure_type} onChange={(e) => set("structure_type", e.target.value)} />
+              <Input list="dl-structures" disabled={locked} value={draft.structure_type} onChange={(e) => set("structure_type", e.target.value)} />
             </div>
             <div className="space-y-1">
               <Label>Tipo de tecido</Label>
-              <Input list="dl-fabric-types" value={draft.fabric_type} onChange={(e) => set("fabric_type", e.target.value)} />
+              <Input list="dl-fabric-types" disabled={locked} value={draft.fabric_type} onChange={(e) => set("fabric_type", e.target.value)} />
             </div>
             <div className="space-y-1">
               <Label>Ref. tecido</Label>
-              <Input list="dl-fabric-refs" value={draft.fabric_ref} onChange={(e) => set("fabric_ref", e.target.value)} />
+              <Input list="dl-fabric-refs" disabled={locked} value={draft.fabric_ref} onChange={(e) => set("fabric_ref", e.target.value)} />
             </div>
             <div className="space-y-1">
               <Label>Cor</Label>
-              <Input list="dl-colors" value={draft.color} onChange={(e) => set("color", e.target.value)} />
+              <Input list="dl-colors" disabled={locked} value={draft.color} onChange={(e) => set("color", e.target.value)} />
             </div>
             <div className="space-y-1">
               <Label>Acabamento</Label>
-              <Input value={draft.finishing} onChange={(e) => set("finishing", e.target.value)} />
+              <Input disabled={locked} value={draft.finishing} onChange={(e) => set("finishing", e.target.value)} />
             </div>
 
             <div className="space-y-1">
