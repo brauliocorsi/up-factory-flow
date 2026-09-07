@@ -861,12 +861,14 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
       {operateByColis && (
         <div className="mt-3 border-t pt-3 space-y-2">
           <div className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
-            <Boxes className="size-3" /> Colis nesta etapa ({colis.length})
+            <Boxes className="size-3" /> Volumes nesta etapa ({colis.length}
+            {coliTotal > 0 ? ` de ${coliTotal}` : ""})
           </div>
           {colis.map((c) => (
             <ColiRow
               key={c.id}
               coli={c}
+              coliTotal={coliTotal}
               canAct={canAct}
               operatorCode={operatorCode}
               pending={coliPending}
@@ -879,8 +881,9 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
   );
 }
 
-function ColiRow({ coli, canAct, operatorCode, pending, onAction }: {
+function ColiRow({ coli, coliTotal, canAct, operatorCode, pending, onAction }: {
   coli: ColiStageItem;
+  coliTotal?: number;
   canAct: boolean;
   operatorCode?: string;
   pending: boolean;
