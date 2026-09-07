@@ -209,6 +209,7 @@ export const setTemplateItems = createServerFn({ method: "POST" })
     })),
   }).parse(d))
   .handler(async ({ data, context }) => {
+    await assertAnyRole(context, ["admin", "escritorio"], "editar itens de qualidade");
     const sb = context.supabase as any;
     const { error: dErr } = await sb.from("quality_template_items").delete().eq("template_id", data.template_id);
     if (dErr) throw new Error(dErr.message);
