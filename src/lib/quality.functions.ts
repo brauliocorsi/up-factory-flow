@@ -110,6 +110,20 @@ export const getTemplateForOrder = createServerFn({ method: "POST" })
     return { ...tpl, items: items ?? [] };
   });
 
+/** Categorias disponíveis para configurar templates de qualidade. */
+export const listQualityCategories = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<{ code: string; name: string }[]> => {
+    const sb = context.supabase as any;
+    const { data, error } = await sb
+      .from("ref_categories")
+      .select("code, name")
+      .eq("active", true)
+      .order("code");
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((c: any) => ({ code: c.code, name: c.name }));
+  });
+
 export const upsertQualityTemplate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({
@@ -119,20 +133,71 @@ export const upsertQualityTemplate = createServerFn({ method: "POST" })
     active: z.boolean().optional(),
   }).parse(d))
   .handler(async ({ data, context }) => {
+    await assertAnyRole(context, ["admin", "escritorio"], "gerir templates de qualidade");
     const sb = context.supabase as any;
+    const category = data.category_code.trim().toUpperCase();
+    const active = data.active ?? true;
+
+    // Fase 3: um só template ativo por categoria — desativar os restantes antes
+    // de gravar, para não bater no índice único.
+    if (active) {
+      let q = sb.from("quality_templates").update({ active: false })
+        .eq("category_code", category).eq("active", true);
+      if (data.id) q = q.neq("id", data.id);
+      const { error: offErr } = await q;
+      if (offErr) throw new Error(offErr.message);
+    }
+
     if (data.id) {
       const { error } = await sb.from("quality_templates").update({
-        category_code: data.category_code, name: data.name, active: data.active ?? true,
+        category_code: category, name: data.name, active,
       }).eq("id", data.id);
       if (error) throw new Error(error.message);
       return { id: data.id };
     }
     const { data: ins, error } = await sb.from("quality_templates").insert({
-      category_code: data.category_code, name: data.name, active: data.active ?? true,
+      category_code: category, name: data.name, active,
     }).select("id").single();
     if (error) throw new Error(error.message);
     return { id: ins.id };
   });
+
+/** Duplica os itens de um template noutra categoria (arranque rápido). */
+export const duplicateQualityTemplate = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({
+    source_template_id: z.string().uuid(),
+    category_code: z.string().trim().min(1).max(16),
+    name: z.string().trim().min(1).max(120),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAnyRole(context, ["admin", "escritorio"], "duplicar templates de qualidade");
+    const sb = context.supabase as any;
+    const category = data.category_code.trim().toUpperCase();
+
+    const { data: items, error: iErr } = await sb.from("quality_template_items")
+      .select("label, sort_order").eq("template_id", data.source_template_id).order("sort_order");
+    if (iErr) throw new Error(iErr.message);
+
+    const { error: offErr } = await sb.from("quality_templates").update({ active: false })
+      .eq("category_code", category).eq("active", true);
+    if (offErr) throw new Error(offErr.message);
+
+    const { data: ins, error } = await sb.from("quality_templates").insert({
+      category_code: category, name: data.name, active: true,
+    }).select("id").single();
+    if (error) throw new Error(error.message);
+
+    if ((items ?? []).length > 0) {
+      const rows = (items ?? []).map((it: any, idx: number) => ({
+        template_id: ins.id, label: it.label, sort_order: it.sort_order ?? idx + 1,
+      }));
+      const { error: insErr } = await sb.from("quality_template_items").insert(rows);
+      if (insErr) throw new Error(insErr.message);
+    }
+    return { id: ins.id, items: (items ?? []).length };
+  });
+
 
 export const setTemplateItems = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
