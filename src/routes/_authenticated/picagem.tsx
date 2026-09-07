@@ -420,7 +420,58 @@ function PicagemPage() {
               ))}
             </CardContent>
           </Card>
+
+          {uncertain.length > 0 && (
+            <Card className="border-2 border-destructive/40">
+              <CardHeader>
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <PackageCheck className="size-4" /> Envios a reconciliar ({uncertain.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm space-y-3 max-h-[300px] overflow-y-auto">
+                <p className="text-xs text-muted-foreground">
+                  Estes lotes não tiveram resposta clara do stock. Confirma se chegaram lá ou marca como falhado para enviar outra vez.
+                </p>
+                {uncertain.map((b) => (
+                  <div key={b.batch_id} className="border rounded p-2 space-y-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10px] uppercase px-1.5 py-0.5 rounded bg-muted">{b.status}</span>
+                      <span className="text-[11px] text-muted-foreground">
+                        {new Date(b.dispatched_at).toLocaleString("pt-PT")}
+                      </span>
+                    </div>
+                    <div className="font-mono text-xs break-words">{b.order_numbers.join(", ")}</div>
+                    {b.response_body && (
+                      <div className="text-[11px] text-muted-foreground truncate">{b.response_body}</div>
+                    )}
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 gap-1"
+                        disabled={!operatorCode || reconcileMutation.isPending}
+                        onClick={() => reconcileMutation.mutate({ batch_id: b.batch_id, outcome: "confirmado" })}
+                      >
+                        <CheckCircle2 className="size-3" /> Chegou ao stock
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 gap-1"
+                        disabled={!operatorCode || reconcileMutation.isPending}
+                        onClick={() => reconcileMutation.mutate({ batch_id: b.batch_id, outcome: "falhado" })}
+                      >
+                        <Trash2 className="size-3" /> Não chegou
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
         </div>
+
+
 
         <div className="lg:col-span-7 space-y-6">
           <Card className="min-h-[400px]">
