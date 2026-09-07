@@ -8,7 +8,9 @@ export type PickingColi = {
   package_total: number;
   package_name: string;
   expected_code: string;
+  picked: boolean;
 };
+
 
 export type PickingOrder = {
   id: string;
