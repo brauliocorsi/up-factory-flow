@@ -105,11 +105,35 @@ function PicagemPage() {
 
   // Picadas que ainda não foram enviadas para o stock (sobrevive a refresh da página)
   const pendingFn = useServerFn(listPendingDispatch);
-  const { data: pendingDispatch = [] } = useQuery({
+  const { data: pendingData } = useQuery({
     queryKey: ["picking-pending-dispatch"],
-    queryFn: () => pendingFn(),
+    queryFn: () => pendingFn({ data: { limit: 200 } }),
     refetchInterval: 15_000,
   });
+  const pendingDispatch = pendingData?.rows ?? [];
+  const pendingTotal = pendingData?.total ?? 0;
+
+  // Envios sem resposta clara do stock — precisam de confirmação do escritório
+  const uncertainFn = useServerFn(listUncertainDispatches);
+  const { data: uncertain = [] } = useQuery({
+    queryKey: ["picking-uncertain-dispatch"],
+    queryFn: () => uncertainFn(),
+    refetchInterval: 30_000,
+  });
+  const reconcileFn = useServerFn(reconcileDispatchBatch);
+  const reconcileMutation = useMutation({
+    mutationFn: (vars: { batch_id: string; outcome: "confirmado" | "falhado" }) =>
+      reconcileFn({ data: { ...vars, operator_code: operatorCode } }),
+    onSuccess: (res) => {
+      if (res.ok) toast.success(res.message);
+      else toast.error(res.message);
+      queryClient.invalidateQueries({ queryKey: ["picking-uncertain-dispatch"] });
+      queryClient.invalidateQueries({ queryKey: ["picking-pending-dispatch"] });
+      queryClient.invalidateQueries({ queryKey: ["picking-queue"] });
+    },
+    onError: (err: any) => toast.error(err.message || "Erro ao reconciliar o lote."),
+  });
+
 
 
   // Try resolving by order_number first (when operator scans the order barcode).
