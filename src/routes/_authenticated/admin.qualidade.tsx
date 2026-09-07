@@ -123,18 +123,26 @@ function AdminQualidadePage() {
   );
 }
 
-function NewTemplateCard({ onCreate, pending }: { onCreate: (v: { category_code: string; name: string }) => void; pending: boolean }) {
+function NewTemplateCard({ categories, templates, onCreate, onDuplicate, pending }: {
+  categories: { code: string; name: string }[];
+  templates: QualityTemplate[];
+  onCreate: (v: { category_code: string; name: string }) => void;
+  onDuplicate: (v: { source_template_id: string; category_code: string; name: string }) => void;
+  pending: boolean;
+}) {
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
+  const [source, setSource] = useState("");
   return (
     <Card className="p-3 flex flex-wrap items-end gap-2">
       <div>
         <Label className="text-xs">Categoria</Label>
         <Select value={code} onValueChange={setCode}>
-          <SelectTrigger className="w-[160px]"><SelectValue placeholder="CAM / SOF..." /></SelectTrigger>
+          <SelectTrigger className="w-[200px]"><SelectValue placeholder="Escolher categoria" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="CAM">CAM — Cama</SelectItem>
-            <SelectItem value="SOF">SOF — Sofá</SelectItem>
+            {categories.map((c) => (
+              <SelectItem key={c.code} value={c.code}>{c.code} — {c.name}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -142,12 +150,28 @@ function NewTemplateCard({ onCreate, pending }: { onCreate: (v: { category_code:
         <Label className="text-xs">Nome</Label>
         <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Conferência Cama..." />
       </div>
-      <Button disabled={pending || !code || !name} onClick={() => { onCreate({ category_code: code, name }); setName(""); setCode(""); }}>
+      <div>
+        <Label className="text-xs">Copiar itens de (opcional)</Label>
+        <Select value={source} onValueChange={setSource}>
+          <SelectTrigger className="w-[200px]"><SelectValue placeholder="Começar do zero" /></SelectTrigger>
+          <SelectContent>
+            {templates.map((t) => (
+              <SelectItem key={t.id} value={t.id}>{t.category_code} — {t.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <Button disabled={pending || !code || !name} onClick={() => {
+        if (source) onDuplicate({ source_template_id: source, category_code: code, name });
+        else onCreate({ category_code: code, name });
+        setName(""); setCode(""); setSource("");
+      }}>
         <Plus className="size-4" /> Novo template
       </Button>
     </Card>
   );
 }
+
 
 function TemplateEditor({ template, onSave }: {
   template: QualityTemplate;
