@@ -94,7 +94,7 @@ Ensaios: dois dispositivos a iniciar a mesma etapa; duplo clique em concluir; du
 
 ## Decisões de negócio a fechar (bloqueiam Fases 2 e 3)
 
-1. Que etapas pertencem a cada volume? (proposta: embalagem e picagem por volume; produção ao nível da ordem)
+1. Confirmado: **todas** as etapas de fabrico são por volume; a etapa da ordem é só um resumo, e a encomenda fecha quando todos os volumes terminam a embalagem.
 2. "Pendente" exige libertação do escritório antes do primeiro início? (proposta: sim)
 3. Aprovar com NOK: permitido a quem, com motivo obrigatório? (proposta: só administrador/escritório)
 4. A picagem comprova presença física de cada volume, ou aceita confirmação administrativa?
