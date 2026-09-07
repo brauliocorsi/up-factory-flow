@@ -969,26 +969,46 @@ export const updateOrder = createServerFn({ method: "POST" })
 
     const { data: existing, error: exErr } = await (context.supabase as any)
       .from("production_orders")
-      .select("id, status")
+      .select("id, status, product_description, model_id, measure, fabric_type, fabric_ref, color, structure_type, finishing")
       .eq("id", id)
       .maybeSingle();
     if (exErr) throw new Error(exErr.message);
     if (!existing) throw new Error("Encomenda não encontrada");
-    if (existing.status === "cancelada") throw new Error("Encomenda cancelada — não é possível editar");
+    if (existing.status === "cancelada") {
+      return { ok: false as const, updated: false, message: "Encomenda cancelada — não é possível editar" };
+    }
 
     const patch: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(rest)) {
       if (v === undefined) continue;
       patch[k] = v === "" ? null : v;
     }
-    if (Object.keys(patch).length === 0) return { ok: true, updated: false };
+
+    // Fase 4: a identidade do produto só muda antes do primeiro início.
+    const identityChanged = IDENTITY_FIELDS.filter(
+      (f) => f in patch && (patch[f] ?? null) !== (existing[f] ?? null),
+    );
+    if (identityChanged.length > 0) {
+      if (await productionStarted(context, id)) {
+        return {
+          ok: false as const,
+          updated: false,
+          message:
+            "A produção desta encomenda já começou: modelo, medida, estrutura, tecido, cor e acabamento não podem ser alterados. Cancela e cria uma nova encomenda, ou altera apenas prazo, prioridade e observações.",
+        };
+      }
+    } else {
+      for (const f of IDENTITY_FIELDS) delete patch[f];
+    }
+
+    if (Object.keys(patch).length === 0) return { ok: true as const, updated: false };
 
     const { error } = await (context.supabase as any)
       .from("production_orders")
       .update(patch)
       .eq("id", id);
     if (error) throw new Error(error.message);
-    return { ok: true, updated: true };
+    return { ok: true as const, updated: true };
   });
 
 // ============================================================
