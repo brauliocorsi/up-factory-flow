@@ -140,7 +140,141 @@ function RelatoriosPage() {
           </tbody>
         </table>
       </Card>
+
+      <TimeBreakdownCard from={from} to={to} />
+      <ForgottenStagesCard />
     </div>
+  );
+}
+
+function TimeBreakdownCard({ from, to }: { from: string; to: string }) {
+  const fetchFn = useServerFn(getOperatorTimeBreakdown);
+  const { data = [], isLoading } = useQuery({
+    queryKey: ["report-time-breakdown", from, to],
+    queryFn: () => fetchFn({ data: { from: new Date(from).toISOString(), to: new Date(to + "T23:59:59").toISOString() } }),
+  });
+
+  return (
+    <Card className="p-4 space-y-3">
+      <div>
+        <h2 className="font-semibold">Tempo por pessoa</h2>
+        <p className="text-xs text-muted-foreground">
+          Duração do processo (do início ao fim), tempo a trabalhar e tempo de espera, por volume concluído. Encomendas de teste ficam de fora.
+        </p>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="text-xs text-muted-foreground border-b">
+            <tr>
+              <th className="text-left py-2 px-2">Operador</th>
+              <th className="text-right px-2">Volumes</th>
+              <th className="text-right px-2">Processo (min)</th>
+              <th className="text-right px-2">A trabalhar (min)</th>
+              <th className="text-right px-2">Espera (min)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {isLoading && <tr><td colSpan={5} className="text-center text-muted-foreground py-6">A carregar…</td></tr>}
+            {!isLoading && data.length === 0 && (
+              <tr><td colSpan={5} className="text-center text-muted-foreground py-6">Sem dados no período</td></tr>
+            )}
+            {data.map((o) => (
+              <tr key={o.operator_id} className="border-b last:border-0">
+                <td className="py-2 px-2">
+                  <div className="font-medium">{o.operator_name}</div>
+                  <div className="text-[11px] text-muted-foreground">{o.operator_code}</div>
+                </td>
+                <td className="text-right px-2">{o.operacoes}</td>
+                <td className="text-right px-2">{o.processo_min}</td>
+                <td className="text-right px-2">{o.mao_de_obra_min}</td>
+                <td className="text-right px-2">{o.espera_min}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  );
+}
+
+function ForgottenStagesCard() {
+  const [minHours, setMinHours] = useState(12);
+  const listFn = useServerFn(listForgottenStages);
+  const pauseFn = useServerFn(pauseForgottenStage);
+
+  const { data, isLoading, refetch, isFetching } = useQuery({
+    queryKey: ["forgotten-stages", minHours],
+    queryFn: () => listFn({ data: { min_hours: minHours } }),
+  });
+
+  const pause = useMutation({
+    mutationFn: (id: string) => pauseFn({ data: { order_coli_stage_id: id, reason: "Operação esquecida em curso" } }),
+    onSuccess: (r: any) => {
+      if (r?.ok === false) { toast.error(r.message); return; }
+      toast.success(r?.message ?? "Operação em pausa");
+      refetch();
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Erro ao pausar"),
+  });
+
+  const items = data && data.ok ? data.items : [];
+  const errorMsg = data && !data.ok ? data.message : null;
+
+  return (
+    <Card className="p-4 space-y-3">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <AlarmClock className="size-5 text-amber-500" />
+          <div>
+            <h2 className="font-semibold">Operações esquecidas em curso</h2>
+            <p className="text-xs text-muted-foreground">A decorrer sem pausa há demasiado tempo — corrigir para não falsear os tempos.</p>
+          </div>
+        </div>
+        <div className="flex items-end gap-2">
+          <div>
+            <Label className="text-xs">Mais de (horas)</Label>
+            <Input
+              type="number"
+              min={1}
+              max={720}
+              className="w-24"
+              value={minHours}
+              onChange={(e) => setMinHours(Math.max(1, Number(e.target.value) || 1))}
+            />
+          </div>
+          <Button variant="secondary" onClick={() => refetch()} disabled={isFetching}>Atualizar</Button>
+        </div>
+      </div>
+
+      {errorMsg && <p className="text-sm text-destructive">{errorMsg}</p>}
+      {isLoading && <p className="text-sm text-muted-foreground">A carregar…</p>}
+      {!isLoading && !errorMsg && items.length === 0 && (
+        <p className="text-sm text-muted-foreground">Nada esquecido. Tudo em ordem.</p>
+      )}
+
+      <div className="space-y-2">
+        {items.map((it) => (
+          <div key={it.order_coli_stage_id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-2">
+            <div className="min-w-0">
+              <div className="font-medium flex items-center gap-2">
+                <Link to="/producao" search={{ q: it.order_number } as any} className="hover:underline">
+                  {it.order_number}
+                </Link>
+                <Badge variant="outline">Volume {it.coli_number} de {it.total_colis}</Badge>
+                <Badge variant="secondary">{STAGE_LABELS[it.stage] ?? it.stage}</Badge>
+                {it.is_test && <Badge className="bg-slate-500 text-white">Teste</Badge>}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {it.operator_name ? `${it.operator_name} (${it.operator_code})` : "Sem operador"} · há {it.hours_running}h
+              </div>
+            </div>
+            <Button size="sm" variant="outline" className="gap-2" disabled={pause.isPending} onClick={() => pause.mutate(it.order_coli_stage_id)}>
+              <PauseCircle className="size-4" /> Pausar por correção
+            </Button>
+          </div>
+        ))}
+      </div>
+    </Card>
   );
 }
 
