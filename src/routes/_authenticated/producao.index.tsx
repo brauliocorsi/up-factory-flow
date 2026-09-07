@@ -91,7 +91,7 @@ function ProducaoPage() {
   });
   const colisByStageMap = Object.fromEntries(
     VISIBLE_STAGES.map((stage, index) => [stage, colisQueries[index]?.data]),
-  ) as Partial<Record<Stage, { byOrder: Record<string, ColiStageItem[]>; multiColiOrderIds: string[] }>>;
+  ) as Partial<Record<Stage, { byOrder: Record<string, ColiStageItem[]>; multiColiOrderIds: string[]; coliCountByOrder?: Record<string, number> }>>;
 
   // Lista de (order_id, stage) visíveis em todas as etapas para resolver SLA em lote
   const visibleItemsByStage = useMemo(() => {
@@ -560,7 +560,7 @@ function ProducaoPage() {
 
 
 function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinutes, colis, isMultiColiOrder, coliTotal = 0, onColiAction, coliPending, fabricConsumption, canUndoFabric, canQuality = false }: {
-  item: StageItem;
+  item: ProductionStageOrder;
   canAct: boolean;
   onAction: (event: "iniciar"|"pausar"|"retomar"|"finalizar") => void;
   pending: boolean;
