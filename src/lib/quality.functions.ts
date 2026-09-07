@@ -110,6 +110,20 @@ export const getTemplateForOrder = createServerFn({ method: "POST" })
     return { ...tpl, items: items ?? [] };
   });
 
+/** Categorias disponíveis para configurar templates de qualidade. */
+export const listQualityCategories = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<{ code: string; name: string }[]> => {
+    const sb = context.supabase as any;
+    const { data, error } = await sb
+      .from("ref_categories")
+      .select("code, name")
+      .eq("active", true)
+      .order("code");
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((c: any) => ({ code: c.code, name: c.name }));
+  });
+
 export const upsertQualityTemplate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({
@@ -119,20 +133,71 @@ export const upsertQualityTemplate = createServerFn({ method: "POST" })
     active: z.boolean().optional(),
   }).parse(d))
   .handler(async ({ data, context }) => {
+    await assertAnyRole(context, ["admin", "escritorio"], "gerir templates de qualidade");
     const sb = context.supabase as any;
+    const category = data.category_code.trim().toUpperCase();
+    const active = data.active ?? true;
+
+    // Fase 3: um só template ativo por categoria — desativar os restantes antes
+    // de gravar, para não bater no índice único.
+    if (active) {
+      let q = sb.from("quality_templates").update({ active: false })
+        .eq("category_code", category).eq("active", true);
+      if (data.id) q = q.neq("id", data.id);
+      const { error: offErr } = await q;
+      if (offErr) throw new Error(offErr.message);
+    }
+
     if (data.id) {
       const { error } = await sb.from("quality_templates").update({
-        category_code: data.category_code, name: data.name, active: data.active ?? true,
+        category_code: category, name: data.name, active,
       }).eq("id", data.id);
       if (error) throw new Error(error.message);
       return { id: data.id };
     }
     const { data: ins, error } = await sb.from("quality_templates").insert({
-      category_code: data.category_code, name: data.name, active: data.active ?? true,
+      category_code: category, name: data.name, active,
     }).select("id").single();
     if (error) throw new Error(error.message);
     return { id: ins.id };
   });
+
+/** Duplica os itens de um template noutra categoria (arranque rápido). */
+export const duplicateQualityTemplate = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({
+    source_template_id: z.string().uuid(),
+    category_code: z.string().trim().min(1).max(16),
+    name: z.string().trim().min(1).max(120),
+  }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAnyRole(context, ["admin", "escritorio"], "duplicar templates de qualidade");
+    const sb = context.supabase as any;
+    const category = data.category_code.trim().toUpperCase();
+
+    const { data: items, error: iErr } = await sb.from("quality_template_items")
+      .select("label, sort_order").eq("template_id", data.source_template_id).order("sort_order");
+    if (iErr) throw new Error(iErr.message);
+
+    const { error: offErr } = await sb.from("quality_templates").update({ active: false })
+      .eq("category_code", category).eq("active", true);
+    if (offErr) throw new Error(offErr.message);
+
+    const { data: ins, error } = await sb.from("quality_templates").insert({
+      category_code: category, name: data.name, active: true,
+    }).select("id").single();
+    if (error) throw new Error(error.message);
+
+    if ((items ?? []).length > 0) {
+      const rows = (items ?? []).map((it: any, idx: number) => ({
+        template_id: ins.id, label: it.label, sort_order: it.sort_order ?? idx + 1,
+      }));
+      const { error: insErr } = await sb.from("quality_template_items").insert(rows);
+      if (insErr) throw new Error(insErr.message);
+    }
+    return { id: ins.id, items: (items ?? []).length };
+  });
+
 
 export const setTemplateItems = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -144,6 +209,7 @@ export const setTemplateItems = createServerFn({ method: "POST" })
     })),
   }).parse(d))
   .handler(async ({ data, context }) => {
+    await assertAnyRole(context, ["admin", "escritorio"], "editar itens de qualidade");
     const sb = context.supabase as any;
     const { error: dErr } = await sb.from("quality_template_items").delete().eq("template_id", data.template_id);
     if (dErr) throw new Error(dErr.message);
@@ -187,7 +253,42 @@ export const submitQualityCheck = createServerFn({ method: "POST" })
 
     const has_nok = data.items.some((i) => i.status === "nok");
 
+    // Fase 3: aprovar com item NOK não é permitido a ninguém.
+    if (data.result === "aprovado" && has_nok) {
+      return {
+        ok: false as const,
+        message: "Há itens NOK: a encomenda não pode ser aprovada. Reprova e envia para retrabalho.",
+      };
+    }
+
+    // Fase 3: a etapa indicada tem de ser a qualidade desta encomenda.
+    if (data.order_stage_id) {
+      const { data: stg } = await sb.from("order_stages")
+        .select("id, order_id, stage").eq("id", data.order_stage_id).maybeSingle();
+      if (!stg || stg.order_id !== data.order_id || stg.stage !== "qualidade") {
+        return { ok: false as const, message: "Etapa de qualidade inválida para esta encomenda." };
+      }
+    }
+
+    // Fase 3: checklist completo — todos os itens do template têm de vir respondidos.
+    if (data.template_id) {
+      const { data: tItems } = await sb.from("quality_template_items")
+        .select("id").eq("template_id", data.template_id);
+      const expected = new Set(((tItems ?? []) as any[]).map((t) => t.id as string));
+      const answered = new Set(
+        data.items.map((i) => i.template_item_id).filter((v): v is string => !!v),
+      );
+      const missing = [...expected].filter((id) => !answered.has(id)).length;
+      if (missing > 0) {
+        return {
+          ok: false as const,
+          message: `Faltam ${missing} item(ns) do checklist por responder.`,
+        };
+      }
+    }
+
     const { data: check, error: cErr } = await sb.from("quality_checks").insert({
+
       order_id: data.order_id,
       template_id: data.template_id ?? null,
       operator_id: op.id,
@@ -233,7 +334,7 @@ export const submitQualityCheck = createServerFn({ method: "POST" })
       if (rpcErr) throw new Error(rpcErr.message);
     }
 
-    return { ok: true, check_id: check.id, has_nok };
+    return { ok: true as const, check_id: check.id, has_nok };
   });
 
 export type QualityCheckHistoryRow = {

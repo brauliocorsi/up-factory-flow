@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   listQualityTemplates, upsertQualityTemplate, setTemplateItems,
+  listQualityCategories, duplicateQualityTemplate,
   type QualityTemplate,
 } from "@/lib/quality.functions";
 
@@ -23,10 +24,16 @@ function AdminQualidadePage() {
   const listFn = useServerFn(listQualityTemplates);
   const upsertFn = useServerFn(upsertQualityTemplate);
   const setItemsFn = useServerFn(setTemplateItems);
+  const catsFn = useServerFn(listQualityCategories);
+  const dupFn = useServerFn(duplicateQualityTemplate);
 
   const { data: templates } = useQuery({
     queryKey: ["quality-templates"],
     queryFn: () => listFn(),
+  });
+  const { data: categories } = useQuery({
+    queryKey: ["quality-categories"],
+    queryFn: () => catsFn(),
   });
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -45,6 +52,22 @@ function AdminQualidadePage() {
     onError: (e: any) => toast.error(e?.message ?? "Erro"),
   });
 
+  const dupMut = useMutation({
+    mutationFn: (vars: { source_template_id: string; category_code: string; name: string }) =>
+      dupFn({ data: vars }),
+    onSuccess: () => {
+      toast.success("Template duplicado");
+      qc.invalidateQueries({ queryKey: ["quality-templates"] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Erro"),
+  });
+
+  const activeByCat = new Set(
+    (templates ?? []).filter((t) => t.active).map((t) => t.category_code),
+  );
+  const missing = (categories ?? []).filter((c) => !activeByCat.has(c.code));
+
+
   return (
     <div className="max-w-5xl mx-auto p-4 space-y-4">
       <div className="flex items-center gap-3">
@@ -52,7 +75,20 @@ function AdminQualidadePage() {
         <h1 className="text-2xl font-bold">Templates de Qualidade</h1>
       </div>
 
-      <NewTemplateCard onCreate={(v) => createMut.mutate(v)} pending={createMut.isPending} />
+      {missing.length > 0 && (
+        <Card className="p-3 bg-amber-50 border-amber-300 text-amber-900 text-sm">
+          Sem conferência própria configurada: <strong>{missing.map((c) => c.name).join(", ")}</strong>.
+          Nestas categorias o posto usa a conferência geral e avisa o operador.
+        </Card>
+      )}
+
+      <NewTemplateCard
+        categories={categories ?? []}
+        templates={templates ?? []}
+        onCreate={(v) => createMut.mutate(v)}
+        onDuplicate={(v) => dupMut.mutate(v)}
+        pending={createMut.isPending || dupMut.isPending}
+      />
 
       <div className="grid md:grid-cols-[260px_1fr] gap-4">
         <Card className="p-2">
@@ -87,18 +123,26 @@ function AdminQualidadePage() {
   );
 }
 
-function NewTemplateCard({ onCreate, pending }: { onCreate: (v: { category_code: string; name: string }) => void; pending: boolean }) {
+function NewTemplateCard({ categories, templates, onCreate, onDuplicate, pending }: {
+  categories: { code: string; name: string }[];
+  templates: QualityTemplate[];
+  onCreate: (v: { category_code: string; name: string }) => void;
+  onDuplicate: (v: { source_template_id: string; category_code: string; name: string }) => void;
+  pending: boolean;
+}) {
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
+  const [source, setSource] = useState("");
   return (
     <Card className="p-3 flex flex-wrap items-end gap-2">
       <div>
         <Label className="text-xs">Categoria</Label>
         <Select value={code} onValueChange={setCode}>
-          <SelectTrigger className="w-[160px]"><SelectValue placeholder="CAM / SOF..." /></SelectTrigger>
+          <SelectTrigger className="w-[200px]"><SelectValue placeholder="Escolher categoria" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="CAM">CAM — Cama</SelectItem>
-            <SelectItem value="SOF">SOF — Sofá</SelectItem>
+            {categories.map((c) => (
+              <SelectItem key={c.code} value={c.code}>{c.code} — {c.name}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
@@ -106,12 +150,28 @@ function NewTemplateCard({ onCreate, pending }: { onCreate: (v: { category_code:
         <Label className="text-xs">Nome</Label>
         <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Conferência Cama..." />
       </div>
-      <Button disabled={pending || !code || !name} onClick={() => { onCreate({ category_code: code, name }); setName(""); setCode(""); }}>
+      <div>
+        <Label className="text-xs">Copiar itens de (opcional)</Label>
+        <Select value={source} onValueChange={setSource}>
+          <SelectTrigger className="w-[200px]"><SelectValue placeholder="Começar do zero" /></SelectTrigger>
+          <SelectContent>
+            {templates.map((t) => (
+              <SelectItem key={t.id} value={t.id}>{t.category_code} — {t.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <Button disabled={pending || !code || !name} onClick={() => {
+        if (source) onDuplicate({ source_template_id: source, category_code: code, name });
+        else onCreate({ category_code: code, name });
+        setName(""); setCode(""); setSource("");
+      }}>
         <Plus className="size-4" /> Novo template
       </Button>
     </Card>
   );
 }
+
 
 function TemplateEditor({ template, onSave }: {
   template: QualityTemplate;

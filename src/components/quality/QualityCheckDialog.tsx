@@ -97,7 +97,11 @@ export function QualityCheckDialog({
         })),
       }});
     },
-    onSuccess: (_, result) => {
+    onSuccess: (res: any, result) => {
+      if (res && res.ok === false) {
+        toast.error(res.message ?? "Não foi possível guardar a conferência");
+        return;
+      }
       setOpen(false);
       setItems([]); setNotes("");
       toast.success(result === "aprovado"
@@ -185,7 +189,7 @@ export function QualityCheckDialog({
 
             {hasNok && (
               <div className="text-xs bg-amber-50 border border-amber-300 text-amber-900 rounded p-2">
-                Há itens NOK. Podes aprovar (segue para embalagem) ou reprovar e enviar para retrabalho.
+                Há itens NOK. Esta encomenda não pode ser aprovada: reprova e envia para retrabalho.
               </div>
             )}
           </>
@@ -200,7 +204,8 @@ export function QualityCheckDialog({
                 <XCircle className="size-4" /> Reprovar
               </Button>
               <Button onClick={() => mut.mutate("aprovado")}
-                disabled={mut.isPending || !allAnswered}
+                disabled={mut.isPending || !allAnswered || hasNok}
+                title={hasNok ? "Não é possível aprovar com itens NOK" : undefined}
                 className="bg-emerald-600 hover:bg-emerald-700 gap-1">
                 <CheckCircle2 className="size-4" /> Aprovar
               </Button>
