@@ -496,12 +496,70 @@ export type BulkSimpleResult = {
   batch_hints: Array<{ kind: "corte" | "estrutura"; label: string; count: number }>;
 };
 
+/**
+ * Fase 4: pré-visualização da importação. Diz, por nº de encomenda do cliente,
+ * quantas unidades já existem no sistema e quantas seriam acrescentadas, para
+ * que o mesmo ficheiro não seja importado duas vezes sem intenção.
+ */
+export type ImportPreview = {
+  per_customer: Array<{
+    customer_order: string;
+    existing: number;
+    to_create: number;
+    duplicate_signature: number;
+  }>;
+  existing_total: number;
+  to_create_total: number;
+};
+
+export const previewSimpleImport = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ rows: z.array(simpleRowSchema).min(1).max(2000) }).parse(d),
+  )
+  .handler(async ({ data, context }): Promise<ImportPreview> => {
+    await assertAdminOrOffice(context);
+    const cos = Array.from(new Set(data.rows.map((r) => r.customer_order)));
+    const { data: existing, error } = await (context.supabase as any)
+      .from("production_orders")
+      .select("customer_order, barcode, status")
+      .in("customer_order", cos);
+    if (error) throw new Error(error.message);
+
+    const existingByCO = new Map<string, number>();
+    const sigByCO = new Map<string, Set<string>>();
+    for (const e of (existing ?? []) as any[]) {
+      if (e.status === "cancelada") continue;
+      existingByCO.set(e.customer_order, (existingByCO.get(e.customer_order) ?? 0) + 1);
+      const set = sigByCO.get(e.customer_order) ?? new Set<string>();
+      // barcode = `${barcode_base}-${order_number}` — extraímos o código do produto
+      const base = String(e.barcode ?? "").split("-")[0];
+      if (base) set.add(base);
+      sigByCO.set(e.customer_order, set);
+    }
+
+    const per_customer = cos.map((co) => {
+      const rows = data.rows.filter((r) => r.customer_order === co);
+      const to_create = rows.reduce((a, r) => a + r.quantity, 0);
+      const sigs = sigByCO.get(co) ?? new Set<string>();
+      const duplicate_signature = rows.filter((r) => sigs.has(r.barcode_base)).length;
+      return { customer_order: co, existing: existingByCO.get(co) ?? 0, to_create, duplicate_signature };
+    });
+
+    return {
+      per_customer,
+      existing_total: per_customer.reduce((a, p) => a + p.existing, 0),
+      to_create_total: per_customer.reduce((a, p) => a + p.to_create, 0),
+    };
+  });
+
 export const bulkImportSimpleOrders = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z.object({ rows: z.array(simpleRowSchema).min(1).max(2000) }).parse(d),
   )
   .handler(async ({ data, context }): Promise<BulkSimpleResult> => {
+    await assertAdminOrOffice(context);
     const { supabase, userId } = context;
 
     // Agrupa por customer_order (preserva ordem de chegada).
