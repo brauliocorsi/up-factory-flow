@@ -14,6 +14,7 @@ import { ProductionLabel, LabelPrintStyles } from "@/components/labels/Productio
 
 const searchSchema = z.object({
   ids: z.string().optional(), // comma-separated uuids
+  colis: z.string().optional(), // comma-separated order_colis uuids (opcional)
   autoprint: z.union([z.literal("1"), z.literal("0")]).optional(),
 });
 
@@ -23,13 +24,17 @@ export const Route = createFileRoute("/_authenticated/etiquetas/imprimir")({
 });
 
 function ImprimirPage() {
-  const { ids, autoprint } = useSearch({ from: "/_authenticated/etiquetas/imprimir" });
+  const { ids, colis, autoprint } = useSearch({ from: "/_authenticated/etiquetas/imprimir" });
   const idList = (ids ?? "").split(",").map((s: string) => s.trim()).filter(Boolean);
+  const coliList = (colis ?? "").split(",").map((s: string) => s.trim()).filter(Boolean);
   const [copies, setCopies] = useState(1);
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["labels", idList.join(",")],
-    queryFn: () => getLabelsForOrders({ data: { ids: idList } }),
+    queryKey: ["labels", idList.join(","), coliList.join(",")],
+    queryFn: () =>
+      getLabelsForOrders({
+        data: { ids: idList, ...(coliList.length ? { coli_ids: coliList } : {}) },
+      }),
     enabled: idList.length > 0,
   });
 
@@ -46,10 +51,12 @@ function ImprimirPage() {
     }, 400);
     return () => clearTimeout(t);
   }, [autoprint, isLoading, rows.length]);
-  const missing = rows.filter((r) => r.packages.length === 0).map((r) => r.order.order_number);
+  const missing = rows
+    .filter((r) => r.colis.length === 0 && r.packages.length === 0)
+    .map((r) => r.order.order_number);
 
   const totalLabels = rows.reduce(
-    (acc, r) => acc + Math.max(r.packages.length, 1) * copies,
+    (acc, r) => acc + Math.max(r.colis.length, r.packages.length, 1) * copies,
     0,
   );
 
@@ -126,8 +133,26 @@ function ImprimirPage() {
 }
 
 function renderLabelsForOrder(row: LabelRow, copies: number) {
-  const { order, packages } = row;
-  const list = packages.length ? packages : [null];
+  const { order, packages, colis } = row;
+  // Preferir os volumes reais da encomenda: cada etiqueta leva o código do
+  // volume, que é o mesmo lido na picagem.
+  const list: ({ id: string; package_number: number; package_total: number; package_name: string; barcode?: string } | null)[] =
+    colis.length
+      ? colis.map((c) => ({
+          id: c.id,
+          package_number: c.coli_number,
+          package_total: colis.length,
+          package_name: c.coli_name,
+          barcode: c.coli_barcode,
+        }))
+      : packages.length
+        ? packages.map((p) => ({
+            id: p.id,
+            package_number: p.package_number,
+            package_total: p.package_total,
+            package_name: p.package_name,
+          }))
+        : [null];
   const out: ReactElement[] = [];
   for (const pkg of list) {
     for (let c = 0; c < copies; c++) {
@@ -136,7 +161,7 @@ function renderLabelsForOrder(row: LabelRow, copies: number) {
         <ProductionLabel
           key={key}
           orderNumber={order.order_number}
-          barcodeValue={order.barcode || order.order_number}
+          barcodeValue={pkg?.barcode || order.barcode || order.order_number}
           productDescription={order.product_description}
           modelName={order.model_name}
           measure={order.measure}

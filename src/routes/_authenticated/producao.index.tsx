@@ -871,6 +871,7 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
               key={c.id}
               coli={c}
               coliTotal={coliTotal}
+              showLabel={isPacking}
               canAct={canAct}
               operatorCode={operatorCode}
               pending={coliPending}
@@ -883,9 +884,10 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
   );
 }
 
-function ColiRow({ coli, coliTotal, canAct, operatorCode, pending, onAction }: {
+function ColiRow({ coli, coliTotal, canAct, operatorCode, pending, onAction, showLabel = false }: {
   coli: ColiStageItem;
   coliTotal?: number;
+  showLabel?: boolean;
   canAct: boolean;
   operatorCode?: string;
   pending: boolean;
@@ -925,6 +927,14 @@ function ColiRow({ coli, coliTotal, canAct, operatorCode, pending, onAction }: {
         </div>
       </div>
       <div className="flex items-center gap-1">
+        {showLabel && (
+          <PrintLabelButton
+            orderId={coli.order_id}
+            coliId={coli.order_coli_id}
+            label="Etiquetar volume"
+            className="h-8 gap-1"
+          />
+        )}
         {!canAct ? (
           <span className="text-[11px] text-muted-foreground inline-flex items-center gap-1">
             <Lock className="size-3" /> Sem permissão

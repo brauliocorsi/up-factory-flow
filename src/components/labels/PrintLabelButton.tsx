@@ -12,12 +12,15 @@ import { toast } from "sonner";
  */
 export function PrintLabelButton({
   orderId,
+  coliId,
   label = "Etiquetar",
   size = "sm",
   variant = "outline",
   className,
 }: {
   orderId: string;
+  /** Quando indicado, imprime apenas a etiqueta deste volume. */
+  coliId?: string;
   label?: string;
   size?: "sm" | "lg" | "default" | "icon";
   variant?: "default" | "outline" | "ghost" | "secondary" | "destructive" | "link";
@@ -38,7 +41,10 @@ export function PrintLabelButton({
       iframe.style.height = "0";
       iframe.style.border = "0";
       iframe.style.visibility = "hidden";
-      iframe.src = `/etiquetas/imprimir?ids=${encodeURIComponent(orderId)}&autoprint=1`;
+      iframe.src =
+        `/etiquetas/imprimir?ids=${encodeURIComponent(orderId)}` +
+        (coliId ? `&colis=${encodeURIComponent(coliId)}` : "") +
+        `&autoprint=1`;
       // Salvaguarda: remover iframe e reativar botão passados 8s
       const cleanup = () => {
         try { document.body.removeChild(iframe); } catch { /* já removido */ }

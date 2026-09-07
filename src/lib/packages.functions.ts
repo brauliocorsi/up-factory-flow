@@ -94,12 +94,19 @@ export type LabelRow = {
     observation: string | null;
   };
   packages: ModelPackage[]; // [] when none defined for the model
+  /** Volumes reais desta encomenda (order_colis). Preferidos na etiqueta. */
+  colis: { id: string; coli_number: number; coli_name: string; coli_barcode: string }[];
 };
 
 export const getLabelsForOrders = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({ ids: z.array(z.string().uuid()).min(1).max(200) }).parse(d),
+    z
+      .object({
+        ids: z.array(z.string().uuid()).min(1).max(200),
+        coli_ids: z.array(z.string().uuid()).max(200).optional(),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }): Promise<LabelRow[]> => {
     const { supabase } = context;
@@ -123,6 +130,20 @@ export const getLabelsForOrders = createServerFn({ method: "POST" })
         .in("model_id", modelIds);
       if (pe) throw new Error(pe.message);
       pkgs = p ?? [];
+    }
+
+    // Volumes reais (order_colis) — a etiqueta do posto de embalagem tem de
+    // identificar o volume verdadeiro, com o código lido na picagem.
+    let colis: any[] = [];
+    {
+      let q = (supabase as any)
+        .from("order_colis")
+        .select("id, order_id, coli_number, coli_name, coli_barcode")
+        .in("order_id", data.ids);
+      if (data.coli_ids?.length) q = q.in("id", data.coli_ids);
+      const { data: c, error: ce } = await q;
+      if (ce) throw new Error(ce.message);
+      colis = c ?? [];
     }
 
     // Preserve requested order
@@ -153,6 +174,15 @@ export const getLabelsForOrders = createServerFn({ method: "POST" })
             observation: o.observation ?? null,
           },
           packages: chosen.sort((a, b) => a.package_number - b.package_number),
+          colis: colis
+            .filter((c) => c.order_id === o.id)
+            .sort((a, b) => a.coli_number - b.coli_number)
+            .map((c) => ({
+              id: c.id,
+              coli_number: c.coli_number,
+              coli_name: c.coli_name,
+              coli_barcode: c.coli_barcode,
+            })),
         };
       });
   });
