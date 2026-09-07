@@ -87,6 +87,16 @@ export function BulkOrderActions({ ids, canEdit, isAdmin, onDone }: Props) {
     onError: (e: any) => toast.error(e?.message ?? "Erro ao apagar"),
   });
 
+  const testFlag = useMutation({
+    mutationFn: (is_test: boolean) => setOrdersTestFlag({ data: { order_ids: ids, is_test } }),
+    onSuccess: (r: any) => {
+      if (r?.ok === false) { toast.error(r.message); return; }
+      toast.success(`${r?.updated ?? 0} encomenda(s) atualizada(s)`);
+      refresh();
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Erro ao marcar como teste"),
+  });
+
   if (!canEdit || ids.length === 0) return null;
 
   return (
