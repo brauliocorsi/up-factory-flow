@@ -191,7 +191,11 @@ export const recordStageEvent = createServerFn({ method: "POST" })
 export const getAppSettings = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data, error } = await context.supabase
+    // Leitura autorizada: o posto precisa de saber o modo de identificação
+    // mesmo com perfil "apenas operador" (F04) — nunca cair em modo errado.
+    const { operationalReader } = await import("./operationalRead.server");
+    const sb = await operationalReader(context as any);
+    const { data, error } = await sb
       .from("app_settings")
       .select("identification_mode")
       .eq("id", 1)
