@@ -559,16 +559,10 @@ function ProducaoPage() {
 }
 
 
-function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinutes, colis, isMultiColiOrder, onColiAction, coliPending, fabricConsumption, canUndoFabric, canQuality = false }: {
-  canQuality?: boolean;
-  item: ProductionStageOrder;
-  canAct: boolean;
-  onAction: (event: "iniciar"|"pausar"|"retomar"|"finalizar") => void;
-  pending: boolean;
-  operatorCode: string;
-  expectedMinutes: number | null;
-  colis: ColiStageItem[];
+function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinutes, colis, isMultiColiOrder, coliTotal = 0, onColiAction, coliPending, fabricConsumption, canUndoFabric, canQuality = false }: {
+...
   isMultiColiOrder: boolean;
+  coliTotal?: number;
   onColiAction: (coli_stage_id: string, event: "iniciar"|"pausar"|"retomar"|"finalizar") => void;
   coliPending: boolean;
   fabricConsumption?: { meters: number; fabric_ref_code: string | null; color_code: string | null } | null;
