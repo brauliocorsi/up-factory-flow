@@ -8,7 +8,8 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogD
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { bulkCancelOrders, bulkDeleteOrders, setOrdersDates, setOrdersPriority } from "@/lib/orders.functions";
 import { activateOrders } from "@/lib/planning.functions";
-import { CalendarDays, Flag, PlayCircle, Trash2, XCircle } from "lucide-react";
+import { setOrdersTestFlag } from "@/lib/analytics.functions";
+import { CalendarDays, FlaskConical, Flag, PlayCircle, Trash2, XCircle } from "lucide-react";
 
 type Props = {
   ids: string[];
