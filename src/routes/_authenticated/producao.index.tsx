@@ -174,6 +174,8 @@ function ProducaoPage() {
   const [showRunning, setShowRunning] = useState<boolean>(true);
   const [showDone, setShowDone] = useState<boolean>(false);
   const [onlyMine, setOnlyMine] = useState<boolean>(!search.q);
+  const [onlyReady, setOnlyReady] = useState<boolean>(false);
+  const [readyDefaultApplied, setReadyDefaultApplied] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>(search.q ?? "");
   useEffect(() => {
     if (search.q) {
