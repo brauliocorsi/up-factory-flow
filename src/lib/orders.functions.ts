@@ -513,6 +513,8 @@ export type BulkSimpleResult = {
   notes: number;
   per_customer: Array<{ customer_order: string; created: number; first_order_number: string }>;
   batch_hints: Array<{ kind: "corte" | "estrutura"; label: string; count: number }>;
+  /** Etapa 09: verdadeiro quando o pedido é uma repetição da mesma intenção. */
+  repeated?: boolean;
 };
 
 /**
@@ -575,11 +577,61 @@ export const previewSimpleImport = createServerFn({ method: "POST" })
 export const bulkImportSimpleOrders = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({ rows: z.array(simpleRowSchema).min(1).max(2000) }).parse(d),
+    z
+      .object({
+        rows: z.array(simpleRowSchema).min(1).max(2000),
+        intent_id: z.string().trim().min(8).max(64).optional(),
+        file_hash: z.string().trim().max(128).optional(),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }): Promise<BulkSimpleResult> => {
     await assertAdminOrOffice(context);
     const { supabase, userId } = context;
+
+    // Etapa 09: intenção persistente — clique repetido ou resposta perdida
+    // devolve o lote anterior em vez de criar unidades a dobrar.
+    const intentId = data.intent_id ?? null;
+    let batchId: string | null = null;
+    if (intentId) {
+      const { data: prev } = await (supabase as any)
+        .from("import_batches")
+        .select("id, status, result")
+        .eq("intent_id", intentId)
+        .maybeSingle();
+      if (prev?.status === "concluido" && prev?.result) {
+        return { ...(prev.result as BulkSimpleResult), repeated: true };
+      }
+      if (prev?.id) {
+        batchId = prev.id as string;
+      } else {
+        const { data: ins, error: insErr } = await (supabase as any)
+          .from("import_batches")
+          .insert({
+            intent_id: intentId,
+            user_id: userId,
+            file_hash: data.file_hash ?? null,
+            rows_count: data.rows.length,
+          })
+          .select("id")
+          .maybeSingle();
+        if (insErr) {
+          // Corrida entre dois pedidos da mesma intenção: reutiliza o existente.
+          const { data: again } = await (supabase as any)
+            .from("import_batches")
+            .select("id, status, result")
+            .eq("intent_id", intentId)
+            .maybeSingle();
+          if (again?.status === "concluido" && again?.result) {
+            return { ...(again.result as BulkSimpleResult), repeated: true };
+          }
+          batchId = again?.id ?? null;
+        } else {
+          batchId = ins?.id ?? null;
+        }
+      }
+    }
+
 
     // Agrupa por customer_order (preserva ordem de chegada).
     const byCO = new Map<string, typeof data.rows>();
@@ -666,12 +718,21 @@ export const bulkImportSimpleOrders = createServerFn({ method: "POST" })
     // Fase C: deteção proativa de lotes (≥ 2 encomendas iguais no backlog)
     const batch_hints = await computeBatchHints(supabase, toInsert);
 
-    return {
+    const result: BulkSimpleResult = {
       created: count ?? toInsert.length,
       notes: customerOrders.length,
       per_customer: perCustomer,
       batch_hints,
     };
+
+    if (batchId) {
+      await (supabase as any)
+        .from("import_batches")
+        .update({ status: "concluido", created_count: result.created, result })
+        .eq("id", batchId);
+    }
+
+    return result;
   });
 
 async function computeBatchHints(

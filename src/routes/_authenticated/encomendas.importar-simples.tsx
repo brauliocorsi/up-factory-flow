@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { bulkImportSimpleOrders, previewSimpleImport, type ImportPreview } from "@/lib/orders.functions";
@@ -110,11 +110,19 @@ function ImportarSimplesPage() {
   const [mapping, setMapping] = useState<{ code?: string; qty?: string; customer_order?: string; due_date?: string }>({});
   const [decoded, setDecoded] = useState<DecodedRow[]>([]);
   const [lastHints, setLastHints] = useState<Array<{ kind: string; label: string; count: number }>>([]);
+  // Etapa 09: intenção estável da importação em preparação.
+  const intentRef = useRef<string | null>(null);
 
   const bulk = useMutation({
     mutationFn: (payload: any) => bulkImportSimpleOrders({ data: payload }),
     onSuccess: (res: any) => {
-      toast.success(`${res.created} encomenda(s) criadas em ${res.notes} nota(s) — backlog (pendentes).`);
+      if (res.repeated) {
+        toast.info(
+          `Esta importação já tinha sido feita: ${res.created} encomenda(s). Nada foi criado a dobrar.`,
+        );
+      } else {
+        toast.success(`${res.created} encomenda(s) criadas em ${res.notes} nota(s) — backlog (pendentes).`);
+      }
       setLastHints(res.batch_hints ?? []);
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
@@ -128,6 +136,7 @@ function ImportarSimplesPage() {
 
   function reset() {
     setStep(1); setFileName(""); setHeaders([]); setRows([]); setMapping({}); setDecoded([]);
+    intentRef.current = null;
   }
 
   function downloadTemplate() {
@@ -270,7 +279,12 @@ function ImportarSimplesPage() {
   function doImport() {
     const valid = decoded.filter((r) => r.ok);
     if (!valid.length) { toast.error("Sem linhas válidas para importar"); return; }
+    // Etapa 09: identificador estável desta importação. Repetir o pedido (clique
+    // duplo, resposta perdida) devolve o mesmo lote em vez de duplicar unidades.
+    if (!intentRef.current) intentRef.current = crypto.randomUUID();
     bulk.mutate({
+      intent_id: intentRef.current,
+      file_hash: `${fileName}|${valid.length}|${valid.reduce((a, r) => a + r.quantity, 0)}`,
       rows: valid.map((r) => ({
         customer_order: r.customer_order,
         quantity: r.quantity,

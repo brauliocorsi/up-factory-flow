@@ -138,8 +138,23 @@ function ColiRoutesAdmin() {
 
       {cat && struct && (
         <>
+          {/* Etapa 03: avisar quando um volume está sem etapas configuradas */}
+          {routes.some((r) => !r.stages.some((s) => s.included)) && (
+            <Card className="p-3 border-destructive/40 bg-destructive/5 text-sm">
+              <strong>Configuração em falta.</strong> Estes volumes não têm
+              nenhuma etapa marcada:{" "}
+              {routes
+                .filter((r) => !r.stages.some((s) => s.included))
+                .map((r) => r.coli_name || `Volume ${r.coli_number}`)
+                .join(", ")}
+              . Enquanto isso não for definido, as encomendas desta estrutura
+              usam o percurso completo em cada volume.
+            </Card>
+          )}
+
           {/* Lista de colis existentes */}
           <div className="space-y-3">
+
             {routes.map((r) => (
               <RouteRow
                 key={r.id}

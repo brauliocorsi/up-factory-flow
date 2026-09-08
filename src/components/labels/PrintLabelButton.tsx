@@ -1,19 +1,22 @@
-import { useState } from "react";
-import { Printer } from "lucide-react";
+import { useRef, useState } from "react";
+import { Printer, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 /**
- * Botão que imprime a etiqueta de uma encomenda diretamente, sem abrir
- * janela de pré-visualização. Usa um iframe oculto que aponta para
+ * Botão que prepara a etiqueta de uma encomenda (ou de um volume) e abre o
+ * diálogo de impressão do dispositivo. Usa um iframe oculto que aponta para
  * /etiquetas/imprimir?ids=<id>&autoprint=1 — essa página dispara
- * window.print() automaticamente quando as etiquetas terminam de
- * renderizar.
+ * window.print() quando as etiquetas terminam de renderizar.
+ *
+ * Etapa 06: nunca afirmamos "impresso com sucesso" (não há confirmação do
+ * dispositivo); o iframe só é removido depois do fim da impressão ou de uma
+ * espera longa, para não cancelar o diálogo enquanto ainda carrega.
  */
 export function PrintLabelButton({
   orderId,
   coliId,
-  label = "Etiquetar",
+  label = "Imprimir etiqueta",
   size = "sm",
   variant = "outline",
   className,
@@ -27,9 +30,15 @@ export function PrintLabelButton({
   className?: string;
 }) {
   const [printing, setPrinting] = useState(false);
+  const busy = useRef(false);
+
+  const url =
+    `/etiquetas/imprimir?ids=${encodeURIComponent(orderId)}` +
+    (coliId ? `&colis=${encodeURIComponent(coliId)}` : "");
 
   function handlePrint() {
-    if (printing) return;
+    if (busy.current) return;
+    busy.current = true;
     setPrinting(true);
     try {
       const iframe = document.createElement("iframe");
@@ -41,43 +50,62 @@ export function PrintLabelButton({
       iframe.style.height = "0";
       iframe.style.border = "0";
       iframe.style.visibility = "hidden";
-      iframe.src =
-        `/etiquetas/imprimir?ids=${encodeURIComponent(orderId)}` +
-        (coliId ? `&colis=${encodeURIComponent(coliId)}` : "") +
-        `&autoprint=1`;
-      // Salvaguarda: remover iframe e reativar botão passados 8s
+      iframe.src = `${url}&autoprint=1`;
+
+      let done = false;
       const cleanup = () => {
+        if (done) return;
+        done = true;
+        window.clearTimeout(timer);
         try { document.body.removeChild(iframe); } catch { /* já removido */ }
+        busy.current = false;
         setPrinting(false);
       };
-      const timer = window.setTimeout(cleanup, 8000);
+      // Salvaguarda longa: só limpa se o dispositivo nunca responder.
+      const timer = window.setTimeout(cleanup, 120000);
+
       iframe.addEventListener("load", () => {
-        // o próprio documento dispara window.print(); aguardamos um pouco
-        // antes de limpar para não cancelar o diálogo do browser.
-        window.setTimeout(() => {
-          window.clearTimeout(timer);
-          cleanup();
-        }, 4000);
+        try {
+          const win = iframe.contentWindow;
+          if (win) {
+            win.addEventListener("afterprint", () => window.setTimeout(cleanup, 500));
+          }
+        } catch {
+          /* sem acesso ao iframe — fica a salvaguarda */
+        }
+        toast.success("Diálogo de impressão preparado — confirma na impressora.");
       });
+
       document.body.appendChild(iframe);
-      toast.success("A enviar etiqueta para a impressora…");
     } catch (e: any) {
+      busy.current = false;
       setPrinting(false);
-      toast.error(e?.message ?? "Não foi possível imprimir a etiqueta");
+      toast.error(e?.message ?? "Não foi possível preparar a etiqueta");
     }
   }
 
   return (
-    <Button
-      type="button"
-      size={size}
-      variant={variant}
-      onClick={handlePrint}
-      disabled={printing}
-      className={className ?? "gap-1"}
-    >
-      <Printer className="size-4" />
-      {printing ? "A imprimir…" : label}
-    </Button>
+    <span className="inline-flex items-center gap-1">
+      <Button
+        type="button"
+        size={size}
+        variant={variant}
+        onClick={handlePrint}
+        disabled={printing}
+        className={className ?? "gap-1"}
+      >
+        <Printer className="size-4" />
+        {printing ? "A preparar…" : label}
+      </Button>
+      <a
+        href={url}
+        target="_blank"
+        rel="noreferrer"
+        title="Abrir a página da etiqueta"
+        className="text-muted-foreground hover:text-foreground"
+      >
+        <ExternalLink className="size-3.5" />
+      </a>
+    </span>
   );
 }
