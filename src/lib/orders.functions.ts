@@ -299,7 +299,12 @@ export const createOrder = createServerFn({ method: "POST" })
 
     const rows: any[] = [];
     for (let i = 0; i < quantity; i++) {
-      const orderNumber = seq === -1 ? base : `${base}-${String(seq + 1 + i).padStart(2, "0")}`;
+      const orderNumber =
+        typedSuffix && quantity === 1
+          ? typed
+          : seq === -1
+            ? base
+            : `${base}-${String(seq + 1 + i).padStart(2, "0")}`;
       const bc = (data.barcode && data.barcode.trim()) || "";
       rows.push({
         ...baseRow,
