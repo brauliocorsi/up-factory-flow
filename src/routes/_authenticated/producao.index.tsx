@@ -430,6 +430,15 @@ function ProducaoPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card p-3 rounded-lg border">
         <div className="flex flex-wrap items-center gap-2">
           <button
+            onClick={() => setOnlyReady((v) => !v)}
+            title="Mostrar só as que já podem ser iniciadas (e as que estão em curso)"
+            className={`text-xs font-medium px-2.5 py-1.5 rounded-md border transition ${
+              onlyReady ? "bg-emerald-700 text-white border-emerald-700" : "bg-card hover:bg-accent"
+            }`}
+          >
+            {onlyReady ? "✓ " : ""}Prontas para iniciar
+          </button>
+          <button
             onClick={() => setShowPending((v) => !v)}
             className={`text-xs font-medium px-2.5 py-1.5 rounded-md border transition ${
               showPending ? "bg-slate-600 text-white border-slate-600" : "bg-card hover:bg-accent"
