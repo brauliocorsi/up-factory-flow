@@ -63,3 +63,11 @@ Se algo correr mal num ensaio: marcar as encomendas de teste como teste, cancela
 
 ## 7. Primeiro teste a fazer
 Ver `TESTES-MANUAIS.md`, percurso 1 (uma cama de teste do início ao fim).
+
+
+## Etapa 14 — fecho de permissões e integridade (08/09/2026)
+
+- Verificado na base que nenhuma função interna pode ser chamada diretamente pela aplicação nem por visitantes anónimos: só a própria base as executa, sempre a partir de funções que confirmam quem está a agir.
+- Verificado no código que qualquer alteração a encomendas e etapas passa por uma função de servidor que confirma o perfil (administração/escritório) ou por uma função da base com autorização própria.
+- Verificação técnica sem erros e 18 páginas do sistema abertas com sucesso.
+- Continua por fazer, e depende de equipamento e pessoas no terreno: o ensaio completo dos 14 percursos com leitor de códigos, impressora de etiquetas e recetor de stock reais (ver `TESTES-MANUAIS.md`).
