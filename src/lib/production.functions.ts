@@ -210,6 +210,9 @@ export const updateAppSettings = createServerFn({ method: "POST" })
     z.object({ identification_mode: z.enum(["codigo","sessao"]) }).parse(d)
   )
   .handler(async ({ data, context }) => {
+    // Etapa 02: perfil verificado no servidor, não apenas na interface.
+    const { assertAnyRole } = await import("./roleGuards");
+    await assertAnyRole(context, ["admin"], "alterar o modo de identificação");
     const { error } = await (context.supabase as any)
       .from("app_settings")
       .update({ identification_mode: data.identification_mode, updated_at: new Date().toISOString() })
@@ -259,6 +262,9 @@ export const setOperatorStages = createServerFn({ method: "POST" })
     }).parse(d)
   )
   .handler(async ({ data, context }) => {
+    // Etapa 02: atribuir postos é administrativo.
+    const { assertAnyRole } = await import("./roleGuards");
+    await assertAnyRole(context, ["admin"], "atribuir etapas a operadores");
     const sb = context.supabase as any;
     const { error: delErr } = await sb.from("operator_stages").delete().eq("operator_id", data.operator_id);
     if (delErr) throw new Error(delErr.message);
