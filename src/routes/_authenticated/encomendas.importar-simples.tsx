@@ -110,6 +110,8 @@ function ImportarSimplesPage() {
   const [mapping, setMapping] = useState<{ code?: string; qty?: string; customer_order?: string; due_date?: string }>({});
   const [decoded, setDecoded] = useState<DecodedRow[]>([]);
   const [lastHints, setLastHints] = useState<Array<{ kind: string; label: string; count: number }>>([]);
+  // Etapa 09: intenção estável da importação em preparação.
+  const intentRef = useRef<string | null>(null);
 
   const bulk = useMutation({
     mutationFn: (payload: any) => bulkImportSimpleOrders({ data: payload }),
