@@ -96,6 +96,8 @@ export type LabelRow = {
   packages: ModelPackage[]; // [] when none defined for the model
   /** Volumes reais desta encomenda (order_colis). Preferidos na etiqueta. */
   colis: { id: string; coli_number: number; coli_name: string; coli_barcode: string }[];
+  /** Total real de volumes da encomenda (mesmo quando só se imprime um). */
+  coli_total: number;
 };
 
 export const getLabelsForOrders = createServerFn({ method: "POST" })
