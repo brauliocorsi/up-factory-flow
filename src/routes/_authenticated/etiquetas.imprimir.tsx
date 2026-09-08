@@ -143,7 +143,7 @@ function renderLabelsForOrder(row: LabelRow, copies: number) {
       ? colis.map((c) => ({
           id: c.id,
           package_number: c.coli_number,
-          package_total: colis.length,
+          package_total: coliTotal,
           package_name: c.coli_name,
           barcode: c.coli_barcode,
         }))
