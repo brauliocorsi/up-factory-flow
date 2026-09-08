@@ -270,7 +270,12 @@ function ImportarSimplesPage() {
   function doImport() {
     const valid = decoded.filter((r) => r.ok);
     if (!valid.length) { toast.error("Sem linhas válidas para importar"); return; }
+    // Etapa 09: identificador estável desta importação. Repetir o pedido (clique
+    // duplo, resposta perdida) devolve o mesmo lote em vez de duplicar unidades.
+    if (!intentRef.current) intentRef.current = crypto.randomUUID();
     bulk.mutate({
+      intent_id: intentRef.current,
+      file_hash: `${fileName}|${valid.length}|${valid.reduce((a, r) => a + r.quantity, 0)}`,
       rows: valid.map((r) => ({
         customer_order: r.customer_order,
         quantity: r.quantity,
