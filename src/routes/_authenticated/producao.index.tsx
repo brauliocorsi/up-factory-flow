@@ -834,7 +834,7 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
               />
             )}
             {isPacking && (
-              <PrintLabelButton orderId={item.order_id} label="Etiquetar" />
+              <PrintLabelButton orderId={item.order_id} label="Imprimir etiqueta" />
             )}
           </>
         )}
@@ -931,7 +931,7 @@ function ColiRow({ coli, coliTotal, canAct, operatorCode, pending, onAction, sho
           <PrintLabelButton
             orderId={coli.order_id}
             coliId={coli.order_coli_id}
-            label="Etiquetar volume"
+            label="Imprimir etiqueta do volume"
             className="h-8 gap-1"
           />
         )}

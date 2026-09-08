@@ -322,7 +322,12 @@ export const getFabricConsumeContext = createServerFn({ method: "POST" })
       s.from("ref_fabric_types").select("id, code, name").eq("active", true).order("code"),
       s.from("ref_fabric_refs").select("id, code, name, fabric_type_id").eq("active", true).order("code"),
       s.from("ref_colors").select("id, code, name").eq("active", true).order("code"),
-      s.from("fabric_consumptions").select("*").eq("order_id", data.order_id).maybeSingle(),
+      s
+        .from("fabric_consumptions")
+        .select("*")
+        .eq("order_id", data.order_id)
+        .is("reverted_at", null)
+        .maybeSingle(),
     ]);
 
     const rolls = rollsRes.data ?? [];
@@ -353,6 +358,7 @@ export const listFabricConsumptions = createServerFn({ method: "POST" })
     const { data: rows, error } = await (context.supabase as any)
       .from("fabric_consumptions")
       .select("order_id, roll_id, fabric_ref_code, color_code, meters, created_at")
+      .is("reverted_at", null)
       .in("order_id", data.order_ids.slice(0, 500));
     if (error) throw new Error(error.message);
     return rows ?? [];

@@ -104,6 +104,8 @@ export type Database = {
           meters: number
           operator_id: string | null
           order_id: string
+          reverted_at: string | null
+          reverted_by: string | null
           roll_id: string | null
         }
         Insert: {
@@ -114,6 +116,8 @@ export type Database = {
           meters: number
           operator_id?: string | null
           order_id: string
+          reverted_at?: string | null
+          reverted_by?: string | null
           roll_id?: string | null
         }
         Update: {
@@ -124,6 +128,8 @@ export type Database = {
           meters?: number
           operator_id?: string | null
           order_id?: string
+          reverted_at?: string | null
+          reverted_by?: string | null
           roll_id?: string | null
         }
         Relationships: [
@@ -232,6 +238,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      import_batches: {
+        Row: {
+          created_at: string
+          created_count: number
+          file_hash: string | null
+          id: string
+          intent_id: string
+          result: Json | null
+          rows_count: number
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_count?: number
+          file_hash?: string | null
+          id?: string
+          intent_id: string
+          result?: Json | null
+          rows_count?: number
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_count?: number
+          file_hash?: string | null
+          id?: string
+          intent_id?: string
+          result?: Json | null
+          rows_count?: number
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       import_mappings: {
         Row: {
@@ -899,8 +944,10 @@ export type Database = {
       quality_checks: {
         Row: {
           created_at: string
+          family_code: string | null
           has_nok: boolean
           id: string
+          intent_id: string | null
           notes: string | null
           operator_id: string | null
           order_id: string
@@ -909,8 +956,10 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          family_code?: string | null
           has_nok?: boolean
           id?: string
+          intent_id?: string | null
           notes?: string | null
           operator_id?: string | null
           order_id: string
@@ -919,8 +968,10 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          family_code?: string | null
           has_nok?: boolean
           id?: string
+          intent_id?: string | null
           notes?: string | null
           operator_id?: string | null
           order_id?: string
@@ -2109,6 +2160,7 @@ export type Database = {
         Args: {
           _detected_stage: Database["public"]["Enums"]["production_stage"]
           _operator_code: string
+          _order_coli_id?: string
           _order_id: string
           _reason_id: string
           _reason_notes: string

@@ -228,6 +228,11 @@ const submitSchema = z.object({
   result: z.enum(["aprovado", "reprovado"]),
   notes: z.string().trim().max(2000).nullable().optional(),
   order_stage_id: z.string().uuid().nullable().optional(),
+  // Etapa 05: família escolhida no posto (CAM/SOF) e chave de intenção do
+  // utilizador — a mesma chave repetida devolve a conferência já gravada.
+  family_code: z.enum(["CAM", "SOF"]).nullable().optional(),
+  intent_id: z.string().uuid().nullable().optional(),
+
   items: z.array(z.object({
     template_item_id: z.string().uuid().nullable().optional(),
     label: z.string().trim().min(1).max(200),
@@ -252,6 +257,16 @@ export const submitQualityCheck = createServerFn({ method: "POST" })
     if (!link) throw new Error(`O operador ${op.code} não está atribuído à qualidade`);
 
     const has_nok = data.items.some((i) => i.status === "nok");
+
+    // Etapa 05: submissão repetida (clique duplo ou resposta perdida) devolve
+    // a conferência já gravada em vez de criar outra.
+    if (data.intent_id) {
+      const { data: prev } = await sb.from("quality_checks")
+        .select("id, has_nok").eq("intent_id", data.intent_id).maybeSingle();
+      if (prev) {
+        return { ok: true as const, check_id: (prev as any).id, has_nok: (prev as any).has_nok, repeated: true };
+      }
+    }
 
     // Fase 3: aprovar com item NOK não é permitido a ninguém.
     if (data.result === "aprovado" && has_nok) {
@@ -288,15 +303,27 @@ export const submitQualityCheck = createServerFn({ method: "POST" })
     }
 
     const { data: check, error: cErr } = await sb.from("quality_checks").insert({
-
       order_id: data.order_id,
       template_id: data.template_id ?? null,
+      family_code: data.family_code ?? null,
+      intent_id: data.intent_id ?? null,
       operator_id: op.id,
       result: data.result,
       has_nok,
       notes: data.notes ?? null,
     }).select("id").single();
-    if (cErr) throw new Error(cErr.message);
+    if (cErr) {
+      // Corrida com a mesma intenção: recuperar a conferência gravada.
+      if (data.intent_id) {
+        const { data: prev } = await sb.from("quality_checks")
+          .select("id, has_nok").eq("intent_id", data.intent_id).maybeSingle();
+        if (prev) {
+          return { ok: true as const, check_id: (prev as any).id, has_nok: (prev as any).has_nok, repeated: true };
+        }
+      }
+      throw new Error(cErr.message);
+    }
+
 
     const itemRows = data.items.map((i) => ({
       check_id: check.id,
@@ -407,4 +434,78 @@ export const signQualityPhoto = createServerFn({ method: "POST" })
     const { data: signed, error } = await sb.storage.from("quality-photos").createSignedUrl(data.path, 600);
     if (error) throw new Error(error.message);
     return { url: signed.signedUrl as string };
+  });
+
+/* ------------------------------------------------------------------ */
+/* Etapa 05 — duas bases de qualidade: CAMA e SOFÁ                      */
+/* ------------------------------------------------------------------ */
+
+export type QualityFamilyCode = "CAM" | "SOF";
+
+export type QualityFamiliesResult = {
+  suggested: QualityFamilyCode | null;
+  suggested_source: "categoria" | "codigo" | "descricao" | null;
+  families: {
+    code: QualityFamilyCode;
+    label: string;
+    template: QualityTemplate | null;
+  }[];
+};
+
+/**
+ * Devolve as duas bases (CAMA/SOFÁ) e qual delas corresponde à encomenda.
+ * Nunca bloqueia: se não houver categoria fiável, o operador escolhe.
+ */
+export const getQualityFamilies = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ order_id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }): Promise<QualityFamiliesResult> => {
+    const { operationalReader } = await import("./operationalRead.server");
+    const sb = await operationalReader(context as any);
+    const norm = (s: unknown) => (typeof s === "string" ? s.trim().toUpperCase() : "");
+
+    let suggested: QualityFamilyCode | null = null;
+    let source: QualityFamiliesResult["suggested_source"] = null;
+    try {
+      const { data: o } = await sb
+        .from("production_orders")
+        .select("id, product_description, barcode, models(category_id, ref_categories:category_id(code))")
+        .eq("id", data.order_id)
+        .maybeSingle();
+      const cat = norm((o as any)?.models?.ref_categories?.code);
+      if (cat === "CAM" || cat === "SOF") {
+        suggested = cat; source = "categoria";
+      } else {
+        const bc = norm((o as any)?.barcode).slice(0, 3);
+        if (bc === "CAM" || bc === "SOF") { suggested = bc as QualityFamilyCode; source = "codigo"; }
+        else {
+          const desc = norm((o as any)?.product_description);
+          if (/\bCAMA|SOMMIER\b/.test(desc)) { suggested = "CAM"; source = "descricao"; }
+          else if (/SOF[AÁ]/.test(desc)) { suggested = "SOF"; source = "descricao"; }
+        }
+      }
+    } catch {
+      /* sem sugestão — o operador escolhe */
+    }
+
+    const load = async (code: QualityFamilyCode): Promise<QualityTemplate | null> => {
+      const { data: t } = await sb.from("quality_templates")
+        .select("id, category_code, name, active, is_default")
+        .eq("category_code", code).eq("active", true)
+        .order("created_at", { ascending: false }).limit(1).maybeSingle();
+      if (!t) return null;
+      const { data: items } = await sb.from("quality_template_items")
+        .select("id, label, sort_order").eq("template_id", (t as any).id).order("sort_order");
+      return { ...(t as any), items: (items ?? []) as any[] };
+    };
+
+    const [cam, sof] = await Promise.all([load("CAM"), load("SOF")]);
+    return {
+      suggested,
+      suggested_source: source,
+      families: [
+        { code: "CAM", label: "CAMA", template: cam },
+        { code: "SOF", label: "SOFÁ", template: sof },
+      ],
+    };
   });
