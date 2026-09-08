@@ -648,6 +648,12 @@ export const reconcileDispatchBatch = createServerFn({ method: "POST" })
         : "Marcado como falhado pelo escritório (repetir envio)",
     });
     if (rpcErr) return { ok: false as const, message: rpcErr.message };
+    if ((recRes as any)?.ok === false) {
+      return {
+        ok: false as const,
+        message: (recRes as any)?.message ?? "Não foi possível confirmar este lote.",
+      };
+    }
     return {
       ok: true as const,
       message: data.outcome === "confirmado"
