@@ -244,7 +244,21 @@ export const createOrder = createServerFn({ method: "POST" })
     const quantity = data.quantity ?? 1;
     // Base = nº de encomenda escrito (sem sufixo -NN). Várias unidades do mesmo
     // nº ficam numeradas BASE-01, BASE-02, … e agrupadas por customer_order.
-    const base = data.order_number.replace(/-(\d{1,3})$/, "");
+    const typed = data.order_number.trim();
+    const typedSuffix = /-(\d{1,3})$/.test(typed);
+    const base = typed.replace(/-(\d{1,3})$/, "");
+
+    // Nº escrito já com sufixo (ex.: 16550-01) e uma só unidade: respeita-se
+    // exatamente o que foi escrito, para a etiqueta coincidir com o papel.
+    if (typedSuffix && quantity === 1) {
+      const { data: dup, error: dupErr } = await supabase
+        .from("production_orders")
+        .select("id")
+        .eq("order_number", typed)
+        .limit(1);
+      if (dupErr) throw new Error(dupErr.message);
+      if (dup?.length) throw new Error(`Já existe uma encomenda com o número ${typed}.`);
+    }
 
     const { data: existingRows, error: exErr } = await supabase
       .from("production_orders")
