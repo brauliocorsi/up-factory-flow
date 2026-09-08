@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   getOperatorEfficiency,
   getOperatorTimeBreakdown,
+  getLaborByPersonDaily,
   listForgottenStages,
   pauseForgottenStage,
 } from "@/lib/analytics.functions";
@@ -142,6 +143,7 @@ function RelatoriosPage() {
       </Card>
 
       <TimeBreakdownCard from={from} to={to} />
+      <LaborByDayCard from={from} to={to} />
       <ForgottenStagesCard />
     </div>
   );
