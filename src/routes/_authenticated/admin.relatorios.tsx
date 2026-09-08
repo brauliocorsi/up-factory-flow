@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   getOperatorEfficiency,
   getOperatorTimeBreakdown,
+  getLaborByPersonDaily,
   listForgottenStages,
   pauseForgottenStage,
 } from "@/lib/analytics.functions";
@@ -142,6 +143,7 @@ function RelatoriosPage() {
       </Card>
 
       <TimeBreakdownCard from={from} to={to} />
+      <LaborByDayCard from={from} to={to} />
       <ForgottenStagesCard />
     </div>
   );
@@ -192,6 +194,87 @@ function TimeBreakdownCard({ from, to }: { from: string; to: string }) {
             ))}
           </tbody>
         </table>
+      </div>
+    </Card>
+  );
+}
+
+function LaborByDayCard({ from, to }: { from: string; to: string }) {
+  const fetchFn = useServerFn(getLaborByPersonDaily);
+  const { data, isLoading } = useQuery({
+    queryKey: ["labor-by-day", from, to],
+    queryFn: () => fetchFn({ data: { from, to } }),
+  });
+  const rows = data && data.ok ? data.rows : [];
+  const errorMsg = data && !data.ok ? data.message : null;
+
+  const byDay = useMemo(() => {
+    const m = new Map<string, typeof rows>();
+    for (const r of rows) {
+      const arr = m.get(r.day) ?? [];
+      arr.push(r);
+      m.set(r.day, arr);
+    }
+    return Array.from(m.entries());
+  }, [rows]);
+
+  function exportCsv() {
+    const lines = [["Dia", "Código", "Nome", "Minutos", "Volumes"].join(";")];
+    for (const r of rows) lines.push([r.day, r.operator_code, r.operator_name, r.minutos, r.volumes].join(";"));
+    const blob = new Blob(["\ufeff" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `mao-de-obra-${from}-a-${to}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+  }
+
+  return (
+    <Card className="p-4 space-y-3">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="font-semibold">Mão de obra por pessoa e por dia</h2>
+          <p className="text-xs text-muted-foreground">
+            Tempo realmente passado a trabalhar em cada volume, repartido pelo dia em que aconteceu (hora de Portugal).
+            Trabalho que atravessa a meia-noite conta em cada dia. Encomendas de teste ficam de fora.
+          </p>
+        </div>
+        <Button onClick={exportCsv} variant="outline" className="gap-2" disabled={!rows.length}>
+          <Download className="size-4" />CSV
+        </Button>
+      </div>
+      {errorMsg && <p className="text-sm text-destructive">{errorMsg}</p>}
+      {isLoading && <p className="text-sm text-muted-foreground">A carregar…</p>}
+      {!isLoading && !errorMsg && rows.length === 0 && (
+        <p className="text-sm text-muted-foreground">
+          Sem tempos registados no período. Este quadro conta a partir do momento em que passou a guardar-se o histórico por volume.
+        </p>
+      )}
+      <div className="space-y-4">
+        {byDay.map(([day, items]) => {
+          const total = items.reduce((a, r) => a + r.minutos, 0);
+          return (
+            <div key={day}>
+              <div className="flex items-center justify-between text-sm font-medium">
+                <span>{day}</span>
+                <span className="text-muted-foreground">{total} min no total</span>
+              </div>
+              <table className="w-full text-sm mt-1">
+                <tbody>
+                  {items.map((r) => (
+                    <tr key={`${day}-${r.operator_id ?? r.operator_code}`} className="border-b last:border-0">
+                      <td className="py-1.5">
+                        <div className="font-medium">{r.operator_name}</div>
+                        <div className="text-[11px] text-muted-foreground">{r.operator_code}</div>
+                      </td>
+                      <td className="text-right">{r.volumes} volume(s)</td>
+                      <td className="text-right w-24">{r.minutos} min</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+        })}
       </div>
     </Card>
   );

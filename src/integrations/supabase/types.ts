@@ -35,6 +35,111 @@ export type Database = {
         }
         Relationships: []
       }
+      coli_stage_time_logs: {
+        Row: {
+          created_at: string
+          event: string
+          event_at: string
+          id: string
+          operator_id: string | null
+          order_coli_id: string | null
+          order_coli_stage_id: string
+          order_id: string | null
+          stage: Database["public"]["Enums"]["production_stage"] | null
+        }
+        Insert: {
+          created_at?: string
+          event: string
+          event_at?: string
+          id?: string
+          operator_id?: string | null
+          order_coli_id?: string | null
+          order_coli_stage_id: string
+          order_id?: string | null
+          stage?: Database["public"]["Enums"]["production_stage"] | null
+        }
+        Update: {
+          created_at?: string
+          event?: string
+          event_at?: string
+          id?: string
+          operator_id?: string | null
+          order_coli_id?: string | null
+          order_coli_stage_id?: string
+          order_id?: string | null
+          stage?: Database["public"]["Enums"]["production_stage"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coli_stage_time_logs_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coli_stage_time_logs_order_coli_stage_id_fkey"
+            columns: ["order_coli_stage_id"]
+            isOneToOne: false
+            referencedRelation: "order_coli_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coli_stage_work_intervals: {
+        Row: {
+          created_at: string
+          ended_at: string
+          id: string
+          operator_id: string | null
+          order_coli_id: string | null
+          order_coli_stage_id: string
+          order_id: string | null
+          seconds: number
+          stage: Database["public"]["Enums"]["production_stage"] | null
+          started_at: string
+        }
+        Insert: {
+          created_at?: string
+          ended_at: string
+          id?: string
+          operator_id?: string | null
+          order_coli_id?: string | null
+          order_coli_stage_id: string
+          order_id?: string | null
+          seconds: number
+          stage?: Database["public"]["Enums"]["production_stage"] | null
+          started_at: string
+        }
+        Update: {
+          created_at?: string
+          ended_at?: string
+          id?: string
+          operator_id?: string | null
+          order_coli_id?: string | null
+          order_coli_stage_id?: string
+          order_id?: string | null
+          seconds?: number
+          stage?: Database["public"]["Enums"]["production_stage"] | null
+          started_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coli_stage_work_intervals_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coli_stage_work_intervals_order_coli_stage_id_fkey"
+            columns: ["order_coli_stage_id"]
+            isOneToOne: false
+            referencedRelation: "order_coli_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       covers: {
         Row: {
           active: boolean
@@ -2059,6 +2164,17 @@ export type Database = {
       }
       is_operator_only: { Args: { _user_id: string }; Returns: boolean }
       is_picker_only: { Args: { _user_id: string }; Returns: boolean }
+      labor_by_person: {
+        Args: { _from: string; _to: string }
+        Returns: {
+          day: string
+          operator_code: string
+          operator_id: string
+          operator_name: string
+          seconds: number
+          stages: number
+        }[]
+      }
       list_forgotten_stages: {
         Args: { _min_hours?: number }
         Returns: {
