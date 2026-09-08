@@ -291,10 +291,11 @@ function ProducaoPage() {
         if (it.status === "em_curso" && !showRunning) return false;
         if (it.status === "concluida" && !showDone) return false;
         if ((it.status === "pendente" || it.status === "bloqueada") && !showPending) return false;
+        if (onlyReady && it.status !== "em_curso" && !isReadyToStart(it)) return false;
         return true;
       })
       .sort((a, b) => rank(a) - rank(b));
-  }, [allItems, searchQuery, onlyMine, showRunning, showDone, showPending, currentOp]);
+  }, [allItems, searchQuery, onlyMine, showRunning, showDone, showPending, onlyReady, currentOp]);
   const hiddenCount = allItems.length - items.length;
 
   const sidebar = <StageQueuePanel stage={activeStage} variant="sidebar" />;
