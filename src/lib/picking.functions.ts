@@ -529,21 +529,38 @@ export const listPendingDispatch = createServerFn({ method: "GET" })
     const limit = data.limit ?? 100;
     const offset = data.offset ?? 0;
 
-    // Filtrar primeiro (nada é escondido por um limite cego): as já enviadas
-    // saem da lista antes da paginação.
-    const { data: sentRows } = await supabase
-      .from("picking_dispatches")
-      .select("order_id")
-      .eq("status", "enviado");
-    const sentSet = new Set(((sentRows ?? []) as any[]).map((d) => d.order_id));
+    // Etapa 12: percorre todas as páginas dos envios confirmados; um limite
+    // cego faria uma encomenda antiga reaparecer como pendente.
+    const sentSet = new Set<string>();
+    for (let from = 0; ; from += 1000) {
+      const { data: sentRows, error: sentErr } = await supabase
+        .from("picking_dispatches")
+        .select("order_id")
+        .eq("status", "enviado")
+        .order("order_id", { ascending: true })
+        .range(from, from + 999);
+      if (sentErr) throw new Error(sentErr.message);
+      const batch = (sentRows ?? []) as any[];
+      for (const d of batch) sentSet.add(d.order_id);
+      if (batch.length < 1000) break;
+    }
 
-    const { data: stages, error } = await supabase
-      .from("order_stages")
-      .select("order_id, finished_at, production_orders!inner(id, order_number, product_description, structure_type, measure, color, status)")
-      .eq("stage", "picagem")
-      .eq("status", "concluida")
-      .order("finished_at", { ascending: false });
-    if (error) throw new Error(error.message);
+    // Todas as picagens concluídas, em páginas, com ordenação estável.
+    const stages: any[] = [];
+    for (let from = 0; ; from += 1000) {
+      const { data: page, error } = await supabase
+        .from("order_stages")
+        .select("order_id, finished_at, production_orders!inner(id, order_number, product_description, structure_type, measure, color, status)")
+        .eq("stage", "picagem")
+        .eq("status", "concluida")
+        .order("finished_at", { ascending: false })
+        .order("order_id", { ascending: true })
+        .range(from, from + 999);
+      if (error) throw new Error(error.message);
+      const batch = (page ?? []) as any[];
+      stages.push(...batch);
+      if (batch.length < 1000) break;
+    }
 
     const rows = ((stages ?? []) as any[]).filter(
       (s) => s.production_orders?.status !== "cancelada" && !sentSet.has(s.order_id),
