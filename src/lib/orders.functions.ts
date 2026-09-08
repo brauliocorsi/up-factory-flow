@@ -575,11 +575,61 @@ export const previewSimpleImport = createServerFn({ method: "POST" })
 export const bulkImportSimpleOrders = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({ rows: z.array(simpleRowSchema).min(1).max(2000) }).parse(d),
+    z
+      .object({
+        rows: z.array(simpleRowSchema).min(1).max(2000),
+        intent_id: z.string().trim().min(8).max(64).optional(),
+        file_hash: z.string().trim().max(128).optional(),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }): Promise<BulkSimpleResult> => {
     await assertAdminOrOffice(context);
     const { supabase, userId } = context;
+
+    // Etapa 09: intenção persistente — clique repetido ou resposta perdida
+    // devolve o lote anterior em vez de criar unidades a dobrar.
+    const intentId = data.intent_id ?? null;
+    let batchId: string | null = null;
+    if (intentId) {
+      const { data: prev } = await (supabase as any)
+        .from("import_batches")
+        .select("id, status, result")
+        .eq("intent_id", intentId)
+        .maybeSingle();
+      if (prev?.status === "concluido" && prev?.result) {
+        return { ...(prev.result as BulkSimpleResult), repeated: true };
+      }
+      if (prev?.id) {
+        batchId = prev.id as string;
+      } else {
+        const { data: ins, error: insErr } = await (supabase as any)
+          .from("import_batches")
+          .insert({
+            intent_id: intentId,
+            user_id: userId,
+            file_hash: data.file_hash ?? null,
+            rows_count: data.rows.length,
+          })
+          .select("id")
+          .maybeSingle();
+        if (insErr) {
+          // Corrida entre dois pedidos da mesma intenção: reutiliza o existente.
+          const { data: again } = await (supabase as any)
+            .from("import_batches")
+            .select("id, status, result")
+            .eq("intent_id", intentId)
+            .maybeSingle();
+          if (again?.status === "concluido" && again?.result) {
+            return { ...(again.result as BulkSimpleResult), repeated: true };
+          }
+          batchId = again?.id ?? null;
+        } else {
+          batchId = ins?.id ?? null;
+        }
+      }
+    }
+
 
     // Agrupa por customer_order (preserva ordem de chegada).
     const byCO = new Map<string, typeof data.rows>();
