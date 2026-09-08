@@ -116,7 +116,13 @@ function ImportarSimplesPage() {
   const bulk = useMutation({
     mutationFn: (payload: any) => bulkImportSimpleOrders({ data: payload }),
     onSuccess: (res: any) => {
-      toast.success(`${res.created} encomenda(s) criadas em ${res.notes} nota(s) — backlog (pendentes).`);
+      if (res.repeated) {
+        toast.info(
+          `Esta importação já tinha sido feita: ${res.created} encomenda(s). Nada foi criado a dobrar.`,
+        );
+      } else {
+        toast.success(`${res.created} encomenda(s) criadas em ${res.notes} nota(s) — backlog (pendentes).`);
+      }
       setLastHints(res.batch_hints ?? []);
       qc.invalidateQueries({ queryKey: ["orders"] });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
@@ -130,6 +136,7 @@ function ImportarSimplesPage() {
 
   function reset() {
     setStep(1); setFileName(""); setHeaders([]); setRows([]); setMapping({}); setDecoded([]);
+    intentRef.current = null;
   }
 
   function downloadTemplate() {
