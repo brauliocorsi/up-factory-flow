@@ -467,6 +467,15 @@ export const sendPickingBatchToStock = createServerFn({ method: "POST" })
         };
       }
 
+      // Etapa 11: a base volta a validar a elegibilidade antes de confirmar.
+      if ((res as any)?.ok === false) {
+        return {
+          success: false,
+          status: response.status,
+          message: `${(res as any)?.message ?? "Não foi possível confirmar o envio."}${rejectedNote}`,
+        };
+      }
+
       const concluded = (res as any)?.concluded ?? 0;
 
       return {
