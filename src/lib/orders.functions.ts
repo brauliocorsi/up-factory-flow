@@ -513,6 +513,8 @@ export type BulkSimpleResult = {
   notes: number;
   per_customer: Array<{ customer_order: string; created: number; first_order_number: string }>;
   batch_hints: Array<{ kind: "corte" | "estrutura"; label: string; count: number }>;
+  /** Etapa 09: verdadeiro quando o pedido é uma repetição da mesma intenção. */
+  repeated?: boolean;
 };
 
 /**
