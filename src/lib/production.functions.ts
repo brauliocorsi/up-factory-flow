@@ -210,6 +210,9 @@ export const updateAppSettings = createServerFn({ method: "POST" })
     z.object({ identification_mode: z.enum(["codigo","sessao"]) }).parse(d)
   )
   .handler(async ({ data, context }) => {
+    // Etapa 02: perfil verificado no servidor, não apenas na interface.
+    const { assertAnyRole } = await import("./roleGuards");
+    await assertAnyRole(context, ["admin"], "alterar o modo de identificação");
     const { error } = await (context.supabase as any)
       .from("app_settings")
       .update({ identification_mode: data.identification_mode, updated_at: new Date().toISOString() })
