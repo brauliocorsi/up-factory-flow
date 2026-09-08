@@ -165,30 +165,52 @@ export const upsertProductSla = createServerFn({ method: "POST" })
  */
 export const getExpectedForOrders = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => {
-    const parsed = z.object({
-      orders: z.array(z.object({
-        order_id: z.string().uuid(),
-        stage: z.enum(STAGES),
-      })),
-    }).parse(d);
-    // Defensivo: em vez de rejeitar listas grandes, trunca para um limite seguro.
-    return { orders: parsed.orders.slice(0, 500) };
-  })
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        orders: z
+          .array(
+            z.object({
+              order_id: z.string().uuid(),
+              stage: z.enum(STAGES),
+            }),
+          )
+          .max(5000),
+      })
+      .parse(d),
+  )
   .handler(async ({ data, context }): Promise<Record<string, Partial<Record<Stage, number | null>>>> => {
     const sb = context.supabase as any;
     const out: Record<string, Partial<Record<Stage, number | null>>> = {};
     if (data.orders.length === 0) return out;
-    // Chamadas em paralelo via RPC — barata para listas de etapas em curso.
-    await Promise.all(data.orders.map(async ({ order_id, stage }) => {
-      try {
-        const { data: res } = await sb.rpc("get_expected_minutes", { _order_id: order_id, _stage: stage });
-        const v = typeof res === "number" ? res : null;
-        out[order_id] = { ...(out[order_id] ?? {}), [stage]: v };
-      } catch {
-        out[order_id] = { ...(out[order_id] ?? {}), [stage]: null };
-      }
-    }));
+
+    // Etapa 12: nada é cortado em silêncio. Remove repetições e processa
+    // todos os pares em lotes com concorrência limitada.
+    const seen = new Set<string>();
+    const pairs = data.orders.filter((p) => {
+      const k = `${p.order_id}|${p.stage}`;
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+
+    const CHUNK = 50;
+    for (let i = 0; i < pairs.length; i += CHUNK) {
+      const chunk = pairs.slice(i, i + CHUNK);
+      await Promise.all(
+        chunk.map(async ({ order_id, stage }) => {
+          try {
+            const { data: res } = await sb.rpc("get_expected_minutes", { _order_id: order_id, _stage: stage });
+            const v = typeof res === "number" ? res : null;
+            out[order_id] = { ...(out[order_id] ?? {}), [stage]: v };
+          } catch {
+            // Falta de meta e falha de consulta ficam ambas como "sem meta",
+            // mas o par pedido é sempre devolvido.
+            out[order_id] = { ...(out[order_id] ?? {}), [stage]: null };
+          }
+        }),
+      );
+    }
     return out;
   });
 
