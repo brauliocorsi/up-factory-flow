@@ -1846,6 +1846,10 @@ export type Database = {
         Args: { _op: Database["public"]["Tables"]["operators"]["Row"] }
         Returns: undefined
       }
+      assert_picking_actor: {
+        Args: { _op: Database["public"]["Tables"]["operators"]["Row"] }
+        Returns: undefined
+      }
       assert_previous_stages_done: {
         Args: {
           _order_id: string
