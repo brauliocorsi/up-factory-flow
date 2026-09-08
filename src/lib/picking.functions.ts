@@ -637,7 +637,7 @@ export const reconcileDispatchBatch = createServerFn({ method: "POST" })
     const orderIds = ((rows ?? []) as any[]).map((r) => r.order_id);
     if (orderIds.length === 0) return { ok: false as const, message: "Lote não encontrado." };
 
-    const { error: rpcErr } = await (supabase as any).rpc("record_picking_dispatch", {
+    const { data: recRes, error: rpcErr } = await (supabase as any).rpc("record_picking_dispatch", {
       _batch_id: data.batch_id,
       _order_ids: orderIds,
       _operator_code: data.operator_code,
