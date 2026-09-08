@@ -136,17 +136,19 @@ export const getLabelsForOrders = createServerFn({ method: "POST" })
 
     // Volumes reais (order_colis) — a etiqueta do posto de embalagem tem de
     // identificar o volume verdadeiro, com o código lido na picagem.
-    let colis: any[] = [];
+    // Lê sempre TODOS os volumes da encomenda: o total "N de M" tem de ser o
+    // real, mesmo quando só se imprime a etiqueta de um volume.
+    let allColis: any[] = [];
     {
-      let q = (supabase as any)
+      const { data: c, error: ce } = await (supabase as any)
         .from("order_colis")
         .select("id, order_id, coli_number, coli_name, coli_barcode")
         .in("order_id", data.ids);
-      if (data.coli_ids?.length) q = q.in("id", data.coli_ids);
-      const { data: c, error: ce } = await q;
       if (ce) throw new Error(ce.message);
-      colis = c ?? [];
+      allColis = c ?? [];
     }
+    const selectedIds = data.coli_ids?.length ? new Set(data.coli_ids) : null;
+    const colis = selectedIds ? allColis.filter((c) => selectedIds.has(c.id)) : allColis;
 
     // Preserve requested order
     const byId = new Map<string, any>((orders ?? []).map((o: any) => [o.id, o]));
