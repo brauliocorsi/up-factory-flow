@@ -302,6 +302,12 @@ function ProducaoPage() {
 
   // Painel pessoal: um operador (login) vê apenas as etapas a que está ligado.
   const isOperatorOnly = role === "operador";
+  // Base para operadores: mostrar apenas o que já pode ser iniciado.
+  useEffect(() => {
+    if (readyDefaultApplied || !role) return;
+    if (isOperatorOnly && !search.q) setOnlyReady(true);
+    setReadyDefaultApplied(true);
+  }, [role, isOperatorOnly, readyDefaultApplied, search.q]);
   const myStages = useMemo<Stage[]>(
     () => VISIBLE_STAGES.filter((s) => currentOp?.stages.includes(s)),
     [currentOp],
