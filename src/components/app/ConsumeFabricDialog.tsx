@@ -57,8 +57,18 @@ export function ConsumeFabricDialog({
 
   useEffect(() => {
     if (!ctx?.ok) return;
-    setRefCode((prev) => prev || (ctx.order?.fabric_ref ?? ""));
-    setColorCode((prev) => prev || (ctx.order?.color ?? ""));
+    // A encomenda guarda o NOME da referência/cor; os rolos e as listas usam o
+    // CÓDIGO. Traduzir nome → código para o pré-preenchimento funcionar.
+    const toCode = (list: Ref[], value: string | null | undefined) => {
+      if (!value) return "";
+      const v = String(value).trim().toLowerCase();
+      const hit = list.find(
+        (r) => r.code?.toLowerCase() === v || r.name?.toLowerCase() === v,
+      );
+      return hit?.code ?? "";
+    };
+    setRefCode((prev) => prev || toCode(ctx.fabric_refs ?? [], ctx.order?.fabric_ref));
+    setColorCode((prev) => prev || toCode(ctx.colors ?? [], ctx.order?.color));
     setMeters((prev) => prev || (ctx.meters_per_unit != null ? String(ctx.meters_per_unit) : ""));
   }, [ctx]);
 
