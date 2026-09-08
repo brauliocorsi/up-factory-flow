@@ -174,6 +174,8 @@ function ProducaoPage() {
   const [showRunning, setShowRunning] = useState<boolean>(true);
   const [showDone, setShowDone] = useState<boolean>(false);
   const [onlyMine, setOnlyMine] = useState<boolean>(!search.q);
+  const [onlyReady, setOnlyReady] = useState<boolean>(false);
+  const [readyDefaultApplied, setReadyDefaultApplied] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>(search.q ?? "");
   useEffect(() => {
     if (search.q) {
@@ -289,16 +291,23 @@ function ProducaoPage() {
         if (it.status === "em_curso" && !showRunning) return false;
         if (it.status === "concluida" && !showDone) return false;
         if ((it.status === "pendente" || it.status === "bloqueada") && !showPending) return false;
+        if (onlyReady && it.status !== "em_curso" && !isReadyToStart(it)) return false;
         return true;
       })
       .sort((a, b) => rank(a) - rank(b));
-  }, [allItems, searchQuery, onlyMine, showRunning, showDone, showPending, currentOp]);
+  }, [allItems, searchQuery, onlyMine, showRunning, showDone, showPending, onlyReady, currentOp]);
   const hiddenCount = allItems.length - items.length;
 
   const sidebar = <StageQueuePanel stage={activeStage} variant="sidebar" />;
 
   // Painel pessoal: um operador (login) vê apenas as etapas a que está ligado.
   const isOperatorOnly = role === "operador";
+  // Base para operadores: mostrar apenas o que já pode ser iniciado.
+  useEffect(() => {
+    if (readyDefaultApplied || !role) return;
+    if (isOperatorOnly && !search.q) setOnlyReady(true);
+    setReadyDefaultApplied(true);
+  }, [role, isOperatorOnly, readyDefaultApplied, search.q]);
   const myStages = useMemo<Stage[]>(
     () => VISIBLE_STAGES.filter((s) => currentOp?.stages.includes(s)),
     [currentOp],
@@ -420,6 +429,15 @@ function ProducaoPage() {
       {/* Filtros e Pesquisa */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card p-3 rounded-lg border">
         <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setOnlyReady((v) => !v)}
+            title="Mostrar só as que já podem ser iniciadas (e as que estão em curso)"
+            className={`text-xs font-medium px-2.5 py-1.5 rounded-md border transition ${
+              onlyReady ? "bg-emerald-700 text-white border-emerald-700" : "bg-card hover:bg-accent"
+            }`}
+          >
+            {onlyReady ? "✓ " : ""}Prontas para iniciar
+          </button>
           <button
             onClick={() => setShowPending((v) => !v)}
             className={`text-xs font-medium px-2.5 py-1.5 rounded-md border transition ${
