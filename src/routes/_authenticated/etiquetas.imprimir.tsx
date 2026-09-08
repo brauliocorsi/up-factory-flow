@@ -134,6 +134,8 @@ function ImprimirPage() {
 
 function renderLabelsForOrder(row: LabelRow, copies: number) {
   const { order, packages, colis } = row;
+  // Total real de volumes da encomenda (não apenas os que estão a ser impressos).
+  const coliTotal = Math.max(row.coli_total ?? colis.length, colis.length);
   // Preferir os volumes reais da encomenda: cada etiqueta leva o código do
   // volume, que é o mesmo lido na picagem.
   const list: ({ id: string; package_number: number; package_total: number; package_name: string; barcode?: string } | null)[] =
