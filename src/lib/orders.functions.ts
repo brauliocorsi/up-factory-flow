@@ -718,12 +718,21 @@ export const bulkImportSimpleOrders = createServerFn({ method: "POST" })
     // Fase C: deteção proativa de lotes (≥ 2 encomendas iguais no backlog)
     const batch_hints = await computeBatchHints(supabase, toInsert);
 
-    return {
+    const result: BulkSimpleResult = {
       created: count ?? toInsert.length,
       notes: customerOrders.length,
       per_customer: perCustomer,
       batch_hints,
     };
+
+    if (batchId) {
+      await (supabase as any)
+        .from("import_batches")
+        .update({ status: "concluido", created_count: result.created, result })
+        .eq("id", batchId);
+    }
+
+    return result;
   });
 
 async function computeBatchHints(
