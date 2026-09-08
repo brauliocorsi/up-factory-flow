@@ -187,6 +187,7 @@ export const getLabelsForOrders = createServerFn({ method: "POST" })
               coli_name: c.coli_name,
               coli_barcode: c.coli_barcode,
             })),
+          coli_total: allColis.filter((c) => c.order_id === o.id).length,
         };
       });
   });
