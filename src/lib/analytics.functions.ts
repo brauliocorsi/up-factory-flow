@@ -344,3 +344,49 @@ export const setOrdersTestFlag = createServerFn({ method: "POST" })
     if (error) return { ok: false as const, message: error.message };
     return { ok: true as const, updated: Number(res ?? 0) };
   });
+
+// ============================================================
+// Etapa 13 — mão de obra por pessoa e por dia (Europe/Lisbon)
+// ============================================================
+
+export type LaborDayRow = {
+  day: string;              // AAAA-MM-DD (hora de Lisboa)
+  operator_id: string | null;
+  operator_code: string;
+  operator_name: string;
+  minutos: number;
+  volumes: number;
+};
+
+/**
+ * Reparte o tempo efectivamente trabalhado por pessoa e por dia, a partir dos
+ * períodos de trabalho registados em cada volume. Períodos que atravessam a
+ * meia-noite são divididos pelo dia respectivo (hora de Lisboa). Encomendas
+ * marcadas como teste ficam de fora. Só admin/escritório.
+ */
+export const getLaborByPersonDaily = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }): Promise<{ ok: true; rows: LaborDayRow[] } | { ok: false; message: string }> => {
+    const { data: res, error } = await (context.supabase as any).rpc("labor_by_person", {
+      _from: data.from,
+      _to: data.to,
+    });
+    if (error) return { ok: false as const, message: error.message };
+    const rows: LaborDayRow[] = ((res ?? []) as any[]).map((r) => ({
+      day: String(r.day),
+      operator_id: r.operator_id ?? null,
+      operator_code: r.operator_code ?? "—",
+      operator_name: r.operator_name ?? "Sem operador",
+      minutos: Math.round(Number(r.seconds ?? 0) / 60),
+      volumes: Number(r.stages ?? 0),
+    }));
+    return { ok: true as const, rows };
+  });
