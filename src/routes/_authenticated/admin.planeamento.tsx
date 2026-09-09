@@ -84,6 +84,12 @@ function PlaneamentoAdminPage() {
             </span>
           )}
           <Link
+            to="/admin/planeamento/painel"
+            className="inline-flex items-center gap-2 rounded-md border bg-card px-3 py-1.5 text-sm font-medium hover:bg-accent"
+          >
+            <BarChart3 className="size-4" /> Painel de planeamento
+          </Link>
+          <Link
             to="/admin/planeamento/carga"
             className="inline-flex items-center gap-2 rounded-md border bg-card px-3 py-1.5 text-sm font-medium hover:bg-accent"
           >
