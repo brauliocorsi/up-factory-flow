@@ -131,10 +131,11 @@ function EncomendasPage() {
         </div>
       </div>
 
-      <Tabs value={tab} onValueChange={(v) => setTab(v as "lista" | "planeamento" | "historico")}>
+      <Tabs value={tab} onValueChange={(v) => setTab(v as "lista" | "planeamento" | "por-data" | "historico")}>
         <TabsList>
           <TabsTrigger value="lista">Lista</TabsTrigger>
           <TabsTrigger value="planeamento">Planeamento</TabsTrigger>
+          <TabsTrigger value="por-data">Por data</TabsTrigger>
           <TabsTrigger value="historico">Histórico</TabsTrigger>
         </TabsList>
         <TabsContent value="lista" className="mt-4 space-y-4">
