@@ -137,6 +137,7 @@ function ProducaoPage() {
 
   useRealtimeOrders([["production"], ...VISIBLE_STAGES.map((s) => ["production-colis", s])], {
     enabled: Boolean(session),
+    debounceMs: 120,
     tables: [
       "production_orders",
       "order_stages",
