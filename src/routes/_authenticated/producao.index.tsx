@@ -633,10 +633,11 @@ function ProducaoPage() {
               colis={colisByStage?.byOrder?.[it.order_id] ?? []}
               isMultiColiOrder={activeStage !== "estrutura" && activeStage !== "corte" && (colisByStage?.multiColiOrderIds ?? []).includes(it.order_id)}
               coliTotal={colisByStage?.coliCountByOrder?.[it.order_id] ?? 0}
-              onColiAction={(coli_stage_id, event) =>
-                coliMutation.mutate({ order_coli_stage_id: coli_stage_id, event })
-              }
-              coliPending={coliMutation.isPending}
+              onColiAction={(coli_stage_id, event) => {
+                if (busyIds[coli_stage_id]) return;
+                coliMutation.mutate({ order_coli_stage_id: coli_stage_id, event });
+              }}
+              coliPending={(id: string) => Boolean(busyIds[id])}
               fabricConsumption={consumptionByOrder[it.order_id] ?? null}
               canUndoFabric={isStaff}
               canQuality={canActOnStage("qualidade")}
