@@ -623,8 +623,11 @@ function ProducaoPage() {
               key={it.id}
               item={it}
               canAct={canActOnStage(activeStage) && !!currentOp}
-              onAction={(event) => mutation.mutate({ order_stage_id: it.id, event })}
-              pending={mutation.isPending}
+              onAction={(event) => {
+                if (busyIds[it.id]) return;
+                mutation.mutate({ order_stage_id: it.id, event });
+              }}
+              pending={Boolean(busyIds[it.id])}
               operatorCode={operatorCode.trim()}
               expectedMinutes={expectedMap?.[it.order_id]?.[it.stage] ?? null}
               colis={colisByStage?.byOrder?.[it.order_id] ?? []}
