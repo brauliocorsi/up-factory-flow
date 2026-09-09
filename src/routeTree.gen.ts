@@ -45,6 +45,7 @@ import { Route as AuthenticatedAdminCatalogoRouteImport } from './routes/_authen
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as AuthenticatedEncomendasIdEtiquetaRouteImport } from './routes/_authenticated/encomendas.$id.etiqueta'
+import { Route as AuthenticatedAdminPlaneamentoPainelRouteImport } from './routes/_authenticated/admin.planeamento.painel'
 import { Route as AuthenticatedAdminPlaneamentoCargaRouteImport } from './routes/_authenticated/admin.planeamento.carga'
 
 const PainelRoute = PainelRouteImport.update({
@@ -249,6 +250,12 @@ const AuthenticatedEncomendasIdEtiquetaRoute =
     path: '/encomendas/$id/etiqueta',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAdminPlaneamentoPainelRoute =
+  AuthenticatedAdminPlaneamentoPainelRouteImport.update({
+    id: '/painel',
+    path: '/painel',
+    getParentRoute: () => AuthenticatedAdminPlaneamentoRoute,
+  } as any)
 const AuthenticatedAdminPlaneamentoCargaRoute =
   AuthenticatedAdminPlaneamentoCargaRouteImport.update({
     id: '/carga',
@@ -292,6 +299,7 @@ export interface FileRoutesByFullPath {
   '/producao/': typeof AuthenticatedProducaoIndexRoute
   '/stock/': typeof AuthenticatedStockIndexRoute
   '/admin/planeamento/carga': typeof AuthenticatedAdminPlaneamentoCargaRoute
+  '/admin/planeamento/painel': typeof AuthenticatedAdminPlaneamentoPainelRoute
   '/encomendas/$id/etiqueta': typeof AuthenticatedEncomendasIdEtiquetaRoute
 }
 export interface FileRoutesByTo {
@@ -330,6 +338,7 @@ export interface FileRoutesByTo {
   '/producao': typeof AuthenticatedProducaoIndexRoute
   '/stock': typeof AuthenticatedStockIndexRoute
   '/admin/planeamento/carga': typeof AuthenticatedAdminPlaneamentoCargaRoute
+  '/admin/planeamento/painel': typeof AuthenticatedAdminPlaneamentoPainelRoute
   '/encomendas/$id/etiqueta': typeof AuthenticatedEncomendasIdEtiquetaRoute
 }
 export interface FileRoutesById {
@@ -370,6 +379,7 @@ export interface FileRoutesById {
   '/_authenticated/producao/': typeof AuthenticatedProducaoIndexRoute
   '/_authenticated/stock/': typeof AuthenticatedStockIndexRoute
   '/_authenticated/admin/planeamento/carga': typeof AuthenticatedAdminPlaneamentoCargaRoute
+  '/_authenticated/admin/planeamento/painel': typeof AuthenticatedAdminPlaneamentoPainelRoute
   '/_authenticated/encomendas/$id/etiqueta': typeof AuthenticatedEncomendasIdEtiquetaRoute
 }
 export interface FileRouteTypes {
@@ -410,6 +420,7 @@ export interface FileRouteTypes {
     | '/producao/'
     | '/stock/'
     | '/admin/planeamento/carga'
+    | '/admin/planeamento/painel'
     | '/encomendas/$id/etiqueta'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -448,6 +459,7 @@ export interface FileRouteTypes {
     | '/producao'
     | '/stock'
     | '/admin/planeamento/carga'
+    | '/admin/planeamento/painel'
     | '/encomendas/$id/etiqueta'
   id:
     | '__root__'
@@ -487,6 +499,7 @@ export interface FileRouteTypes {
     | '/_authenticated/producao/'
     | '/_authenticated/stock/'
     | '/_authenticated/admin/planeamento/carga'
+    | '/_authenticated/admin/planeamento/painel'
     | '/_authenticated/encomendas/$id/etiqueta'
   fileRoutesById: FileRoutesById
 }
@@ -755,6 +768,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEncomendasIdEtiquetaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin/planeamento/painel': {
+      id: '/_authenticated/admin/planeamento/painel'
+      path: '/painel'
+      fullPath: '/admin/planeamento/painel'
+      preLoaderRoute: typeof AuthenticatedAdminPlaneamentoPainelRouteImport
+      parentRoute: typeof AuthenticatedAdminPlaneamentoRoute
+    }
     '/_authenticated/admin/planeamento/carga': {
       id: '/_authenticated/admin/planeamento/carga'
       path: '/carga'
@@ -780,12 +800,15 @@ const AuthenticatedPicagemRouteWithChildren =
 
 interface AuthenticatedAdminPlaneamentoRouteChildren {
   AuthenticatedAdminPlaneamentoCargaRoute: typeof AuthenticatedAdminPlaneamentoCargaRoute
+  AuthenticatedAdminPlaneamentoPainelRoute: typeof AuthenticatedAdminPlaneamentoPainelRoute
 }
 
 const AuthenticatedAdminPlaneamentoRouteChildren: AuthenticatedAdminPlaneamentoRouteChildren =
   {
     AuthenticatedAdminPlaneamentoCargaRoute:
       AuthenticatedAdminPlaneamentoCargaRoute,
+    AuthenticatedAdminPlaneamentoPainelRoute:
+      AuthenticatedAdminPlaneamentoPainelRoute,
   }
 
 const AuthenticatedAdminPlaneamentoRouteWithChildren =
