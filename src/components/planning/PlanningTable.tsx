@@ -11,6 +11,7 @@ import {
 import { EditOrderDialog } from "@/components/orders/EditOrderDialog";
 import { useServerFn } from "@tanstack/react-start";
 import { activateOrders } from "@/lib/planning.functions";
+import { getExpectedForOrders } from "@/lib/sla.functions";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,7 @@ export function PlanningTable({ canEdit }: { canEdit: boolean }) {
   const deactivateFn = useServerFn(deactivateOrders);
   const activateFn = useServerFn(activateOrders);
   const updateOrderFn = useServerFn(updateOrder);
+  const fetchExpected = useServerFn(getExpectedForOrders);
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -50,6 +52,16 @@ export function PlanningTable({ canEdit }: { canEdit: boolean }) {
     queryKey: ["planning-orders"],
     queryFn: () => fetchPlanning(),
   });
+
+  // Tempo de estofagem por encomenda (tempo do modelo) para o planeamento.
+  const orderIds = useMemo(() => (orders ?? []).map((o: PlanningOrder) => o.id), [orders]);
+  const { data: expected } = useQuery({
+    queryKey: ["planning-estofo-minutes", orderIds.length, orderIds[0] ?? ""],
+    queryFn: () =>
+      fetchExpected({ data: { orders: orderIds.map((id) => ({ order_id: id, stage: "estofagem" as const })) } }),
+    enabled: orderIds.length > 0,
+  });
+  const estofoMinutes = (id: string) => (expected?.[id]?.estofagem ?? null) as number | null;
 
   const todayStr = new Date().toISOString().slice(0, 10);
 
@@ -246,6 +258,7 @@ export function PlanningTable({ canEdit }: { canEdit: boolean }) {
                 <TableHead>Estado</TableHead>
                 <TableHead>Entrada</TableHead>
                 <TableHead>Saída</TableHead>
+                <TableHead>Estofo (min)</TableHead>
                 <TableHead>Etapa atual</TableHead>
                 <TableHead></TableHead>
               </TableRow>
@@ -255,6 +268,7 @@ export function PlanningTable({ canEdit }: { canEdit: boolean }) {
                 <PlanningRow
                   key={o.id}
                   order={o}
+                  estofoMinutes={estofoMinutes(o.id)}
                   canEdit={canEdit}
                   selected={selected.has(o.id)}
                   onToggle={() => toggle(o.id)}
@@ -268,7 +282,7 @@ export function PlanningTable({ canEdit }: { canEdit: boolean }) {
               ))}
               {filtered.length === 0 && !isLoading && (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
                     Sem encomendas com estes filtros
                   </TableCell>
                 </TableRow>
@@ -287,6 +301,7 @@ const VISIBLE_STAGES_FOR_INV = [
 
 function PlanningRow({
   order,
+  estofoMinutes,
   canEdit,
   selected,
   onToggle,
@@ -298,6 +313,7 @@ function PlanningRow({
   pending,
 }: {
   order: PlanningOrder;
+  estofoMinutes: number | null;
   canEdit: boolean;
   selected: boolean;
   onToggle: () => void;
@@ -389,6 +405,18 @@ function PlanningRow({
           </span>
         ) : (
           "—"
+        )}
+      </TableCell>
+      <TableCell>
+        {estofoMinutes != null ? (
+          <span className="tabular-nums font-medium">{estofoMinutes} min</span>
+        ) : (
+          <span
+            className="text-[10px] text-amber-700"
+            title="Tempo desconhecido — a carga do dia fica subestimada. Define o tempo do modelo."
+          >
+            sem tempo
+          </span>
         )}
       </TableCell>
       <TableCell>

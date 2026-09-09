@@ -359,3 +359,63 @@ export const activateOrders = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return res as ActivateResult;
   });
+// ---------- Planeamento por tempo útil (semana) ----------
+
+export type WeekLoadCell = {
+  stage: Stage;
+  date: string;
+  capacity_minutes: number;
+  load_minutes: number;
+  load_firm_minutes: number;
+  items_count: number;
+  has_unknown: boolean;
+  includes_overdue: boolean;
+  over_minutes: number;
+};
+
+export type DayStageOrder = {
+  order_id: string;
+  order_number: string;
+  customer_order: string | null;
+  product_description: string | null;
+  model_name: string | null;
+  measure: string | null;
+  due_date: string | null;
+  target_date: string | null;
+  order_status: string;
+  stage_status: string;
+  expected_minutes: number | null;
+  overdue: boolean;
+};
+
+export const getWeekCapacityPlan = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }): Promise<WeekLoadCell[]> => {
+    const { data: res, error } = await (context.supabase as any).rpc("get_week_capacity_plan", {
+      _from: data.from, _to: data.to,
+    });
+    if (error) throw new Error(error.message);
+    return (res ?? []) as WeekLoadCell[];
+  });
+
+export const getDayStageOrders = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      stage: z.enum(STAGES),
+      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    }).parse(d),
+  )
+  .handler(async ({ data, context }): Promise<DayStageOrder[]> => {
+    const { data: res, error } = await (context.supabase as any).rpc("get_day_stage_orders", {
+      _stage: data.stage, _date: data.date,
+    });
+    if (error) throw new Error(error.message);
+    return (res ?? []) as DayStageOrder[];
+  });
