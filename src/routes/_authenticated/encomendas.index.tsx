@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { listOrders, listModels, previewCancelOrder, cancelOrder, type CancelPreview } from "@/lib/orders.functions";
 import { PlanningTable } from "@/components/planning/PlanningTable";
+import { PlanningPanel } from "@/components/planning/PlanningPanel";
 import { useMySession } from "@/hooks/useMySession";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
