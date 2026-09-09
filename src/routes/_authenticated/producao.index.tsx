@@ -880,12 +880,17 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
           </div>
         ) : (
           <>
-            {!isQuality && !operateByColis && item.status !== "em_curso" && !blocked && (!isUpholstery || convergenceReady) && (
+            {!isQuality && !operateByColis && item.status !== "em_curso" && !blocked && !prereqBlocked && (!isUpholstery || convergenceReady) && (
               <Button size="lg" disabled={pending} onClick={() => onAction("iniciar")} className="gap-2 h-12 flex-1 sm:flex-none">
                 <Play className="size-4" /> Iniciar
               </Button>
             )}
-            {!isQuality && !operateByColis && isUpholstery && !convergenceReady && item.status !== "em_curso" && (
+            {prereqBlocked && (
+              <div className="text-xs text-destructive flex items-center gap-1">
+                <Lock className="size-3" /> Aguarda {missingPrereqs.map((s) => STAGE_LABELS[s]).join(" + ")}
+              </div>
+            )}
+            {!isQuality && !operateByColis && isUpholstery && !convergenceReady && !prereqBlocked && item.status !== "em_curso" && (
               <div className="text-xs text-muted-foreground flex items-center gap-1">
                 <Lock className="size-3" /> Aguarda {!item.lines?.tecido?.ready ? "Costura" : ""}
                 {!item.lines?.tecido?.ready && !item.lines?.estrutura?.ready ? " + " : ""}
