@@ -11,6 +11,7 @@ import {
 import { EditOrderDialog } from "@/components/orders/EditOrderDialog";
 import { useServerFn } from "@tanstack/react-start";
 import { activateOrders } from "@/lib/planning.functions";
+import { getExpectedForOrders } from "@/lib/sla.functions";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,7 @@ export function PlanningTable({ canEdit }: { canEdit: boolean }) {
   const deactivateFn = useServerFn(deactivateOrders);
   const activateFn = useServerFn(activateOrders);
   const updateOrderFn = useServerFn(updateOrder);
+  const fetchExpected = useServerFn(getExpectedForOrders);
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -50,6 +52,16 @@ export function PlanningTable({ canEdit }: { canEdit: boolean }) {
     queryKey: ["planning-orders"],
     queryFn: () => fetchPlanning(),
   });
+
+  // Tempo de estofagem por encomenda (tempo do modelo) para o planeamento.
+  const orderIds = useMemo(() => (orders ?? []).map((o: PlanningOrder) => o.id), [orders]);
+  const { data: expected } = useQuery({
+    queryKey: ["planning-estofo-minutes", orderIds.length, orderIds[0] ?? ""],
+    queryFn: () =>
+      fetchExpected({ data: { orders: orderIds.map((id) => ({ order_id: id, stage: "estofagem" as const })) } }),
+    enabled: orderIds.length > 0,
+  });
+  const estofoMinutes = (id: string) => (expected?.[id]?.estofagem ?? null) as number | null;
 
   const todayStr = new Date().toISOString().slice(0, 10);
 
@@ -246,6 +258,7 @@ export function PlanningTable({ canEdit }: { canEdit: boolean }) {
                 <TableHead>Estado</TableHead>
                 <TableHead>Entrada</TableHead>
                 <TableHead>Saída</TableHead>
+                <TableHead>Estofo (min)</TableHead>
                 <TableHead>Etapa atual</TableHead>
                 <TableHead></TableHead>
               </TableRow>

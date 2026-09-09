@@ -2111,6 +2111,13 @@ export type Database = {
       }
       get_activation_suggestions: { Args: never; Returns: Json }
       get_backlog: { Args: never; Returns: Json }
+      get_day_stage_orders: {
+        Args: {
+          _date: string
+          _stage: Database["public"]["Enums"]["production_stage"]
+        }
+        Returns: Json
+      }
       get_expected_minutes: {
         Args: {
           _order_id: string
@@ -2154,6 +2161,10 @@ export type Database = {
           status: string
           target_date: string
         }[]
+      }
+      get_week_capacity_plan: {
+        Args: { _from: string; _to: string }
+        Returns: Json
       }
       has_role: {
         Args: {

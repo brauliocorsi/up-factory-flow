@@ -113,8 +113,9 @@ function SlaPage() {
         </Button>
       </div>
 
-      <Tabs defaultValue="categoria">
+      <Tabs defaultValue="tempos">
         <TabsList>
+          <TabsTrigger value="tempos">Tempo por modelo</TabsTrigger>
           <TabsTrigger value="categoria">Padrão por categoria</TabsTrigger>
           <TabsTrigger value="modelo">Padrão por modelo</TabsTrigger>
           <TabsTrigger value="produto">Override por produto</TabsTrigger>
@@ -123,6 +124,17 @@ function SlaPage() {
         <div className="mt-3 text-xs text-muted-foreground">
           Hierarquia (do mais específico ao geral): <b>produto</b> (exceção) → <b>modelo</b> (padrão) → <b>categoria</b> (geral).
         </div>
+
+        <TabsContent value="tempos" className="space-y-3 mt-3">
+          <ModelTimeTable
+            categories={categories as any}
+            models={models as any}
+            catMap={catMap}
+            modelMap={modelMap}
+            onSave={(v) => modelSlaMutation.mutate(v)}
+          />
+        </TabsContent>
+
 
         <TabsContent value="categoria" className="space-y-3 mt-3">
           {categories.length === 0 && (
@@ -425,6 +437,106 @@ function ModelSlaSection({
           })}
         </div>
       )}
+    </Card>
+  );
+}
+/**
+ * Tempo de produção por modelo, com a estofagem em primeiro lugar.
+ * Escreve no padrão por modelo (stage_sla_model), que o planeamento já usa.
+ */
+const TIME_STAGES: Stage[] = ["estofagem", "estrutura", "corte", "costura", "branco", "qualidade", "embalagem"];
+
+function ModelTimeTable({
+  categories, models, catMap, modelMap, onSave,
+}: {
+  categories: { id?: string; code: string; name: string }[];
+  models: { id?: string; code: string; name: string; category_id: string | null }[];
+  catMap: Map<string, number>;
+  modelMap: Map<string, number>;
+  onSave: (v: { category_code: string; model_code: string; stage: Stage; expected_minutes: number | null }) => void;
+}) {
+  const [filter, setFilter] = useState("");
+  const catById = useMemo(() => {
+    const m = new Map<string, { code: string; name: string }>();
+    for (const c of categories) if (c.id) m.set(c.id, { code: c.code, name: c.name });
+    return m;
+  }, [categories]);
+
+  const rows = useMemo(() => {
+    const s = filter.trim().toLowerCase();
+    return models
+      .map((m) => {
+        const cat = m.category_id ? catById.get(m.category_id) : undefined;
+        return { ...m, cat_code: cat?.code ?? "", cat_name: cat?.name ?? "—" };
+      })
+      .filter((m) =>
+        !s || m.name.toLowerCase().includes(s) || m.code.toLowerCase().includes(s) || m.cat_name.toLowerCase().includes(s),
+      )
+      .sort((a, b) => (a.cat_name + a.name).localeCompare(b.cat_name + b.name));
+  }, [models, catById, filter]);
+
+  const missing = rows.filter(
+    (m) => !m.cat_code || (modelMap.get(`${m.cat_code}|${m.code}|estofagem`) == null && catMap.get(`${m.cat_code}|estofagem`) == null),
+  ).length;
+
+  return (
+    <Card className="p-4 space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <Input
+          placeholder="Procurar modelo…"
+          value={filter}
+          onChange={(e) => setFilter(e.target.value)}
+          className="h-9 max-w-64"
+        />
+        {missing > 0 && (
+          <Badge className="bg-amber-500 text-white">{missing} modelo(s) sem tempo de estofagem</Badge>
+        )}
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Estes minutos são o tempo de produção usado no planeamento diário e semanal (tempo necessário por dia).
+      </p>
+
+      <div className="space-y-2">
+        {rows.length === 0 && <p className="text-sm text-muted-foreground">Sem modelos.</p>}
+        {rows.map((m) => (
+          <div key={m.code} className="rounded-lg border p-3 space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-semibold text-sm">{m.name}</span>
+              <Badge variant="secondary" className="text-[10px]">{m.code}</Badge>
+              <Badge variant="outline" className="text-[10px]">{m.cat_name}</Badge>
+              {!m.cat_code && (
+                <Badge className="bg-amber-500 text-white text-[10px]">sem categoria — define no catálogo</Badge>
+              )}
+              {m.cat_code && modelMap.get(`${m.cat_code}|${m.code}|estofagem`) == null &&
+                catMap.get(`${m.cat_code}|estofagem`) == null && (
+                  <Badge className="bg-amber-500 text-white text-[10px]">sem tempo definido</Badge>
+                )}
+            </div>
+            {m.cat_code && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {TIME_STAGES.map((s) => {
+                  const current = modelMap.get(`${m.cat_code}|${m.code}|${s}`);
+                  const fallback = catMap.get(`${m.cat_code}|${s}`);
+                  return (
+                    <div key={s} className="space-y-1">
+                      <Label className={`text-xs ${s === "estofagem" ? "font-semibold text-foreground" : ""}`}>
+                        {STAGE_LABELS[s]} (min)
+                      </Label>
+                      <OverrideCell
+                        initial={current}
+                        fallback={fallback}
+                        onSave={(v) =>
+                          onSave({ category_code: m.cat_code, model_code: m.code, stage: s, expected_minutes: v })
+                        }
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
     </Card>
   );
 }
