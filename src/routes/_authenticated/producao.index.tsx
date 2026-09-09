@@ -154,11 +154,67 @@ function ProducaoPage() {
   const colisByStage = colisByStageMap[activeStage];
   const supportsGrouping = activeStage === "corte" || activeStage === "estrutura";
 
+  // ---- Resposta imediata ao clique -------------------------------------
+  // O operador vê o estado mudar sem esperar o servidor, e o mesmo botão
+  // fica bloqueado até a resposta chegar (evita duplo clique / duplo registo).
+  const [busyIds, setBusyIds] = useState<Record<string, true>>({});
+  const markBusy = (id: string) => setBusyIds((m) => ({ ...m, [id]: true }));
+  const clearBusy = (id: string) =>
+    setBusyIds((m) => {
+      const next = { ...m };
+      delete next[id];
+      return next;
+    });
+
+  const patchState = (
+    row: { status: string; is_paused: boolean; started_at: string | null; last_resume_at?: string | null; current_segment_started_at?: string | null },
+    event: "iniciar" | "pausar" | "retomar" | "finalizar",
+  ) => {
+    const nowIso = new Date().toISOString();
+    if (event === "iniciar" || event === "retomar") {
+      return {
+        ...row,
+        status: "em_curso",
+        is_paused: false,
+        started_at: row.started_at ?? nowIso,
+        ...("last_resume_at" in row ? { last_resume_at: nowIso } : {}),
+        ...("current_segment_started_at" in row ? { current_segment_started_at: nowIso } : {}),
+      };
+    }
+    if (event === "pausar") {
+      return {
+        ...row,
+        is_paused: true,
+        ...("last_resume_at" in row ? { last_resume_at: null } : {}),
+        ...("current_segment_started_at" in row ? { current_segment_started_at: null } : {}),
+      };
+    }
+    return { ...row, status: "concluida", is_paused: false };
+  };
+
   const coliMutation = useMutation({
     mutationFn: (vars: { order_coli_stage_id: string; event: "iniciar"|"pausar"|"retomar"|"finalizar" }) => {
       const code = operatorCodeRef.current.trim();
       if (!code) throw new Error("Indica o teu código primeiro");
       return recordColiFn({ data: { ...vars, operator_code: code } });
+    },
+    onMutate: (vars) => {
+      markBusy(vars.order_coli_stage_id);
+      VISIBLE_STAGES.forEach((stage) => {
+        qc.setQueryData(["production-colis", stage], (old: any) => {
+          if (!old?.byOrder) return old;
+          let touched = false;
+          const byOrder: Record<string, any[]> = {};
+          for (const [oid, arr] of Object.entries(old.byOrder as Record<string, any[]>)) {
+            byOrder[oid] = arr.map((c) => {
+              if (c.id !== vars.order_coli_stage_id) return c;
+              touched = true;
+              return patchState(c, vars.event);
+            });
+          }
+          return touched ? { ...old, byOrder } : old;
+        });
+      });
     },
     onSuccess: (res: any) => {
       if (res && res.ok === false) toast.error(res.message ?? "Não foi possível registar o evento");
@@ -167,6 +223,7 @@ function ProducaoPage() {
     },
 
     onError: (e: any) => toast.error(e?.message ?? "Erro ao registar"),
+    onSettled: (_d, _e, vars) => clearBusy(vars.order_coli_stage_id),
   });
 
   const [groupMode, setGroupMode] = useState<boolean>(false);
