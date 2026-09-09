@@ -665,7 +665,7 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
   isMultiColiOrder: boolean;
   coliTotal?: number;
   onColiAction: (coli_stage_id: string, event: "iniciar"|"pausar"|"retomar"|"finalizar") => void;
-  coliPending: boolean;
+  coliPending: (id: string) => boolean;
   fabricConsumption?: { meters: number; fabric_ref_code: string | null; color_code: string | null } | null;
   canUndoFabric?: boolean;
 }) {
