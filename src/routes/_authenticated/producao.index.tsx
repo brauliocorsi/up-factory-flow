@@ -735,6 +735,9 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
   const slaWarn = !slaExceeded && slaRatio >= 0.8;
 
   const blocked = item.status === "bloqueada";
+  // Etapas anteriores em falta (Estrutura→Branco, Corte→Costura, …)
+  const missingPrereqs = pendingPrereqs(item.stage, item.stage_states);
+  const prereqBlocked = missingPrereqs.length > 0 && item.status !== "em_curso" && item.status !== "concluida";
   const paused = item.is_paused;
   const done = item.status === "concluida";
   const isUpholstery = item.stage === "estofagem";
