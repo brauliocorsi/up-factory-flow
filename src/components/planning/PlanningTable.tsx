@@ -301,6 +301,7 @@ const VISIBLE_STAGES_FOR_INV = [
 
 function PlanningRow({
   order,
+  estofoMinutes,
   canEdit,
   selected,
   onToggle,
@@ -312,6 +313,7 @@ function PlanningRow({
   pending,
 }: {
   order: PlanningOrder;
+  estofoMinutes: number | null;
   canEdit: boolean;
   selected: boolean;
   onToggle: () => void;
