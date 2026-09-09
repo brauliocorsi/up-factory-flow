@@ -304,7 +304,7 @@ function EncomendasPage() {
 
         <TabsContent value="por-data" className="mt-4">
           {canEditPlanning ? (
-            <PlanningPanel />
+            <PlanningPanel canEdit />
           ) : (
             <div className="text-center text-sm text-muted-foreground py-8 border border-dashed rounded-lg">
               A vista por data está disponível para admin e escritório.
