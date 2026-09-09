@@ -335,7 +335,9 @@ function ProducaoPage() {
   const isReadyToStart = (it: ProductionStageOrder) => {
     // Qualidade não tem iniciar/pausar/finalizar — está sempre "pronta"
     // para receber o formulário enquanto não estiver concluída.
-    if (it.stage === "qualidade") return it.status !== "concluida";
+    if (it.stage === "qualidade") {
+      return it.status !== "concluida" && pendingPrereqs(it.stage, it.stage_states).length === 0;
+    }
     // Estrutura/Corte são iniciadas pelo cartão normal. O facto de a
     // encomenda ter vários colis só interessa ao modo "Agrupar".
     if (it.stage !== "estrutura" && it.stage !== "corte" && (it.coli_count ?? 0) > 1) {
@@ -344,6 +346,8 @@ function ProducaoPage() {
     }
     if (it.status === "bloqueada") return false;
     if (it.status === "em_curso") return false;
+    // Sequência de etapas: só está pronta se as anteriores estiverem concluídas.
+    if (pendingPrereqs(it.stage, it.stage_states).length > 0) return false;
     if (it.stage === "estofagem" && it.lines) {
       return !!(it.lines.tecido?.ready && it.lines.estrutura?.ready);
     }
