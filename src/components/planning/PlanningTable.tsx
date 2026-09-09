@@ -268,6 +268,7 @@ export function PlanningTable({ canEdit }: { canEdit: boolean }) {
                 <PlanningRow
                   key={o.id}
                   order={o}
+                  estofoMinutes={estofoMinutes(o.id)}
                   canEdit={canEdit}
                   selected={selected.has(o.id)}
                   onToggle={() => toggle(o.id)}
@@ -281,7 +282,7 @@ export function PlanningTable({ canEdit }: { canEdit: boolean }) {
               ))}
               {filtered.length === 0 && !isLoading && (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
                     Sem encomendas com estes filtros
                   </TableCell>
                 </TableRow>
