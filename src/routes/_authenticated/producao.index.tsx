@@ -12,6 +12,7 @@ import { Lock, Play, Pause, Check, RotateCcw, Clock, UserCircle2, AlertTriangle,
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Link } from "@tanstack/react-router";
 import { STAGE_LABELS } from "@/lib/format";
+import { pendingPrereqs } from "@/lib/stagePrereqs";
 import {
   getProductionData, recordStageEvent, getAppSettings,
   listOperatorsWithStages, STAGES, VISIBLE_STAGES, type ProductionStageOrder, type Stage,
