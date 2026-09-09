@@ -301,6 +301,17 @@ function EncomendasPage() {
           )}
         </TabsContent>
 
+        <TabsContent value="por-data" className="mt-4">
+          {canEditPlanning ? (
+            <PlanningPanel />
+          ) : (
+            <div className="text-center text-sm text-muted-foreground py-8 border border-dashed rounded-lg">
+              A vista por data está disponível para admin e escritório.
+            </div>
+          )}
+        </TabsContent>
+
+
         <TabsContent value="historico" className="mt-4 space-y-4">
           <div className="relative max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
