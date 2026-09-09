@@ -408,6 +408,18 @@ function PlanningRow({
         )}
       </TableCell>
       <TableCell>
+        {estofoMinutes != null ? (
+          <span className="tabular-nums font-medium">{estofoMinutes} min</span>
+        ) : (
+          <span
+            className="text-[10px] text-amber-700"
+            title="Tempo desconhecido — a carga do dia fica subestimada. Define o tempo do modelo."
+          >
+            sem tempo
+          </span>
+        )}
+      </TableCell>
+      <TableCell>
         <span className="text-[10px] text-muted-foreground">
           {order.has_started ? "Produção iniciada" : "Sem etapas iniciadas"}
         </span>
