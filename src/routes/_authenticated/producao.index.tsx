@@ -294,6 +294,19 @@ function ProducaoPage() {
       if (!code) throw new Error("Indica o teu código primeiro");
       return recordFn({ data: { ...vars, operator_code: code } });
     },
+    onMutate: (vars) => {
+      markBusy(vars.order_stage_id);
+      qc.setQueryData(["production"], (old: any) => {
+        if (!old?.byStage) return old;
+        const byStage: Record<string, any[]> = {};
+        for (const [s, arr] of Object.entries(old.byStage as Record<string, any[]>)) {
+          byStage[s] = (arr ?? []).map((it) =>
+            it.id === vars.order_stage_id ? patchState(it, vars.event) : it,
+          );
+        }
+        return { ...old, byStage };
+      });
+    },
     onSuccess: (res: any) => {
       if (res && res.ok === false) {
         toast.error(res.message ?? "Não foi possível registar");
@@ -301,6 +314,7 @@ function ProducaoPage() {
       qc.invalidateQueries({ queryKey: ["production"] });
     },
     onError: (e: any) => toast.error(e?.message ?? "Erro ao registar"),
+    onSettled: (_d, _e, vars) => clearBusy(vars.order_stage_id),
   });
 
   const codeInputRef = useRef<HTMLInputElement>(null);
