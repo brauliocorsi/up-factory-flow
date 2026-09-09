@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { STAGES, type Stage } from "@/lib/production.functions";
-import { loadRouteStageOrder, routeRank } from "@/lib/colis.server";
+import { pendingPrereqs } from "@/lib/stagePrereqs";
 
 /**
  * Colis (Parte 2) — operação por coli na produção.
