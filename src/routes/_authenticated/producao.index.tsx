@@ -12,6 +12,7 @@ import { Lock, Play, Pause, Check, RotateCcw, Clock, UserCircle2, AlertTriangle,
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Link } from "@tanstack/react-router";
 import { STAGE_LABELS } from "@/lib/format";
+import { pendingPrereqs } from "@/lib/stagePrereqs";
 import {
   getProductionData, recordStageEvent, getAppSettings,
   listOperatorsWithStages, STAGES, VISIBLE_STAGES, type ProductionStageOrder, type Stage,
@@ -334,7 +335,9 @@ function ProducaoPage() {
   const isReadyToStart = (it: ProductionStageOrder) => {
     // Qualidade não tem iniciar/pausar/finalizar — está sempre "pronta"
     // para receber o formulário enquanto não estiver concluída.
-    if (it.stage === "qualidade") return it.status !== "concluida";
+    if (it.stage === "qualidade") {
+      return it.status !== "concluida" && pendingPrereqs(it.stage, it.stage_states).length === 0;
+    }
     // Estrutura/Corte são iniciadas pelo cartão normal. O facto de a
     // encomenda ter vários colis só interessa ao modo "Agrupar".
     if (it.stage !== "estrutura" && it.stage !== "corte" && (it.coli_count ?? 0) > 1) {
@@ -343,6 +346,8 @@ function ProducaoPage() {
     }
     if (it.status === "bloqueada") return false;
     if (it.status === "em_curso") return false;
+    // Sequência de etapas: só está pronta se as anteriores estiverem concluídas.
+    if (pendingPrereqs(it.stage, it.stage_states).length > 0) return false;
     if (it.stage === "estofagem" && it.lines) {
       return !!(it.lines.tecido?.ready && it.lines.estrutura?.ready);
     }
@@ -730,6 +735,9 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
   const slaWarn = !slaExceeded && slaRatio >= 0.8;
 
   const blocked = item.status === "bloqueada";
+  // Etapas anteriores em falta (Estrutura→Branco, Corte→Costura, …)
+  const missingPrereqs = pendingPrereqs(item.stage, item.stage_states);
+  const prereqBlocked = missingPrereqs.length > 0 && item.status !== "em_curso" && item.status !== "concluida";
   const paused = item.is_paused;
   const done = item.status === "concluida";
   const isUpholstery = item.stage === "estofagem";
@@ -872,12 +880,17 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
           </div>
         ) : (
           <>
-            {!isQuality && !operateByColis && item.status !== "em_curso" && !blocked && (!isUpholstery || convergenceReady) && (
+            {!isQuality && !operateByColis && item.status !== "em_curso" && !blocked && !prereqBlocked && (!isUpholstery || convergenceReady) && (
               <Button size="lg" disabled={pending} onClick={() => onAction("iniciar")} className="gap-2 h-12 flex-1 sm:flex-none">
                 <Play className="size-4" /> Iniciar
               </Button>
             )}
-            {!isQuality && !operateByColis && isUpholstery && !convergenceReady && item.status !== "em_curso" && (
+            {prereqBlocked && (
+              <div className="text-xs text-destructive flex items-center gap-1">
+                <Lock className="size-3" /> Aguarda {missingPrereqs.map((s) => STAGE_LABELS[s]).join(" + ")}
+              </div>
+            )}
+            {!isQuality && !operateByColis && isUpholstery && !convergenceReady && !prereqBlocked && item.status !== "em_curso" && (
               <div className="text-xs text-muted-foreground flex items-center gap-1">
                 <Lock className="size-3" /> Aguarda {!item.lines?.tecido?.ready ? "Costura" : ""}
                 {!item.lines?.tecido?.ready && !item.lines?.estrutura?.ready ? " + " : ""}
@@ -918,7 +931,7 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
                 operatorCode={operatorCode}
               />
             )}
-            {(isQuality || (isPacking && canQuality)) && (
+            {(isQuality || (isPacking && canQuality)) && !prereqBlocked && (
               <QualityCheckDialog
                 orderId={item.order_id}
                 orderStageId={isQuality ? item.id : ""}

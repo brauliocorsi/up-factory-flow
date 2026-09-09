@@ -2002,6 +2002,13 @@ export type Database = {
         Args: { _op: Database["public"]["Tables"]["operators"]["Row"] }
         Returns: undefined
       }
+      assert_order_previous_stages_done_any: {
+        Args: {
+          _order_id: string
+          _stage: Database["public"]["Enums"]["production_stage"]
+        }
+        Returns: undefined
+      }
       assert_picking_actor: {
         Args: { _op: Database["public"]["Tables"]["operators"]["Row"] }
         Returns: undefined
