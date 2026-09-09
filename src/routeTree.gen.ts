@@ -39,11 +39,11 @@ import { Route as AuthenticatedAdminSlaRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedAdminRotasColisRouteImport } from './routes/_authenticated/admin.rotas-colis'
 import { Route as AuthenticatedAdminRelatoriosRouteImport } from './routes/_authenticated/admin.relatorios'
 import { Route as AuthenticatedAdminQualidadeRouteImport } from './routes/_authenticated/admin.qualidade'
-import { Route as AuthenticatedAdminPlaneamentoRouteImport } from './routes/_authenticated/admin.planeamento'
 import { Route as AuthenticatedAdminColisRouteImport } from './routes/_authenticated/admin.colis'
 import { Route as AuthenticatedAdminCatalogoRouteImport } from './routes/_authenticated/admin.catalogo'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
+import { Route as AuthenticatedAdminPlaneamentoIndexRouteImport } from './routes/_authenticated/admin.planeamento.index'
 import { Route as AuthenticatedEncomendasIdEtiquetaRouteImport } from './routes/_authenticated/encomendas.$id.etiqueta'
 import { Route as AuthenticatedAdminPlaneamentoPainelRouteImport } from './routes/_authenticated/admin.planeamento.painel'
 import { Route as AuthenticatedAdminPlaneamentoCargaRouteImport } from './routes/_authenticated/admin.planeamento.carga'
@@ -216,12 +216,6 @@ const AuthenticatedAdminQualidadeRoute =
     path: '/admin/qualidade',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedAdminPlaneamentoRoute =
-  AuthenticatedAdminPlaneamentoRouteImport.update({
-    id: '/admin/planeamento',
-    path: '/admin/planeamento',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
 const AuthenticatedAdminColisRoute = AuthenticatedAdminColisRouteImport.update({
   id: '/admin/colis',
   path: '/admin/colis',
@@ -244,6 +238,12 @@ const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
   path: '/.lovable/oauth/consent',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAdminPlaneamentoIndexRoute =
+  AuthenticatedAdminPlaneamentoIndexRouteImport.update({
+    id: '/admin/planeamento/',
+    path: '/admin/planeamento/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedEncomendasIdEtiquetaRoute =
   AuthenticatedEncomendasIdEtiquetaRouteImport.update({
     id: '/encomendas/$id/etiqueta',
@@ -252,15 +252,15 @@ const AuthenticatedEncomendasIdEtiquetaRoute =
   } as any)
 const AuthenticatedAdminPlaneamentoPainelRoute =
   AuthenticatedAdminPlaneamentoPainelRouteImport.update({
-    id: '/painel',
-    path: '/painel',
-    getParentRoute: () => AuthenticatedAdminPlaneamentoRoute,
+    id: '/admin/planeamento/painel',
+    path: '/admin/planeamento/painel',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedAdminPlaneamentoCargaRoute =
   AuthenticatedAdminPlaneamentoCargaRouteImport.update({
-    id: '/carga',
-    path: '/carga',
-    getParentRoute: () => AuthenticatedAdminPlaneamentoRoute,
+    id: '/admin/planeamento/carga',
+    path: '/admin/planeamento/carga',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -278,7 +278,6 @@ export interface FileRoutesByFullPath {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/admin/catalogo': typeof AuthenticatedAdminCatalogoRoute
   '/admin/colis': typeof AuthenticatedAdminColisRoute
-  '/admin/planeamento': typeof AuthenticatedAdminPlaneamentoRouteWithChildren
   '/admin/qualidade': typeof AuthenticatedAdminQualidadeRoute
   '/admin/relatorios': typeof AuthenticatedAdminRelatoriosRoute
   '/admin/rotas-colis': typeof AuthenticatedAdminRotasColisRoute
@@ -301,6 +300,7 @@ export interface FileRoutesByFullPath {
   '/admin/planeamento/carga': typeof AuthenticatedAdminPlaneamentoCargaRoute
   '/admin/planeamento/painel': typeof AuthenticatedAdminPlaneamentoPainelRoute
   '/encomendas/$id/etiqueta': typeof AuthenticatedEncomendasIdEtiquetaRoute
+  '/admin/planeamento/': typeof AuthenticatedAdminPlaneamentoIndexRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
@@ -317,7 +317,6 @@ export interface FileRoutesByTo {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/admin/catalogo': typeof AuthenticatedAdminCatalogoRoute
   '/admin/colis': typeof AuthenticatedAdminColisRoute
-  '/admin/planeamento': typeof AuthenticatedAdminPlaneamentoRouteWithChildren
   '/admin/qualidade': typeof AuthenticatedAdminQualidadeRoute
   '/admin/relatorios': typeof AuthenticatedAdminRelatoriosRoute
   '/admin/rotas-colis': typeof AuthenticatedAdminRotasColisRoute
@@ -340,6 +339,7 @@ export interface FileRoutesByTo {
   '/admin/planeamento/carga': typeof AuthenticatedAdminPlaneamentoCargaRoute
   '/admin/planeamento/painel': typeof AuthenticatedAdminPlaneamentoPainelRoute
   '/encomendas/$id/etiqueta': typeof AuthenticatedEncomendasIdEtiquetaRoute
+  '/admin/planeamento': typeof AuthenticatedAdminPlaneamentoIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -358,7 +358,6 @@ export interface FileRoutesById {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/admin/catalogo': typeof AuthenticatedAdminCatalogoRoute
   '/_authenticated/admin/colis': typeof AuthenticatedAdminColisRoute
-  '/_authenticated/admin/planeamento': typeof AuthenticatedAdminPlaneamentoRouteWithChildren
   '/_authenticated/admin/qualidade': typeof AuthenticatedAdminQualidadeRoute
   '/_authenticated/admin/relatorios': typeof AuthenticatedAdminRelatoriosRoute
   '/_authenticated/admin/rotas-colis': typeof AuthenticatedAdminRotasColisRoute
@@ -381,6 +380,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/planeamento/carga': typeof AuthenticatedAdminPlaneamentoCargaRoute
   '/_authenticated/admin/planeamento/painel': typeof AuthenticatedAdminPlaneamentoPainelRoute
   '/_authenticated/encomendas/$id/etiqueta': typeof AuthenticatedEncomendasIdEtiquetaRoute
+  '/_authenticated/admin/planeamento/': typeof AuthenticatedAdminPlaneamentoIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -399,7 +399,6 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/admin/catalogo'
     | '/admin/colis'
-    | '/admin/planeamento'
     | '/admin/qualidade'
     | '/admin/relatorios'
     | '/admin/rotas-colis'
@@ -422,6 +421,7 @@ export interface FileRouteTypes {
     | '/admin/planeamento/carga'
     | '/admin/planeamento/painel'
     | '/encomendas/$id/etiqueta'
+    | '/admin/planeamento/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
@@ -438,7 +438,6 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/admin/catalogo'
     | '/admin/colis'
-    | '/admin/planeamento'
     | '/admin/qualidade'
     | '/admin/relatorios'
     | '/admin/rotas-colis'
@@ -461,6 +460,7 @@ export interface FileRouteTypes {
     | '/admin/planeamento/carga'
     | '/admin/planeamento/painel'
     | '/encomendas/$id/etiqueta'
+    | '/admin/planeamento'
   id:
     | '__root__'
     | '/_authenticated'
@@ -478,7 +478,6 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/_authenticated/admin/catalogo'
     | '/_authenticated/admin/colis'
-    | '/_authenticated/admin/planeamento'
     | '/_authenticated/admin/qualidade'
     | '/_authenticated/admin/relatorios'
     | '/_authenticated/admin/rotas-colis'
@@ -501,6 +500,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/planeamento/carga'
     | '/_authenticated/admin/planeamento/painel'
     | '/_authenticated/encomendas/$id/etiqueta'
+    | '/_authenticated/admin/planeamento/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -726,13 +726,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminQualidadeRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/admin/planeamento': {
-      id: '/_authenticated/admin/planeamento'
-      path: '/admin/planeamento'
-      fullPath: '/admin/planeamento'
-      preLoaderRoute: typeof AuthenticatedAdminPlaneamentoRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/admin/colis': {
       id: '/_authenticated/admin/colis'
       path: '/admin/colis'
@@ -761,6 +754,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DotlovableOauthConsentRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/admin/planeamento/': {
+      id: '/_authenticated/admin/planeamento/'
+      path: '/admin/planeamento'
+      fullPath: '/admin/planeamento/'
+      preLoaderRoute: typeof AuthenticatedAdminPlaneamentoIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/encomendas/$id/etiqueta': {
       id: '/_authenticated/encomendas/$id/etiqueta'
       path: '/encomendas/$id/etiqueta'
@@ -770,17 +770,17 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/admin/planeamento/painel': {
       id: '/_authenticated/admin/planeamento/painel'
-      path: '/painel'
+      path: '/admin/planeamento/painel'
       fullPath: '/admin/planeamento/painel'
       preLoaderRoute: typeof AuthenticatedAdminPlaneamentoPainelRouteImport
-      parentRoute: typeof AuthenticatedAdminPlaneamentoRoute
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin/planeamento/carga': {
       id: '/_authenticated/admin/planeamento/carga'
-      path: '/carga'
+      path: '/admin/planeamento/carga'
       fullPath: '/admin/planeamento/carga'
       preLoaderRoute: typeof AuthenticatedAdminPlaneamentoCargaRouteImport
-      parentRoute: typeof AuthenticatedAdminPlaneamentoRoute
+      parentRoute: typeof AuthenticatedRouteRoute
     }
   }
 }
@@ -798,24 +798,6 @@ const AuthenticatedPicagemRouteChildren: AuthenticatedPicagemRouteChildren = {
 const AuthenticatedPicagemRouteWithChildren =
   AuthenticatedPicagemRoute._addFileChildren(AuthenticatedPicagemRouteChildren)
 
-interface AuthenticatedAdminPlaneamentoRouteChildren {
-  AuthenticatedAdminPlaneamentoCargaRoute: typeof AuthenticatedAdminPlaneamentoCargaRoute
-  AuthenticatedAdminPlaneamentoPainelRoute: typeof AuthenticatedAdminPlaneamentoPainelRoute
-}
-
-const AuthenticatedAdminPlaneamentoRouteChildren: AuthenticatedAdminPlaneamentoRouteChildren =
-  {
-    AuthenticatedAdminPlaneamentoCargaRoute:
-      AuthenticatedAdminPlaneamentoCargaRoute,
-    AuthenticatedAdminPlaneamentoPainelRoute:
-      AuthenticatedAdminPlaneamentoPainelRoute,
-  }
-
-const AuthenticatedAdminPlaneamentoRouteWithChildren =
-  AuthenticatedAdminPlaneamentoRoute._addFileChildren(
-    AuthenticatedAdminPlaneamentoRouteChildren,
-  )
-
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
   AuthenticatedImportarRoute: typeof AuthenticatedImportarRoute
@@ -824,7 +806,6 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedAdminCatalogoRoute: typeof AuthenticatedAdminCatalogoRoute
   AuthenticatedAdminColisRoute: typeof AuthenticatedAdminColisRoute
-  AuthenticatedAdminPlaneamentoRoute: typeof AuthenticatedAdminPlaneamentoRouteWithChildren
   AuthenticatedAdminQualidadeRoute: typeof AuthenticatedAdminQualidadeRoute
   AuthenticatedAdminRelatoriosRoute: typeof AuthenticatedAdminRelatoriosRoute
   AuthenticatedAdminRotasColisRoute: typeof AuthenticatedAdminRotasColisRoute
@@ -842,7 +823,10 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedEncomendasIndexRoute: typeof AuthenticatedEncomendasIndexRoute
   AuthenticatedProducaoIndexRoute: typeof AuthenticatedProducaoIndexRoute
   AuthenticatedStockIndexRoute: typeof AuthenticatedStockIndexRoute
+  AuthenticatedAdminPlaneamentoCargaRoute: typeof AuthenticatedAdminPlaneamentoCargaRoute
+  AuthenticatedAdminPlaneamentoPainelRoute: typeof AuthenticatedAdminPlaneamentoPainelRoute
   AuthenticatedEncomendasIdEtiquetaRoute: typeof AuthenticatedEncomendasIdEtiquetaRoute
+  AuthenticatedAdminPlaneamentoIndexRoute: typeof AuthenticatedAdminPlaneamentoIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -853,8 +837,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedAdminCatalogoRoute: AuthenticatedAdminCatalogoRoute,
   AuthenticatedAdminColisRoute: AuthenticatedAdminColisRoute,
-  AuthenticatedAdminPlaneamentoRoute:
-    AuthenticatedAdminPlaneamentoRouteWithChildren,
   AuthenticatedAdminQualidadeRoute: AuthenticatedAdminQualidadeRoute,
   AuthenticatedAdminRelatoriosRoute: AuthenticatedAdminRelatoriosRoute,
   AuthenticatedAdminRotasColisRoute: AuthenticatedAdminRotasColisRoute,
@@ -873,8 +855,14 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedEncomendasIndexRoute: AuthenticatedEncomendasIndexRoute,
   AuthenticatedProducaoIndexRoute: AuthenticatedProducaoIndexRoute,
   AuthenticatedStockIndexRoute: AuthenticatedStockIndexRoute,
+  AuthenticatedAdminPlaneamentoCargaRoute:
+    AuthenticatedAdminPlaneamentoCargaRoute,
+  AuthenticatedAdminPlaneamentoPainelRoute:
+    AuthenticatedAdminPlaneamentoPainelRoute,
   AuthenticatedEncomendasIdEtiquetaRoute:
     AuthenticatedEncomendasIdEtiquetaRoute,
+  AuthenticatedAdminPlaneamentoIndexRoute:
+    AuthenticatedAdminPlaneamentoIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =

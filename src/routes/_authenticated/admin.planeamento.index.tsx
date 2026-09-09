@@ -25,7 +25,7 @@ import { ActivationSuggestions } from "@/components/planning/ActivationSuggestio
 import { LoadCell } from "@/components/planning/LoadCell";
 import { formatDatePT } from "@/lib/format";
 
-export const Route = createFileRoute("/_authenticated/admin/planeamento")({
+export const Route = createFileRoute("/_authenticated/admin/planeamento/")({
   beforeLoad: async () => {
     const { data } = await supabase.auth.getUser();
     if (!data.user) throw redirect({ to: "/auth" });
