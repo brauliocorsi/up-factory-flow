@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { listOrders, listModels, previewCancelOrder, cancelOrder, type CancelPreview } from "@/lib/orders.functions";
 import { PlanningTable } from "@/components/planning/PlanningTable";
+import { PlanningPanel } from "@/components/planning/PlanningPanel";
 import { useMySession } from "@/hooks/useMySession";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -33,7 +34,7 @@ function EncomendasPage() {
   const { operator, role } = useMySession();
   const opCode = operator?.code ?? "";
   const canEditPlanning = role === "admin" || role === "escritorio";
-  const [tab, setTab] = useState<"lista" | "planeamento" | "historico">("lista");
+  const [tab, setTab] = useState<"lista" | "planeamento" | "por-data" | "historico">("lista");
   const [histSearch, setHistSearch] = useState("");
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<string>("all");
@@ -131,10 +132,11 @@ function EncomendasPage() {
         </div>
       </div>
 
-      <Tabs value={tab} onValueChange={(v) => setTab(v as "lista" | "planeamento" | "historico")}>
+      <Tabs value={tab} onValueChange={(v) => setTab(v as "lista" | "planeamento" | "por-data" | "historico")}>
         <TabsList>
           <TabsTrigger value="lista">Lista</TabsTrigger>
           <TabsTrigger value="planeamento">Planeamento</TabsTrigger>
+          <TabsTrigger value="por-data">Por data</TabsTrigger>
           <TabsTrigger value="historico">Histórico</TabsTrigger>
         </TabsList>
         <TabsContent value="lista" className="mt-4 space-y-4">
@@ -299,6 +301,17 @@ function EncomendasPage() {
             </div>
           )}
         </TabsContent>
+
+        <TabsContent value="por-data" className="mt-4">
+          {canEditPlanning ? (
+            <PlanningPanel canEdit />
+          ) : (
+            <div className="text-center text-sm text-muted-foreground py-8 border border-dashed rounded-lg">
+              A vista por data está disponível para admin e escritório.
+            </div>
+          )}
+        </TabsContent>
+
 
         <TabsContent value="historico" className="mt-4 space-y-4">
           <div className="relative max-w-sm">
