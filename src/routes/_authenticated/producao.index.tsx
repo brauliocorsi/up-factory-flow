@@ -931,7 +931,7 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
                 operatorCode={operatorCode}
               />
             )}
-            {(isQuality || (isPacking && canQuality)) && (
+            {(isQuality || (isPacking && canQuality)) && !prereqBlocked && (
               <QualityCheckDialog
                 orderId={item.order_id}
                 orderStageId={isQuality ? item.id : ""}
