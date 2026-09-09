@@ -137,6 +137,7 @@ function ProducaoPage() {
 
   useRealtimeOrders([["production"], ...VISIBLE_STAGES.map((s) => ["production-colis", s])], {
     enabled: Boolean(session),
+    debounceMs: 120,
     tables: [
       "production_orders",
       "order_stages",
@@ -154,11 +155,67 @@ function ProducaoPage() {
   const colisByStage = colisByStageMap[activeStage];
   const supportsGrouping = activeStage === "corte" || activeStage === "estrutura";
 
+  // ---- Resposta imediata ao clique -------------------------------------
+  // O operador vê o estado mudar sem esperar o servidor, e o mesmo botão
+  // fica bloqueado até a resposta chegar (evita duplo clique / duplo registo).
+  const [busyIds, setBusyIds] = useState<Record<string, true>>({});
+  const markBusy = (id: string) => setBusyIds((m) => ({ ...m, [id]: true }));
+  const clearBusy = (id: string) =>
+    setBusyIds((m) => {
+      const next = { ...m };
+      delete next[id];
+      return next;
+    });
+
+  const patchState = (
+    row: { status: string; is_paused: boolean; started_at: string | null; last_resume_at?: string | null; current_segment_started_at?: string | null },
+    event: "iniciar" | "pausar" | "retomar" | "finalizar",
+  ) => {
+    const nowIso = new Date().toISOString();
+    if (event === "iniciar" || event === "retomar") {
+      return {
+        ...row,
+        status: "em_curso",
+        is_paused: false,
+        started_at: row.started_at ?? nowIso,
+        ...("last_resume_at" in row ? { last_resume_at: nowIso } : {}),
+        ...("current_segment_started_at" in row ? { current_segment_started_at: nowIso } : {}),
+      };
+    }
+    if (event === "pausar") {
+      return {
+        ...row,
+        is_paused: true,
+        ...("last_resume_at" in row ? { last_resume_at: null } : {}),
+        ...("current_segment_started_at" in row ? { current_segment_started_at: null } : {}),
+      };
+    }
+    return { ...row, status: "concluida", is_paused: false };
+  };
+
   const coliMutation = useMutation({
     mutationFn: (vars: { order_coli_stage_id: string; event: "iniciar"|"pausar"|"retomar"|"finalizar" }) => {
       const code = operatorCodeRef.current.trim();
       if (!code) throw new Error("Indica o teu código primeiro");
       return recordColiFn({ data: { ...vars, operator_code: code } });
+    },
+    onMutate: (vars) => {
+      markBusy(vars.order_coli_stage_id);
+      VISIBLE_STAGES.forEach((stage) => {
+        qc.setQueryData(["production-colis", stage], (old: any) => {
+          if (!old?.byOrder) return old;
+          let touched = false;
+          const byOrder: Record<string, any[]> = {};
+          for (const [oid, arr] of Object.entries(old.byOrder as Record<string, any[]>)) {
+            byOrder[oid] = arr.map((c) => {
+              if (c.id !== vars.order_coli_stage_id) return c;
+              touched = true;
+              return patchState(c, vars.event);
+            });
+          }
+          return touched ? { ...old, byOrder } : old;
+        });
+      });
     },
     onSuccess: (res: any) => {
       if (res && res.ok === false) toast.error(res.message ?? "Não foi possível registar o evento");
@@ -167,6 +224,7 @@ function ProducaoPage() {
     },
 
     onError: (e: any) => toast.error(e?.message ?? "Erro ao registar"),
+    onSettled: (_d, _e, vars) => clearBusy(vars.order_coli_stage_id),
   });
 
   const [groupMode, setGroupMode] = useState<boolean>(false);
@@ -237,6 +295,19 @@ function ProducaoPage() {
       if (!code) throw new Error("Indica o teu código primeiro");
       return recordFn({ data: { ...vars, operator_code: code } });
     },
+    onMutate: (vars) => {
+      markBusy(vars.order_stage_id);
+      qc.setQueryData(["production"], (old: any) => {
+        if (!old?.byStage) return old;
+        const byStage: Record<string, any[]> = {};
+        for (const [s, arr] of Object.entries(old.byStage as Record<string, any[]>)) {
+          byStage[s] = (arr ?? []).map((it) =>
+            it.id === vars.order_stage_id ? patchState(it, vars.event) : it,
+          );
+        }
+        return { ...old, byStage };
+      });
+    },
     onSuccess: (res: any) => {
       if (res && res.ok === false) {
         toast.error(res.message ?? "Não foi possível registar");
@@ -244,6 +315,7 @@ function ProducaoPage() {
       qc.invalidateQueries({ queryKey: ["production"] });
     },
     onError: (e: any) => toast.error(e?.message ?? "Erro ao registar"),
+    onSettled: (_d, _e, vars) => clearBusy(vars.order_stage_id),
   });
 
   const codeInputRef = useRef<HTMLInputElement>(null);
@@ -552,17 +624,21 @@ function ProducaoPage() {
               key={it.id}
               item={it}
               canAct={canActOnStage(activeStage) && !!currentOp}
-              onAction={(event) => mutation.mutate({ order_stage_id: it.id, event })}
-              pending={mutation.isPending}
+              onAction={(event) => {
+                if (busyIds[it.id]) return;
+                mutation.mutate({ order_stage_id: it.id, event });
+              }}
+              pending={Boolean(busyIds[it.id])}
               operatorCode={operatorCode.trim()}
               expectedMinutes={expectedMap?.[it.order_id]?.[it.stage] ?? null}
               colis={colisByStage?.byOrder?.[it.order_id] ?? []}
               isMultiColiOrder={activeStage !== "estrutura" && activeStage !== "corte" && (colisByStage?.multiColiOrderIds ?? []).includes(it.order_id)}
               coliTotal={colisByStage?.coliCountByOrder?.[it.order_id] ?? 0}
-              onColiAction={(coli_stage_id, event) =>
-                coliMutation.mutate({ order_coli_stage_id: coli_stage_id, event })
-              }
-              coliPending={coliMutation.isPending}
+              onColiAction={(coli_stage_id, event) => {
+                if (busyIds[coli_stage_id]) return;
+                coliMutation.mutate({ order_coli_stage_id: coli_stage_id, event });
+              }}
+              coliPending={(id: string) => Boolean(busyIds[id])}
               fabricConsumption={consumptionByOrder[it.order_id] ?? null}
               canUndoFabric={isStaff}
               canQuality={canActOnStage("qualidade")}
@@ -590,7 +666,7 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
   isMultiColiOrder: boolean;
   coliTotal?: number;
   onColiAction: (coli_stage_id: string, event: "iniciar"|"pausar"|"retomar"|"finalizar") => void;
-  coliPending: boolean;
+  coliPending: (id: string) => boolean;
   fabricConsumption?: { meters: number; fabric_ref_code: string | null; color_code: string | null } | null;
   canUndoFabric?: boolean;
 }) {
@@ -892,7 +968,7 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
               showLabel={isPacking}
               canAct={canAct}
               operatorCode={operatorCode}
-              pending={coliPending}
+              pending={coliPending(c.id)}
               onAction={(ev) => onColiAction(c.id, ev)}
             />
           ))}
