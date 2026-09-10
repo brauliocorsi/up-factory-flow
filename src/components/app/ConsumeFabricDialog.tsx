@@ -35,11 +35,14 @@ export function ConsumeFabricDialog({
   orderNumber,
   operatorCode,
   canUndo = false,
+  compact = false,
 }: {
   orderId: string;
   orderNumber: string;
   operatorCode?: string;
   canUndo?: boolean;
+  /** Versão pequena do botão, para listas de grupos. */
+  compact?: boolean;
 }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -149,9 +152,15 @@ export function ConsumeFabricDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="lg" variant="outline" className="gap-2 h-12 flex-1 sm:flex-none">
-          <Scissors className="size-4" /> Consumir tecido
-        </Button>
+        {compact ? (
+          <Button size="sm" variant="outline" className="gap-1 shrink-0">
+            <Scissors className="size-3.5" /> Tecido
+          </Button>
+        ) : (
+          <Button size="lg" variant="outline" className="gap-2 h-12 flex-1 sm:flex-none">
+            <Scissors className="size-4" /> Consumir tecido
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="max-w-lg">
         <DialogHeader>
