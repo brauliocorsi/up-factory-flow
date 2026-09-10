@@ -24,6 +24,11 @@ import {
   STAGES, type Stage,
 } from "@/lib/production.functions";
 import { setOperatorPin } from "@/lib/operatorAuth.functions";
+import {
+  listStaffUsers, createStaffUser, setStaffRole, resetStaffPassword, deleteStaffUser,
+} from "@/lib/staffUsers.functions";
+import { useMySession } from "@/hooks/useMySession";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export const Route = createFileRoute("/_authenticated/configuracoes")({
   component: ConfigPage,
