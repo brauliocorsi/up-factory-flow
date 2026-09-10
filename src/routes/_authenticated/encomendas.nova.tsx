@@ -428,7 +428,7 @@ function NovaEncomendaPage() {
               <RefSelect items={modelsForCat} value={form.model_id} onChange={(v) => set("model_id", v)} />
             </Field>
             <Field label="Estrutura" highlight={missingSegments.has("structure")}>
-              <RefSelect items={cat?.structures ?? []} value={form.structure_id} onChange={(v) => set("structure_id", v)} />
+              <RefSelect items={structuresForSelection} value={form.structure_id} onChange={(v) => set("structure_id", v)} />
             </Field>
             <Field label="Medida" highlight={missingSegments.has("measure")}>
               <RefSelect items={cat?.measures ?? []} value={form.measure_id} onChange={(v) => set("measure_id", v)} />
