@@ -1997,6 +1997,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      assert_fabric_consumed: {
+        Args: { _order_id: string }
+        Returns: undefined
+      }
       assert_office_or_admin: { Args: { _action: string }; Returns: undefined }
       assert_operator_is_session: {
         Args: { _op: Database["public"]["Tables"]["operators"]["Row"] }
