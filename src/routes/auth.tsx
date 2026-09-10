@@ -9,6 +9,23 @@ import { Factory } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
+/**
+ * Destino inicial conforme o perfil: operador vai direto ao seu posto e
+ * picador à picagem. Evita passar pelo painel geral (que estes perfis não
+ * podem ler) e o erro "Algo correu mal" logo após iniciar sessão.
+ */
+async function landingPathForUser(userId: string): Promise<string> {
+  const { data: roles } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId);
+  const list = (roles ?? []).map((r: any) => r.role as string);
+  if (list.includes("admin") || list.includes("escritorio")) return "/";
+  if (list.includes("operador")) return "/producao";
+  if (list.includes("picador")) return "/picagem";
+  return "/producao";
+}
+
 export const Route = createFileRoute("/auth")({
   ssr: false,
   validateSearch: (s: Record<string, unknown>): { next?: string } =>
@@ -20,7 +37,8 @@ export const Route = createFileRoute("/auth")({
       if (next && next.startsWith("/") && !next.startsWith("//")) {
         throw redirect({ href: next });
       }
-      throw redirect({ to: "/" });
+      const to = await landingPathForUser(data.session.user.id);
+      throw redirect({ href: to });
     }
   },
   component: AuthPage,
@@ -36,7 +54,7 @@ function AuthPage() {
       window.location.href = safeNext;
       return;
     }
-    navigate({ to: fallback, replace: true });
+    navigate({ href: fallback, replace: true });
   }
   const [tab, setTab] = useState<"operador" | "admin">("operador");
 
@@ -64,11 +82,12 @@ function AuthPage() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) { toast.error(error.message); return; }
     toast.success("Sessão iniciada");
-    goNext("/");
+    const to = data.user ? await landingPathForUser(data.user.id) : "/";
+    goNext(to);
   }
 
   return (
