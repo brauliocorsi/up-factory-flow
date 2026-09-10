@@ -87,11 +87,14 @@ export const getColisByStage = createServerFn({ method: "POST" })
     const coliIds = Array.from(new Set((rows ?? []).map((r: any) => r.order_coli_id)));
     const statesByColi = new Map<string, { stage: Stage; status: string }[]>();
     if (coliIds.length > 0) {
-      const { data: allStages, error: eS } = await sb
-        .from("order_coli_stages")
-        .select("order_coli_id, stage, status")
-        .in("order_coli_id", coliIds);
-      if (eS) throw new Error(eS.message);
+      const allStages = await fetchAll((from, to) =>
+        sb
+          .from("order_coli_stages")
+          .select("order_coli_id, stage, status")
+          .in("order_coli_id", coliIds)
+          .order("id", { ascending: true })
+          .range(from, to),
+      );
       for (const r of (allStages ?? []) as any[]) {
         const arr = statesByColi.get(r.order_coli_id) ?? [];
         arr.push({ stage: r.stage, status: r.status });
