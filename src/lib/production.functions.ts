@@ -122,10 +122,14 @@ export const getProductionData = createServerFn({ method: "GET" })
         );
       }
 
-      const { data: colisRows } = await (supabase as any)
-        .from("order_colis")
-        .select("order_id")
-        .in("order_id", orderIds);
+      const colisRows = await fetchAllPages((from, to) =>
+        (supabase as any)
+          .from("order_colis")
+          .select("order_id")
+          .in("order_id", orderIds)
+          .order("id", { ascending: true })
+          .range(from, to),
+      );
       for (const c of (colisRows ?? []) as any[]) {
         coliCountByOrder.set(c.order_id, (coliCountByOrder.get(c.order_id) ?? 0) + 1);
       }
