@@ -9,6 +9,23 @@ import { Factory } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
+/**
+ * Destino inicial conforme o perfil: operador vai direto ao seu posto e
+ * picador à picagem. Evita passar pelo painel geral (que estes perfis não
+ * podem ler) e o erro "Algo correu mal" logo após iniciar sessão.
+ */
+async function landingPathForUser(userId: string): Promise<string> {
+  const { data: roles } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId);
+  const list = (roles ?? []).map((r: any) => r.role as string);
+  if (list.includes("admin") || list.includes("escritorio")) return "/";
+  if (list.includes("operador")) return "/producao";
+  if (list.includes("picador")) return "/picagem";
+  return "/producao";
+}
+
 export const Route = createFileRoute("/auth")({
   ssr: false,
   validateSearch: (s: Record<string, unknown>): { next?: string } =>
@@ -20,7 +37,8 @@ export const Route = createFileRoute("/auth")({
       if (next && next.startsWith("/") && !next.startsWith("//")) {
         throw redirect({ href: next });
       }
-      throw redirect({ to: "/" });
+      const to = await landingPathForUser(data.session.user.id);
+      throw redirect({ href: to });
     }
   },
   component: AuthPage,
