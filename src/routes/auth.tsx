@@ -82,11 +82,12 @@ function AuthPage() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) { toast.error(error.message); return; }
     toast.success("Sessão iniciada");
-    goNext("/");
+    const to = data.user ? await landingPathForUser(data.user.id) : "/";
+    goNext(to);
   }
 
   return (
