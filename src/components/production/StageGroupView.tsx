@@ -54,6 +54,25 @@ export function StageGroupView({ stage, canAct, operatorCode }: Props) {
     enabled: Boolean(session),
   });
 
+  // Consumos de tecido já registados (obrigatórios para finalizar o Corte)
+  const fetchConsumptions = useServerFn(listFabricConsumptions);
+  const orderIds = useMemo(
+    () => Array.from(new Set(groups.flatMap((g) => g.items.map((i) => i.order_id)))),
+    [groups],
+  );
+  const { data: consumptions } = useQuery({
+    queryKey: ["fabric-consumptions", "groups", stage, orderIds.join(",")],
+    queryFn: () => fetchConsumptions({ data: { order_ids: orderIds } }),
+    enabled: Boolean(session) && stage === "corte" && orderIds.length > 0,
+  });
+  const consumptionByOrder = useMemo(() => {
+    const m: Record<string, FabricConsumption> = {};
+    for (const c of ((consumptions ?? []) as FabricConsumption[])) m[c.order_id] = c;
+    return m;
+  }, [consumptions]);
+
+
+
   const finalizeMut = useMutation({
     mutationFn: (vars: { order_stage_ids: string[] }) => {
       const code = operatorCode.trim();
