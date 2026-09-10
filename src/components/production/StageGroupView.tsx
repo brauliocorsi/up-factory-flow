@@ -351,7 +351,16 @@ function GroupCard({
         {pausedItems.length > 0 && (
           <Badge className="bg-amber-500 text-white">{pausedItems.length} em pausa</Badge>
         )}
+        {isCut && (
+          <span className="inline-flex items-center gap-1">
+            Tecido do lote: <strong className="text-foreground">{totalMeters.toFixed(1)} m</strong>
+          </span>
+        )}
+        {isCut && missingFabric.length > 0 && (
+          <Badge variant="destructive">{missingFabric.length} sem tecido consumido</Badge>
+        )}
       </div>
+
 
       {group.stage === "corte" && group.directional && (
         <div className="flex items-center gap-2 rounded-md border border-warning/50 bg-warning/15 px-3 py-2 text-sm font-medium">
