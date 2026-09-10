@@ -97,10 +97,14 @@ export const getProductionData = createServerFn({ method: "GET" })
     const coliCountByOrder = new Map<string, number>();
     const stageStatesByOrder = new Map<string, Array<{ stage: Stage; status: string }>>();
     if (orderIds.length > 0) {
-      const { data: allStages } = await (supabase as any)
-        .from("order_stages")
-        .select("order_id, stage, status, notes")
-        .in("order_id", orderIds);
+      const allStages = await fetchAllPages((from, to) =>
+        (supabase as any)
+          .from("order_stages")
+          .select("order_id, stage, status, notes")
+          .in("order_id", orderIds)
+          .order("id", { ascending: true })
+          .range(from, to),
+      );
       const stagesByOrder = new Map<string, any[]>();
       for (const s of (allStages ?? []) as any[]) {
         const arr = stagesByOrder.get(s.order_id) ?? [];
