@@ -148,6 +148,7 @@ export function StageGroupView({ stage, canAct, operatorCode }: Props) {
           key={g.key}
           group={g}
           canAct={canAct}
+          consumptionByOrder={consumptionByOrder}
           pending={finalizeMut.isPending || eventMut.isPending}
           onFinalize={(ids) => finalizeMut.mutate({ order_stage_ids: ids })}
           onEvent={(ids, event) => eventMut.mutate({ ids, event })}
@@ -161,12 +162,14 @@ function GroupCard({
   group,
   canAct,
   pending,
+  consumptionByOrder,
   onFinalize,
   onEvent,
 }: {
   group: StageGroup;
   canAct: boolean;
   pending: boolean;
+  consumptionByOrder: Record<string, FabricConsumption>;
   onFinalize: (ids: string[]) => void;
   onEvent: (ids: string[], event: "iniciar" | "pausar" | "retomar") => void;
 }) {
