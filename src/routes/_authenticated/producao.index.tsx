@@ -311,6 +311,7 @@ function ProducaoPage() {
     },
     onMutate: (vars) => {
       markBusy(vars.order_stage_id);
+      const previous = qc.getQueryData(["production"]);
       qc.setQueryData(["production"], (old: any) => {
         if (!old?.byStage) return old;
         const byStage: Record<string, any[]> = {};
