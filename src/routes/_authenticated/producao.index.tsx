@@ -322,6 +322,7 @@ function ProducaoPage() {
         }
         return { ...old, byStage };
       });
+      return { previous };
     },
     onSuccess: (res: any) => {
       if (res && res.ok === false) {
@@ -329,7 +330,12 @@ function ProducaoPage() {
       }
       qc.invalidateQueries({ queryKey: ["production"] });
     },
-    onError: (e: any) => toast.error(e?.message ?? "Erro ao registar"),
+    onError: (e: any, _vars, ctx: any) => {
+      // Reverter o estado otimista: nada foi registado no servidor.
+      if (ctx?.previous !== undefined) qc.setQueryData(["production"], ctx.previous);
+      qc.invalidateQueries({ queryKey: ["production"] });
+      toast.error(e?.message ?? "Erro ao registar");
+    },
     onSettled: (_d, _e, vars) => clearBusy(vars.order_stage_id),
   });
 
