@@ -14,7 +14,15 @@ import {
   finalizeStageGroup,
   type StageGroup,
 } from "@/lib/grouping.functions";
+import { listFabricConsumptions } from "@/lib/stock.functions";
 import { useAuth } from "@/hooks/useAuth";
+
+type FabricConsumption = {
+  order_id: string;
+  meters: number;
+  fabric_ref_code: string | null;
+  color_code: string | null;
+};
 
 function fmtDur(seconds: number) {
   const s = Math.max(0, Math.floor(seconds));
@@ -45,6 +53,25 @@ export function StageGroupView({ stage, canAct, operatorCode }: Props) {
     refetchInterval: 30000,
     enabled: Boolean(session),
   });
+
+  // Consumos de tecido já registados (obrigatórios para finalizar o Corte)
+  const fetchConsumptions = useServerFn(listFabricConsumptions);
+  const orderIds = useMemo(
+    () => Array.from(new Set(groups.flatMap((g) => g.items.map((i) => i.order_id)))),
+    [groups],
+  );
+  const { data: consumptions } = useQuery({
+    queryKey: ["fabric-consumptions", "groups", stage, orderIds.join(",")],
+    queryFn: () => fetchConsumptions({ data: { order_ids: orderIds } }),
+    enabled: Boolean(session) && stage === "corte" && orderIds.length > 0,
+  });
+  const consumptionByOrder = useMemo(() => {
+    const m: Record<string, FabricConsumption> = {};
+    for (const c of ((consumptions ?? []) as FabricConsumption[])) m[c.order_id] = c;
+    return m;
+  }, [consumptions]);
+
+
 
   const finalizeMut = useMutation({
     mutationFn: (vars: { order_stage_ids: string[] }) => {
@@ -121,6 +148,7 @@ export function StageGroupView({ stage, canAct, operatorCode }: Props) {
           key={g.key}
           group={g}
           canAct={canAct}
+          consumptionByOrder={consumptionByOrder}
           pending={finalizeMut.isPending || eventMut.isPending}
           onFinalize={(ids) => finalizeMut.mutate({ order_stage_ids: ids })}
           onEvent={(ids, event) => eventMut.mutate({ ids, event })}
@@ -134,12 +162,14 @@ function GroupCard({
   group,
   canAct,
   pending,
+  consumptionByOrder,
   onFinalize,
   onEvent,
 }: {
   group: StageGroup;
   canAct: boolean;
   pending: boolean;
+  consumptionByOrder: Record<string, FabricConsumption>;
   onFinalize: (ids: string[]) => void;
   onEvent: (ids: string[], event: "iniciar" | "pausar" | "retomar") => void;
 }) {
@@ -182,16 +212,32 @@ function GroupCard({
       ? `${group.model_name ?? group.model_code ?? "—"} · ${group.measure ?? "—"} · ${group.fabric_type ?? "—"}`
       : `Estrutura ${group.structure_type ?? "—"} · ${group.measure ?? "—"}`;
 
+  const isCut = group.stage === "corte";
+  const fabricOf = (orderId: string) => consumptionByOrder[orderId] ?? null;
+  const missingFabric = isCut
+    ? visibleItems.filter((i) => i.status !== "concluida" && !fabricOf(i.order_id))
+    : [];
+  const totalMeters = isCut
+    ? visibleItems.reduce((acc, i) => acc + Number(fabricOf(i.order_id)?.meters ?? 0), 0)
+    : 0;
+
   const handleFinalize = () => {
-    const pending = visibleItems
-      .filter((i) => i.status !== "concluida")
+    const pendingIds = visibleItems
+      .filter((i) => i.status !== "concluida" && (!isCut || fabricOf(i.order_id)))
       .map((i) => i.order_stage_id);
-    if (pending.length === 0) {
+    if (missingFabric.length > 0) {
+      toast.error(
+        `${missingFabric.length} peça(s) sem consumo de tecido — registe o consumo antes de concluir`,
+        { description: missingFabric.slice(0, 3).map((i) => i.order_number).join(" · ") },
+      );
+      return;
+    }
+    if (pendingIds.length === 0) {
       toast.info("Sem etapas pendentes neste grupo");
       return;
     }
-    if (!confirm(`Concluir ${pending.length} peça(s) deste grupo?`)) return;
-    onFinalize(pending);
+    if (!confirm(`Concluir ${pendingIds.length} peça(s) deste grupo?`)) return;
+    onFinalize(pendingIds);
   };
 
   return (
@@ -273,10 +319,19 @@ function GroupCard({
           )}
           <Button
             size="sm"
-            disabled={!canAct || pending || visibleCount === 0 || notStarted.length === visibleCount}
+            disabled={
+              !canAct || pending || visibleCount === 0 ||
+              notStarted.length === visibleCount || missingFabric.length > 0
+            }
             onClick={handleFinalize}
             className="gap-1"
-            title={notStarted.length === visibleCount ? "Inicia o grupo antes de concluir" : undefined}
+            title={
+              missingFabric.length > 0
+                ? "Consome o tecido de todas as peças antes de concluir"
+                : notStarted.length === visibleCount
+                ? "Inicia o grupo antes de concluir"
+                : undefined
+            }
           >
             <Check className="size-4" />
             Concluir grupo
@@ -296,7 +351,16 @@ function GroupCard({
         {pausedItems.length > 0 && (
           <Badge className="bg-amber-500 text-white">{pausedItems.length} em pausa</Badge>
         )}
+        {isCut && (
+          <span className="inline-flex items-center gap-1">
+            Tecido do lote: <strong className="text-foreground">{totalMeters.toFixed(1)} m</strong>
+          </span>
+        )}
+        {isCut && missingFabric.length > 0 && (
+          <Badge variant="destructive">{missingFabric.length} sem tecido consumido</Badge>
+        )}
       </div>
+
 
       {group.stage === "corte" && group.directional && (
         <div className="flex items-center gap-2 rounded-md border border-warning/50 bg-warning/15 px-3 py-2 text-sm font-medium">
@@ -332,6 +396,19 @@ function GroupCard({
                     STOCK
                   </Badge>
                 )}
+                {isCut && (
+                  fabricOf(it.order_id) ? (
+                    <Badge variant="secondary" className="text-[10px] shrink-0">
+                      {Number(fabricOf(it.order_id)!.meters).toFixed(1)} m ·{" "}
+                      {fabricOf(it.order_id)!.fabric_ref_code ?? "—"}/
+                      {fabricOf(it.order_id)!.color_code ?? "—"}
+                    </Badge>
+                  ) : (
+                    <Badge variant="destructive" className="text-[10px] shrink-0">
+                      Sem tecido consumido
+                    </Badge>
+                  )
+                )}
               </div>
               <div className="flex items-center gap-1 shrink-0">
                 <Badge variant="outline" className="text-[10px]">
@@ -340,9 +417,14 @@ function GroupCard({
                 <Button
                   size="sm"
                   variant="ghost"
-                  disabled={!canAct || pending || it.status === "concluida"}
+                  disabled={
+                    !canAct || pending || it.status === "concluida" ||
+                    (isCut && !fabricOf(it.order_id))
+                  }
+                  title={isCut && !fabricOf(it.order_id) ? "Consome o tecido primeiro" : undefined}
                   onClick={() => onFinalize([it.order_stage_id])}
                 >
+
                   Concluir
                 </Button>
               </div>
