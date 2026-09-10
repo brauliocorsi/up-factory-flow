@@ -36,6 +36,7 @@ export const Route = createFileRoute("/_authenticated/configuracoes")({
 
 function ConfigPage() {
   const qc = useQueryClient();
+  const { role: myRole } = useMySession();
   const fetchSettings = useServerFn(getAppSettings);
   const fetchOps = useServerFn(listOperatorsWithStages);
   const updateSettingsFn = useServerFn(updateAppSettings);
@@ -151,6 +152,191 @@ function ConfigPage() {
           ))}
         </div>
       </Card>
+
+      {myRole === "admin" && <StaffAccessCard />}
+    </div>
+  );
+}
+
+function StaffAccessCard() {
+  const qc = useQueryClient();
+  const fetchStaff = useServerFn(listStaffUsers);
+  const createFn = useServerFn(createStaffUser);
+  const roleFn = useServerFn(setStaffRole);
+  const pwdFn = useServerFn(resetStaffPassword);
+  const delFn = useServerFn(deleteStaffUser);
+
+  const { data: staff } = useQuery({ queryKey: ["staff-users"], queryFn: () => fetchStaff() });
+  const refresh = () => qc.invalidateQueries({ queryKey: ["staff-users"] });
+
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [password, setPassword] = useState("");
+  const [newRole, setNewRole] = useState<"admin" | "escritorio">("escritorio");
+
+  const create = useMutation({
+    mutationFn: () => createFn({ data: { email: email.trim(), password, name: name.trim() || undefined, role: newRole } }),
+    onSuccess: (r: any) => {
+      if (!r?.ok) { toast.error(r?.message ?? "Erro"); return; }
+      setEmail(""); setName(""); setPassword("");
+      refresh();
+      toast.success("Acesso criado. Já pode entrar com o email e a password.");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Erro"),
+  });
+
+  const changeRole = useMutation({
+    mutationFn: (v: { user_id: string; role: "admin" | "escritorio" }) => roleFn({ data: v }),
+    onSuccess: (r: any) => {
+      if (!r?.ok) { toast.error(r?.message ?? "Erro"); return; }
+      refresh(); toast.success("Permissão atualizada");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Erro"),
+  });
+
+  const resetPwd = useMutation({
+    mutationFn: (v: { user_id: string; password: string }) => pwdFn({ data: v }),
+    onSuccess: (r: any) => {
+      if (!r?.ok) { toast.error(r?.message ?? "Erro"); return; }
+      toast.success("Password alterada");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Erro"),
+  });
+
+  const removeUser = useMutation({
+    mutationFn: (user_id: string) => delFn({ data: { user_id } }),
+    onSuccess: (r: any) => {
+      if (!r?.ok) { toast.error(r?.message ?? "Erro"); return; }
+      refresh(); toast.success("Acesso removido");
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Erro"),
+  });
+
+  const canCreate = /\S+@\S+\.\S+/.test(email.trim()) && password.length >= 8 && !create.isPending;
+
+  return (
+    <Card className="p-4 space-y-4">
+      <div>
+        <h2 className="font-semibold">Acessos de escritório e administração</h2>
+        <p className="text-xs text-muted-foreground mt-0.5">
+          Criar logins com email e password. Escritório gere encomendas e planeamento;
+          administração tem acesso total, incluindo estas configurações.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-2 items-end pb-3 border-b">
+        <div className="md:col-span-2">
+          <Label className="text-xs">Email</Label>
+          <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="nome@empresa.pt" autoComplete="off" />
+        </div>
+        <div>
+          <Label className="text-xs">Nome</Label>
+          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Opcional" />
+        </div>
+        <div>
+          <Label className="text-xs">Password</Label>
+          <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mín. 8 caracteres" autoComplete="new-password" />
+        </div>
+        <div>
+          <Label className="text-xs">Permissão</Label>
+          <Select value={newRole} onValueChange={(v) => setNewRole(v as "admin" | "escritorio")}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="escritorio">Escritório</SelectItem>
+              <SelectItem value="admin">Administração</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="md:col-span-5">
+          <Button disabled={!canCreate} onClick={() => create.mutate()}>
+            {create.isPending ? "A criar…" : "Criar acesso"}
+          </Button>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        {(staff ?? []).length === 0 && (
+          <div className="text-sm text-muted-foreground">Ainda não existem acessos de escritório.</div>
+        )}
+        {(staff ?? []).map((u) => (
+          <StaffRow
+            key={u.id}
+            user={u}
+            onRole={(r) => changeRole.mutate({ user_id: u.id, role: r })}
+            onPassword={(p) => resetPwd.mutate({ user_id: u.id, password: p })}
+            onDelete={() => removeUser.mutate(u.id)}
+            busy={changeRole.isPending || resetPwd.isPending || removeUser.isPending}
+          />
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+function StaffRow({ user, onRole, onPassword, onDelete, busy }: {
+  user: { id: string; email: string; name: string; role: "admin" | "escritorio"; is_self: boolean };
+  onRole: (r: "admin" | "escritorio") => void;
+  onPassword: (p: string) => void;
+  onDelete: () => void;
+  busy: boolean;
+}) {
+  const [pwdOpen, setPwdOpen] = useState(false);
+  const [pwd, setPwd] = useState("");
+  const [delOpen, setDelOpen] = useState(false);
+
+  return (
+    <div className="border rounded-md p-3 flex items-center justify-between gap-3 flex-wrap">
+      <div className="min-w-0">
+        <div className="font-medium text-sm truncate">{user.name || user.email}</div>
+        <div className="text-xs text-muted-foreground truncate">{user.email}</div>
+      </div>
+      <div className="flex items-center gap-2">
+        {user.is_self && <Badge variant="secondary">Você</Badge>}
+        <Select value={user.role} onValueChange={(v) => onRole(v as "admin" | "escritorio")} disabled={busy}>
+          <SelectTrigger className="w-[170px] h-9"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="escritorio">Escritório</SelectItem>
+            <SelectItem value="admin">Administração</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button size="sm" variant="outline" onClick={() => setPwdOpen(true)} disabled={busy}>
+          <KeyRound className="size-3.5 mr-1" /> Password
+        </Button>
+        {!user.is_self && (
+          <Button size="sm" variant="outline" className="text-destructive hover:text-destructive" onClick={() => setDelOpen(true)} disabled={busy}>
+            <Trash2 className="size-3.5" />
+          </Button>
+        )}
+      </div>
+
+      <Dialog open={pwdOpen} onOpenChange={setPwdOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Alterar password — {user.email}</DialogTitle>
+            <DialogDescription>Defina uma nova password com pelo menos 8 caracteres.</DialogDescription>
+          </DialogHeader>
+          <Input type="password" value={pwd} onChange={(e) => setPwd(e.target.value)} placeholder="Nova password" autoComplete="new-password" />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setPwd(""); setPwdOpen(false); }}>Cancelar</Button>
+            <Button disabled={pwd.length < 8} onClick={() => { onPassword(pwd); setPwd(""); setPwdOpen(false); }}>Guardar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={delOpen} onOpenChange={setDelOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remover acesso?</DialogTitle>
+            <DialogDescription>
+              <b>{user.email}</b> deixa de conseguir entrar na aplicação. O histórico de trabalho mantém-se.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDelOpen(false)}>Cancelar</Button>
+            <Button variant="destructive" onClick={() => { onDelete(); setDelOpen(false); }}>Remover</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
