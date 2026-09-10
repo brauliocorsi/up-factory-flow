@@ -212,16 +212,32 @@ function GroupCard({
       ? `${group.model_name ?? group.model_code ?? "—"} · ${group.measure ?? "—"} · ${group.fabric_type ?? "—"}`
       : `Estrutura ${group.structure_type ?? "—"} · ${group.measure ?? "—"}`;
 
+  const isCut = group.stage === "corte";
+  const fabricOf = (orderId: string) => consumptionByOrder[orderId] ?? null;
+  const missingFabric = isCut
+    ? visibleItems.filter((i) => i.status !== "concluida" && !fabricOf(i.order_id))
+    : [];
+  const totalMeters = isCut
+    ? visibleItems.reduce((acc, i) => acc + Number(fabricOf(i.order_id)?.meters ?? 0), 0)
+    : 0;
+
   const handleFinalize = () => {
-    const pending = visibleItems
-      .filter((i) => i.status !== "concluida")
+    const pendingIds = visibleItems
+      .filter((i) => i.status !== "concluida" && (!isCut || fabricOf(i.order_id)))
       .map((i) => i.order_stage_id);
-    if (pending.length === 0) {
+    if (missingFabric.length > 0) {
+      toast.error(
+        `${missingFabric.length} peça(s) sem consumo de tecido — registe o consumo antes de concluir`,
+        { description: missingFabric.slice(0, 3).map((i) => i.order_number).join(" · ") },
+      );
+      return;
+    }
+    if (pendingIds.length === 0) {
       toast.info("Sem etapas pendentes neste grupo");
       return;
     }
-    if (!confirm(`Concluir ${pending.length} peça(s) deste grupo?`)) return;
-    onFinalize(pending);
+    if (!confirm(`Concluir ${pendingIds.length} peça(s) deste grupo?`)) return;
+    onFinalize(pendingIds);
   };
 
   return (
