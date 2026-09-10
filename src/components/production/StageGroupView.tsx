@@ -396,6 +396,19 @@ function GroupCard({
                     STOCK
                   </Badge>
                 )}
+                {isCut && (
+                  fabricOf(it.order_id) ? (
+                    <Badge variant="secondary" className="text-[10px] shrink-0">
+                      {Number(fabricOf(it.order_id)!.meters).toFixed(1)} m ·{" "}
+                      {fabricOf(it.order_id)!.fabric_ref_code ?? "—"}/
+                      {fabricOf(it.order_id)!.color_code ?? "—"}
+                    </Badge>
+                  ) : (
+                    <Badge variant="destructive" className="text-[10px] shrink-0">
+                      Sem tecido consumido
+                    </Badge>
+                  )
+                )}
               </div>
               <div className="flex items-center gap-1 shrink-0">
                 <Badge variant="outline" className="text-[10px]">
@@ -404,9 +417,14 @@ function GroupCard({
                 <Button
                   size="sm"
                   variant="ghost"
-                  disabled={!canAct || pending || it.status === "concluida"}
+                  disabled={
+                    !canAct || pending || it.status === "concluida" ||
+                    (isCut && !fabricOf(it.order_id))
+                  }
+                  title={isCut && !fabricOf(it.order_id) ? "Consome o tecido primeiro" : undefined}
                   onClick={() => onFinalize([it.order_stage_id])}
                 >
+
                   Concluir
                 </Button>
               </div>
