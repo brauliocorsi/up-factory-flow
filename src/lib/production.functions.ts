@@ -59,16 +59,36 @@ export type ProductionData = {
   byStage: Record<Stage, ProductionStageOrder[]>;
 };
 
+/**
+ * Lê todas as páginas de uma consulta. Sem isto, o PostgREST devolve no
+ * máximo 1000 linhas e encomendas ficariam invisíveis no quadro.
+ */
+const PAGE = 1000;
+async function fetchAllPages<T = any>(build: (from: number, to: number) => any): Promise<T[]> {
+  const out: T[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await build(from, from + PAGE - 1);
+    if (error) throw new Error(error.message);
+    const rows = (data ?? []) as T[];
+    out.push(...rows);
+    if (rows.length < PAGE) break;
+  }
+  return out;
+}
+
 export const getProductionData = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }): Promise<ProductionData> => {
     const { supabase } = context;
-    const { data, error } = await (supabase as any)
-      .from("order_stages")
-      .select("id, stage, status, started_at, finished_at, productive_seconds, paused_seconds, is_paused, is_rework, rework_seconds, rework_count, production_orders!inner(id, order_number, product_description, observation, status), operators(code)")
-      .neq("production_orders.status", "cancelada")
-      .order("started_at", { ascending: true, nullsFirst: false });
-    if (error) throw new Error(error.message);
+    const data = await fetchAllPages((from, to) =>
+      (supabase as any)
+        .from("order_stages")
+        .select("id, stage, status, started_at, finished_at, productive_seconds, paused_seconds, is_paused, is_rework, rework_seconds, rework_count, production_orders!inner(id, order_number, product_description, observation, status), operators(code)")
+        .neq("production_orders.status", "cancelada")
+        .order("started_at", { ascending: true, nullsFirst: false })
+        .order("id", { ascending: true })
+        .range(from, to),
+    );
 
     // Buscar TODAS as etapas das encomendas envolvidas, para calcular o
     // estado das duas linhas paralelas (Tecido + Estrutura).
@@ -77,10 +97,14 @@ export const getProductionData = createServerFn({ method: "GET" })
     const coliCountByOrder = new Map<string, number>();
     const stageStatesByOrder = new Map<string, Array<{ stage: Stage; status: string }>>();
     if (orderIds.length > 0) {
-      const { data: allStages } = await (supabase as any)
-        .from("order_stages")
-        .select("order_id, stage, status, notes")
-        .in("order_id", orderIds);
+      const allStages = await fetchAllPages((from, to) =>
+        (supabase as any)
+          .from("order_stages")
+          .select("order_id, stage, status, notes")
+          .in("order_id", orderIds)
+          .order("id", { ascending: true })
+          .range(from, to),
+      );
       const stagesByOrder = new Map<string, any[]>();
       for (const s of (allStages ?? []) as any[]) {
         const arr = stagesByOrder.get(s.order_id) ?? [];
@@ -98,10 +122,14 @@ export const getProductionData = createServerFn({ method: "GET" })
         );
       }
 
-      const { data: colisRows } = await (supabase as any)
-        .from("order_colis")
-        .select("order_id")
-        .in("order_id", orderIds);
+      const colisRows = await fetchAllPages((from, to) =>
+        (supabase as any)
+          .from("order_colis")
+          .select("order_id")
+          .in("order_id", orderIds)
+          .order("id", { ascending: true })
+          .range(from, to),
+      );
       for (const c of (colisRows ?? []) as any[]) {
         coliCountByOrder.set(c.order_id, (coliCountByOrder.get(c.order_id) ?? 0) + 1);
       }

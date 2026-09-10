@@ -49,17 +49,35 @@ export const getColisByStage = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const sb = context.supabase as any;
     // 1) Etapas desta aba ainda não concluídas.
-    const { data: rows, error } = await sb
-      .from("order_coli_stages")
-      .select(
-        `id, order_id, order_coli_id, stage, status, is_paused,
-         productive_seconds, paused_seconds, started_at, finished_at, last_resume_at,
-         order_colis!inner(coli_number, coli_name),
-         operators(code)`,
-      )
-      .eq("stage", data.stage)
-      .neq("status", "concluida");
-    if (error) throw new Error(error.message);
+    // Paginado: o PostgREST devolve no máximo 1000 linhas por pedido e
+    // volumes ficariam invisíveis no posto.
+    const PAGE = 1000;
+    const fetchAll = async (build: (from: number, to: number) => any) => {
+      const out: any[] = [];
+      for (let from = 0; ; from += PAGE) {
+        const { data: page, error: err } = await build(from, from + PAGE - 1);
+        if (err) throw new Error(err.message);
+        const list = (page ?? []) as any[];
+        out.push(...list);
+        if (list.length < PAGE) break;
+      }
+      return out;
+    };
+
+    const rows = await fetchAll((from, to) =>
+      sb
+        .from("order_coli_stages")
+        .select(
+          `id, order_id, order_coli_id, stage, status, is_paused,
+           productive_seconds, paused_seconds, started_at, finished_at, last_resume_at,
+           order_colis!inner(coli_number, coli_name),
+           operators(code)`,
+        )
+        .eq("stage", data.stage)
+        .neq("status", "concluida")
+        .order("id", { ascending: true })
+        .range(from, to),
+    );
 
     // 2) Como create_order_colis cria TODAS as etapas da rota em 'pendente'
     //    de uma só vez, só mostramos o coli na aba <stage> quando as etapas
@@ -69,11 +87,14 @@ export const getColisByStage = createServerFn({ method: "POST" })
     const coliIds = Array.from(new Set((rows ?? []).map((r: any) => r.order_coli_id)));
     const statesByColi = new Map<string, { stage: Stage; status: string }[]>();
     if (coliIds.length > 0) {
-      const { data: allStages, error: eS } = await sb
-        .from("order_coli_stages")
-        .select("order_coli_id, stage, status")
-        .in("order_coli_id", coliIds);
-      if (eS) throw new Error(eS.message);
+      const allStages = await fetchAll((from, to) =>
+        sb
+          .from("order_coli_stages")
+          .select("order_coli_id, stage, status")
+          .in("order_coli_id", coliIds)
+          .order("id", { ascending: true })
+          .range(from, to),
+      );
       for (const r of (allStages ?? []) as any[]) {
         const arr = statesByColi.get(r.order_coli_id) ?? [];
         arr.push({ stage: r.stage, status: r.status });
