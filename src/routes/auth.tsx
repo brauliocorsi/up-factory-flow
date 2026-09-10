@@ -54,7 +54,7 @@ function AuthPage() {
       window.location.href = safeNext;
       return;
     }
-    navigate({ to: fallback, replace: true });
+    navigate({ href: fallback, replace: true });
   }
   const [tab, setTab] = useState<"operador" | "admin">("operador");
 
