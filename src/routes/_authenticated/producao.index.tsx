@@ -202,6 +202,10 @@ function ProducaoPage() {
     },
     onMutate: (vars) => {
       markBusy(vars.order_coli_stage_id);
+      // Guardar o estado anterior para poder reverter se o servidor falhar.
+      const snapshot = VISIBLE_STAGES.map(
+        (stage) => [stage, qc.getQueryData(["production-colis", stage])] as const,
+      );
       VISIBLE_STAGES.forEach((stage) => {
         qc.setQueryData(["production-colis", stage], (old: any) => {
           if (!old?.byOrder) return old;
