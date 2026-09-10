@@ -418,6 +418,14 @@ function GroupCard({
                 <Badge variant="outline" className="text-[10px]">
                   {it.status}
                 </Badge>
+                {isCut && it.status !== "concluida" && (
+                  <ConsumeFabricDialog
+                    compact
+                    orderId={it.order_id}
+                    orderNumber={it.order_number}
+                    operatorCode={operatorCode}
+                  />
+                )}
                 <Button
                   size="sm"
                   variant="ghost"
