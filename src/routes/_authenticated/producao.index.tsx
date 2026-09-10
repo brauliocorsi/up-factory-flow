@@ -202,6 +202,10 @@ function ProducaoPage() {
     },
     onMutate: (vars) => {
       markBusy(vars.order_coli_stage_id);
+      // Guardar o estado anterior para poder reverter se o servidor falhar.
+      const snapshot = VISIBLE_STAGES.map(
+        (stage) => [stage, qc.getQueryData(["production-colis", stage])] as const,
+      );
       VISIBLE_STAGES.forEach((stage) => {
         qc.setQueryData(["production-colis", stage], (old: any) => {
           if (!old?.byOrder) return old;
@@ -217,6 +221,7 @@ function ProducaoPage() {
           return touched ? { ...old, byOrder } : old;
         });
       });
+      return { snapshot };
     },
     onSuccess: (res: any) => {
       if (res && res.ok === false) toast.error(res.message ?? "Não foi possível registar o evento");
@@ -224,7 +229,15 @@ function ProducaoPage() {
       VISIBLE_STAGES.forEach((stage) => qc.invalidateQueries({ queryKey: ["production-colis", stage] }));
     },
 
-    onError: (e: any) => toast.error(e?.message ?? "Erro ao registar"),
+    onError: (e: any, _vars, ctx: any) => {
+      // Reverter o estado otimista: nada foi registado no servidor.
+      for (const [stage, data] of ctx?.snapshot ?? []) {
+        qc.setQueryData(["production-colis", stage], data);
+      }
+      qc.invalidateQueries({ queryKey: ["production"] });
+      VISIBLE_STAGES.forEach((stage) => qc.invalidateQueries({ queryKey: ["production-colis", stage] }));
+      toast.error(e?.message ?? "Erro ao registar");
+    },
     onSettled: (_d, _e, vars) => clearBusy(vars.order_coli_stage_id),
   });
 
@@ -298,6 +311,7 @@ function ProducaoPage() {
     },
     onMutate: (vars) => {
       markBusy(vars.order_stage_id);
+      const previous = qc.getQueryData(["production"]);
       qc.setQueryData(["production"], (old: any) => {
         if (!old?.byStage) return old;
         const byStage: Record<string, any[]> = {};
@@ -308,6 +322,7 @@ function ProducaoPage() {
         }
         return { ...old, byStage };
       });
+      return { previous };
     },
     onSuccess: (res: any) => {
       if (res && res.ok === false) {
@@ -315,7 +330,12 @@ function ProducaoPage() {
       }
       qc.invalidateQueries({ queryKey: ["production"] });
     },
-    onError: (e: any) => toast.error(e?.message ?? "Erro ao registar"),
+    onError: (e: any, _vars, ctx: any) => {
+      // Reverter o estado otimista: nada foi registado no servidor.
+      if (ctx?.previous !== undefined) qc.setQueryData(["production"], ctx.previous);
+      qc.invalidateQueries({ queryKey: ["production"] });
+      toast.error(e?.message ?? "Erro ao registar");
+    },
     onSettled: (_d, _e, vars) => clearBusy(vars.order_stage_id),
   });
 

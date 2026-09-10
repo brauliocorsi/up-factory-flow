@@ -53,6 +53,8 @@ export function PrintLabelButton({
       iframe.src = `${url}&autoprint=1`;
 
       let done = false;
+      let printStarted = false;
+      let timer = 0;
       const cleanup = () => {
         if (done) return;
         done = true;
@@ -61,19 +63,31 @@ export function PrintLabelButton({
         busy.current = false;
         setPrinting(false);
       };
-      // Salvaguarda longa: só limpa se o dispositivo nunca responder.
-      const timer = window.setTimeout(cleanup, 120000);
+      // Se a impressão nunca começar (etiqueta sem dados ou erro a carregar),
+      // liberta o botão depressa e avisa, em vez de ficar preso.
+      const failFast = () => {
+        if (printStarted || done) return;
+        cleanup();
+        toast.error("Não foi possível preparar a etiqueta — tenta novamente.");
+      };
+      timer = window.setTimeout(failFast, 15000);
 
       iframe.addEventListener("load", () => {
         try {
           const win = iframe.contentWindow;
           if (win) {
+            win.addEventListener("beforeprint", () => {
+              printStarted = true;
+              window.clearTimeout(timer);
+              // Salvaguarda longa: só limpa se o dispositivo nunca responder.
+              timer = window.setTimeout(cleanup, 120000);
+              toast.success("Diálogo de impressão preparado — confirma na impressora.");
+            });
             win.addEventListener("afterprint", () => window.setTimeout(cleanup, 500));
           }
         } catch {
           /* sem acesso ao iframe — fica a salvaguarda */
         }
-        toast.success("Diálogo de impressão preparado — confirma na impressora.");
       });
 
       document.body.appendChild(iframe);
