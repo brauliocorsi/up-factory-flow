@@ -202,7 +202,7 @@ export const getCatalogs = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const s = context.supabase as any;
-    const [cats, models, structures, measures, fts, frs, colors] = await Promise.all([
+    const [cats, models, structures, measures, fts, frs, colors, links] = await Promise.all([
       s.from("ref_categories").select("id, code, name, active").eq("active", true).order("code"),
       s.from("models").select("id, code, name, active, category_id, meters_per_unit").eq("active", true).order("code"),
       s.from("ref_structures").select("id, code, name, active").eq("active", true).order("code"),
@@ -210,11 +210,19 @@ export const getCatalogs = createServerFn({ method: "GET" })
       s.from("ref_fabric_types").select("id, code, name, active").eq("active", true).order("code"),
       s.from("ref_fabric_refs").select("id, code, name, active, fabric_type_id").eq("active", true).order("code"),
       s.from("ref_colors").select("id, code, name, active").eq("active", true).order("code"),
+      s.from("model_structures").select("model_id, structure_id"),
     ]);
+    const byStructure = new Map<string, string[]>();
+    for (const l of links.data ?? []) {
+      const arr = byStructure.get(l.structure_id) ?? [];
+      arr.push(l.model_id);
+      byStructure.set(l.structure_id, arr);
+    }
+    const structuresList = (structures.data ?? []).map((r: any) => ({ ...r, model_ids: byStructure.get(r.id) ?? [] }));
     return {
       categories: cats.data ?? [],
       models: models.data ?? [],
-      structures: structures.data ?? [],
+      structures: structuresList,
       measures: measures.data ?? [],
       fabric_types: fts.data ?? [],
       fabric_refs: frs.data ?? [],
