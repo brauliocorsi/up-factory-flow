@@ -15,6 +15,7 @@ import {
   type StageGroup,
 } from "@/lib/grouping.functions";
 import { listFabricConsumptions } from "@/lib/stock.functions";
+import { ConsumeFabricDialog } from "@/components/app/ConsumeFabricDialog";
 import { useAuth } from "@/hooks/useAuth";
 
 type FabricConsumption = {
@@ -148,6 +149,7 @@ export function StageGroupView({ stage, canAct, operatorCode }: Props) {
           key={g.key}
           group={g}
           canAct={canAct}
+          operatorCode={operatorCode}
           consumptionByOrder={consumptionByOrder}
           pending={finalizeMut.isPending || eventMut.isPending}
           onFinalize={(ids) => finalizeMut.mutate({ order_stage_ids: ids })}
@@ -161,6 +163,7 @@ export function StageGroupView({ stage, canAct, operatorCode }: Props) {
 function GroupCard({
   group,
   canAct,
+  operatorCode,
   pending,
   consumptionByOrder,
   onFinalize,
@@ -168,6 +171,7 @@ function GroupCard({
 }: {
   group: StageGroup;
   canAct: boolean;
+  operatorCode: string;
   pending: boolean;
   consumptionByOrder: Record<string, FabricConsumption>;
   onFinalize: (ids: string[]) => void;
