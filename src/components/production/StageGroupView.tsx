@@ -319,10 +319,19 @@ function GroupCard({
           )}
           <Button
             size="sm"
-            disabled={!canAct || pending || visibleCount === 0 || notStarted.length === visibleCount}
+            disabled={
+              !canAct || pending || visibleCount === 0 ||
+              notStarted.length === visibleCount || missingFabric.length > 0
+            }
             onClick={handleFinalize}
             className="gap-1"
-            title={notStarted.length === visibleCount ? "Inicia o grupo antes de concluir" : undefined}
+            title={
+              missingFabric.length > 0
+                ? "Consome o tecido de todas as peças antes de concluir"
+                : notStarted.length === visibleCount
+                ? "Inicia o grupo antes de concluir"
+                : undefined
+            }
           >
             <Check className="size-4" />
             Concluir grupo
