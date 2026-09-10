@@ -14,7 +14,15 @@ import {
   finalizeStageGroup,
   type StageGroup,
 } from "@/lib/grouping.functions";
+import { listFabricConsumptions } from "@/lib/stock.functions";
 import { useAuth } from "@/hooks/useAuth";
+
+type FabricConsumption = {
+  order_id: string;
+  meters: number;
+  fabric_ref_code: string | null;
+  color_code: string | null;
+};
 
 function fmtDur(seconds: number) {
   const s = Math.max(0, Math.floor(seconds));
