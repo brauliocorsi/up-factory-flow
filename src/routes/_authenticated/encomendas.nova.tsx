@@ -107,6 +107,26 @@ function NovaEncomendaPage() {
     [cat, form.category_id],
   );
 
+  // Estruturas: só as ligadas ao modelo escolhido; sem modelo, as ligadas aos modelos da categoria.
+  // Se nenhuma ligação existir para esse âmbito, mostra todas (catálogo ainda não vinculado).
+  const structuresForSelection = useMemo(() => {
+    const all = cat?.structures ?? [];
+    const modelIds = form.model_id
+      ? [form.model_id]
+      : form.category_id
+        ? modelsForCat.map((m: any) => m.id)
+        : [];
+    if (modelIds.length === 0) return all;
+    const linked = all.filter((s: any) => (s.model_ids ?? []).some((id: string) => modelIds.includes(id)));
+    return linked.length > 0 ? linked : all;
+  }, [cat, form.model_id, form.category_id, modelsForCat]);
+
+  useEffect(() => {
+    if (!form.structure_id) return;
+    const ok = structuresForSelection.some((s: any) => s.id === form.structure_id);
+    if (!ok) setForm((f) => ({ ...f, structure_id: "" }));
+  }, [structuresForSelection, form.structure_id]);
+
   const fabricRefsForType = useMemo(
     () =>
       (cat?.fabric_refs ?? []).filter(
@@ -408,7 +428,7 @@ function NovaEncomendaPage() {
               <RefSelect items={modelsForCat} value={form.model_id} onChange={(v) => set("model_id", v)} />
             </Field>
             <Field label="Estrutura" highlight={missingSegments.has("structure")}>
-              <RefSelect items={cat?.structures ?? []} value={form.structure_id} onChange={(v) => set("structure_id", v)} />
+              <RefSelect items={structuresForSelection} value={form.structure_id} onChange={(v) => set("structure_id", v)} />
             </Field>
             <Field label="Medida" highlight={missingSegments.has("measure")}>
               <RefSelect items={cat?.measures ?? []} value={form.measure_id} onChange={(v) => set("measure_id", v)} />
