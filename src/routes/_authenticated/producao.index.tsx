@@ -749,6 +749,8 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
   // colapsaria para a vista antiga ao nível da encomenda.
   // Encomendas de 1 coli ("Produto completo") continuam na vista antiga.
   const operateByColis = isMultiColiOrder;
+  // Corte: só se pode finalizar depois de registar o consumo de tecido.
+  const fabricMissing = item.stage === "corte" && !fabricConsumption;
   const convergenceReady = item.lines
     ? !!(item.lines.tecido?.ready && item.lines.estrutura?.ready)
     : true;
@@ -908,9 +910,21 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
               </Button>
             )}
             {!isQuality && !operateByColis && item.status === "em_curso" && (
-              <Button size="lg" variant="default" disabled={pending || ownedByOther} onClick={() => onAction("finalizar")} className="gap-2 h-12 flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700">
+              <Button
+                size="lg"
+                variant="default"
+                disabled={pending || ownedByOther || fabricMissing}
+                onClick={() => onAction("finalizar")}
+                className="gap-2 h-12 flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700"
+                title={fabricMissing ? "Consome o tecido antes de finalizar o Corte" : undefined}
+              >
                 <Check className="size-4" /> Finalizar
               </Button>
+            )}
+            {fabricMissing && item.status === "em_curso" && (
+              <div className="text-xs text-destructive flex items-center gap-1">
+                <Lock className="size-3" /> Consumo de tecido obrigatório para finalizar o Corte
+              </div>
             )}
             {!isQuality && !operateByColis && ownedByOther && (
               <div className="text-xs text-muted-foreground flex items-center gap-1">
