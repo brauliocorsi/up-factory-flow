@@ -124,8 +124,12 @@ function EncomendasPage() {
             </Button>
           )}
           <Button asChild variant="outline" size="sm" className="gap-2">
-            <Link to="/importar"><Upload className="size-4" /> Importar</Link>
+            <Link to="/encomendas/importar-produtos"><Upload className="size-4" /> Importar por Excel</Link>
           </Button>
+          <Button asChild variant="outline" size="sm" className="gap-2">
+            <Link to="/importar"><Upload className="size-4" /> Importar (simples)</Link>
+          </Button>
+
           <Button asChild size="sm" className="gap-2">
             <Link to="/encomendas/nova"><Plus className="size-4" /> Nova encomenda</Link>
           </Button>
