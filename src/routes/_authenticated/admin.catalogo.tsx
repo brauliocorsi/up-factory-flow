@@ -319,7 +319,35 @@ function UpsertDialog({ kind, hasCategory, cats, fabricTypes = [], modelsAll = [
               </Select>
             </div>
           )}
+          {isModels && !isSofaModel && (
+            <div className="space-y-1.5">
+              <Label className="text-xs">Estrutura fixa do modelo</Label>
+              <Select value={structureCode} onValueChange={setStructureCode}>
+                <SelectTrigger className="h-11"><SelectValue placeholder="Escolher estrutura…" /></SelectTrigger>
+                <SelectContent>
+                  {structuresAll.filter((st) => st.active || st.code === structureCode).map((st) => (
+                    <SelectItem key={st.code} value={st.code}>{st.code} · {st.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">Cada modelo tem uma só estrutura; nas encomendas aparece preenchida e bloqueada.</p>
+            </div>
+          )}
+          {isModels && isSofaModel && (
+            <div className="space-y-1.5">
+              <Label className="text-xs">Família do sofá</Label>
+              <Select value={sofaFamilyCode} onValueChange={setSofaFamilyCode}>
+                <SelectTrigger className="h-11"><SelectValue placeholder="Escolher família…" /></SelectTrigger>
+                <SelectContent>
+                  {sofaFamilies.filter((f) => f.active || f.code === sofaFamilyCode).map((f) => (
+                    <SelectItem key={f.code} value={f.code}>{f.code} · {f.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           {showMeters && (
+
             <div className="space-y-1.5">
               <Label className="text-xs">Metros de tecido por unidade</Label>
               <Input
