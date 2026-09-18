@@ -352,3 +352,15 @@ export const setFabricActive = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+/** Famílias de sofá (01 Simples, 02 Deslizante, 03 Sofá-Cama). */
+export const listSofaFamilies = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await (context.supabase as any)
+      .from("ref_sofa_families")
+      .select("code, name, active")
+      .order("code");
+    if (error) throw new Error(error.message);
+    return (data ?? []) as { code: string; name: string; active: boolean }[];
+  });
