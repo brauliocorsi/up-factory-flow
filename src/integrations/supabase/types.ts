@@ -965,6 +965,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           customer_order: string | null
+          customization: string | null
           due_date: string | null
           entry_date: string | null
           fabric_ref: string | null
@@ -973,6 +974,7 @@ export type Database = {
           id: string
           is_stock_production: boolean
           is_test: boolean
+          line_kind: string
           measure: string | null
           model_id: string | null
           notes: string | null
@@ -985,6 +987,7 @@ export type Database = {
           reserved_cover_state: string | null
           reserved_shell_id: string | null
           reserved_shell_state: string | null
+          service_type: string | null
           status: Database["public"]["Enums"]["order_status"]
           stock_item_id: string | null
           stock_item_type: string | null
@@ -997,6 +1000,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           customer_order?: string | null
+          customization?: string | null
           due_date?: string | null
           entry_date?: string | null
           fabric_ref?: string | null
@@ -1005,6 +1009,7 @@ export type Database = {
           id?: string
           is_stock_production?: boolean
           is_test?: boolean
+          line_kind?: string
           measure?: string | null
           model_id?: string | null
           notes?: string | null
@@ -1017,6 +1022,7 @@ export type Database = {
           reserved_cover_state?: string | null
           reserved_shell_id?: string | null
           reserved_shell_state?: string | null
+          service_type?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           stock_item_id?: string | null
           stock_item_type?: string | null
@@ -1029,6 +1035,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           customer_order?: string | null
+          customization?: string | null
           due_date?: string | null
           entry_date?: string | null
           fabric_ref?: string | null
@@ -1037,6 +1044,7 @@ export type Database = {
           id?: string
           is_stock_production?: boolean
           is_test?: boolean
+          line_kind?: string
           measure?: string | null
           model_id?: string | null
           notes?: string | null
@@ -1049,6 +1057,7 @@ export type Database = {
           reserved_cover_state?: string | null
           reserved_shell_id?: string | null
           reserved_shell_state?: string | null
+          service_type?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           stock_item_id?: string | null
           stock_item_type?: string | null
