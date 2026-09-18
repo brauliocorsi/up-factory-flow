@@ -224,8 +224,16 @@ const orderInputSchema = z.object({
   observation: z.string().trim().max(500).nullable().optional(),
   finishing: z.enum(["F", "N"]).nullable().optional(),
   barcode: z.string().trim().max(64).nullable().optional(),
+  /** Referência do tecido (TECnnnnnn) da tabela de tecidos. */
+  ref_tec: z.string().trim().max(12).nullable().optional(),
+  /** Personalizações extraídas do pedido (cab:300, ilhargueiro, furos, …). */
+  customization: z.string().trim().max(500).nullable().optional(),
+  /** Linha de catálogo ou linha livre (assistência, serviço, peça, …). */
+  line_kind: z.enum(["catalogo", "livre"]).optional(),
+  service_type: z.enum(["assistencia", "reparacao", "servico", "peca", "porte", "outro"]).nullable().optional(),
   /** Nº de unidades: cada unidade gera uma encomenda numerada (BASE-01, BASE-02, …). */
   quantity: z.coerce.number().int().min(1).max(200).optional(),
+
 });
 
 export type OrderInput = z.infer<typeof orderInputSchema>;
@@ -294,8 +302,13 @@ export const createOrder = createServerFn({ method: "POST" })
       notes: data.notes ?? null,
       observation: data.observation ?? null,
       finishing: data.finishing ?? null,
+      ref_tec: data.ref_tec ?? null,
+      customization: data.customization ?? null,
+      line_kind: data.line_kind ?? "catalogo",
+      service_type: data.service_type ?? null,
       created_by: userId,
     } as any;
+
 
     const rows: any[] = [];
     for (let i = 0; i < quantity; i++) {

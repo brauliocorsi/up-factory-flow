@@ -35,6 +35,13 @@ export type RefRow = {
   model_ids?: string[];
   /** Apenas para models: metros de tecido a consumir por unidade. */
   meters_per_unit?: number | null;
+  /** Apenas para models de cama/sommier: estrutura fixa do modelo. */
+  structure_code?: string | null;
+  /** Apenas para models de sofá: família do sofá. */
+  sofa_family_code?: string | null;
+  /** Apenas para fabric_refs: código do tipo de tecido. */
+  fabric_type_code?: string | null;
+
 };
 
 const kindSchema = z.enum([
@@ -53,12 +60,13 @@ export const listRef = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<RefRow[]> => {
     const cols =
       data.kind === "models"
-        ? "id, code, name, active, category_id, meters_per_unit"
+        ? "id, code, name, active, category_id, meters_per_unit, structure_code, sofa_family_code"
         : data.kind === "fabric_types"
           ? "id, code, name, active, directional"
           : data.kind === "fabric_refs"
-            ? "id, code, name, active, fabric_type_id"
+            ? "id, code, name, active, fabric_type_id, fabric_type_code"
             : "id, code, name, active";
+
     const { data: rows, error } = await (context.supabase as any)
       .from(REF_TABLE[data.kind])
       .select(cols)
@@ -93,6 +101,9 @@ const upsertSchema = z.object({
   fabric_type_id: z.string().uuid().nullable().optional(),
   model_ids: z.array(z.string().uuid()).optional(),
   meters_per_unit: z.number().min(0).nullable().optional(),
+  structure_code: z.string().trim().max(8).nullable().optional(),
+  sofa_family_code: z.string().trim().max(8).nullable().optional(),
+  fabric_type_code: z.string().trim().max(8).nullable().optional(),
 });
 
 export const upsertRef = createServerFn({ method: "POST" })
@@ -104,13 +115,17 @@ export const upsertRef = createServerFn({ method: "POST" })
     if (data.kind === "models") {
       row.category_id = data.category_id ?? null;
       if (data.meters_per_unit !== undefined) row.meters_per_unit = data.meters_per_unit;
+      if (data.structure_code !== undefined) row.structure_code = data.structure_code;
+      if (data.sofa_family_code !== undefined) row.sofa_family_code = data.sofa_family_code;
     }
     if (data.kind === "fabric_types" && data.directional !== undefined) {
       row.directional = data.directional;
     }
-    if (data.kind === "fabric_refs" && data.fabric_type_id !== undefined) {
-      row.fabric_type_id = data.fabric_type_id;
+    if (data.kind === "fabric_refs") {
+      if (data.fabric_type_id !== undefined) row.fabric_type_id = data.fabric_type_id;
+      if (data.fabric_type_code !== undefined) row.fabric_type_code = data.fabric_type_code;
     }
+
     const table = REF_TABLE[data.kind];
     let structureId: string | undefined = data.id;
     if (data.id) {
@@ -202,16 +217,31 @@ export const getCatalogs = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const s = context.supabase as any;
-    const [cats, models, structures, measures, fts, frs, colors, links] = await Promise.all([
-      s.from("ref_categories").select("id, code, name, active").eq("active", true).order("code"),
-      s.from("models").select("id, code, name, active, category_id, meters_per_unit").eq("active", true).order("code"),
-      s.from("ref_structures").select("id, code, name, active").eq("active", true).order("code"),
-      s.from("ref_measures").select("id, code, name, active").eq("active", true).order("code"),
-      s.from("ref_fabric_types").select("id, code, name, active").eq("active", true).order("code"),
-      s.from("ref_fabric_refs").select("id, code, name, active, fabric_type_id").eq("active", true).order("code"),
-      s.from("ref_colors").select("id, code, name, active").eq("active", true).order("code"),
-      s.from("model_structures").select("model_id, structure_id"),
-    ]);
+    const [cats, models, structures, measures, fts, frs, colors, links, families, fabrics] =
+      await Promise.all([
+        s.from("ref_categories").select("id, code, name, active").eq("active", true).order("code"),
+        s
+          .from("models")
+          .select("id, code, name, active, category_id, meters_per_unit, structure_code, sofa_family_code")
+          .eq("active", true)
+          .order("code"),
+        s.from("ref_structures").select("id, code, name, active").eq("active", true).order("code"),
+        s.from("ref_measures").select("id, code, name, active").eq("active", true).order("code"),
+        s.from("ref_fabric_types").select("id, code, name, active").eq("active", true).order("code"),
+        s
+          .from("ref_fabric_refs")
+          .select("id, code, name, active, fabric_type_id, fabric_type_code")
+          .eq("active", true)
+          .order("code"),
+        s.from("ref_colors").select("id, code, name, active").eq("active", true).order("code"),
+        s.from("model_structures").select("model_id, structure_id"),
+        s.from("ref_sofa_families").select("id, code, name, active").eq("active", true).order("code"),
+        s
+          .from("fabrics")
+          .select("ref_tec, fabric_type_code, fabric_ref_code, supplier_ref, color_code, active")
+          .eq("active", true)
+          .order("ref_tec"),
+      ]);
     const byStructure = new Map<string, string[]>();
     for (const l of links.data ?? []) {
       const arr = byStructure.get(l.structure_id) ?? [];
@@ -227,5 +257,81 @@ export const getCatalogs = createServerFn({ method: "GET" })
       fabric_types: fts.data ?? [],
       fabric_refs: frs.data ?? [],
       colors: colors.data ?? [],
+      sofa_families: families.data ?? [],
+      fabrics: fabrics.data ?? [],
     };
+  });
+
+// ---------- Tecidos (fabrics: coleção + referência do fornecedor + cor) ----------
+
+export type FabricRow = {
+  ref_tec: string;
+  fabric_type_code: string;
+  fabric_ref_code: string;
+  supplier_ref: string;
+  color_code: string | null;
+  active: boolean;
+};
+
+export const listFabrics = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<FabricRow[]> => {
+    const { data, error } = await (context.supabase as any)
+      .from("fabrics")
+      .select("ref_tec, fabric_type_code, fabric_ref_code, supplier_ref, color_code, active")
+      .order("ref_tec");
+    if (error) throw new Error(error.message);
+    return (data ?? []) as FabricRow[];
+  });
+
+const fabricSchema = z.object({
+  ref_tec: z.string().trim().max(12).optional().nullable(),
+  fabric_ref_code: z.string().trim().min(1).max(8),
+  supplier_ref: z.string().trim().min(1).max(120),
+  color_code: z.string().trim().max(8).nullable().optional(),
+  active: z.boolean().optional(),
+});
+
+export const upsertFabric = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => fabricSchema.parse(d))
+  .handler(async ({ data, context }) => {
+    const s = context.supabase as any;
+    // O tipo de tecido vem sempre da coleção — nunca é escolhido à mão.
+    const { data: coll, error: cErr } = await s
+      .from("ref_fabric_refs")
+      .select("code, fabric_type_code")
+      .eq("code", data.fabric_ref_code)
+      .maybeSingle();
+    if (cErr) throw new Error(cErr.message);
+    if (!coll) throw new Error("Coleção de tecido não encontrada.");
+    const row: any = {
+      fabric_type_code: coll.fabric_type_code,
+      fabric_ref_code: data.fabric_ref_code,
+      supplier_ref: data.supplier_ref,
+      color_code: data.color_code ?? null,
+    };
+    if (data.active !== undefined) row.active = data.active;
+    if (data.ref_tec) {
+      const { error } = await s.from("fabrics").update(row).eq("ref_tec", data.ref_tec);
+      if (error) throw new Error(error.message);
+      return { ref_tec: data.ref_tec };
+    }
+    const { data: ins, error } = await s.from("fabrics").insert(row).select("ref_tec").single();
+    if (error) throw new Error(error.message);
+    return { ref_tec: (ins as any).ref_tec as string };
+  });
+
+export const setFabricActive = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ ref_tec: z.string().trim().min(1).max(12), active: z.boolean() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await (context.supabase as any)
+      .from("fabrics")
+      .update({ active: data.active })
+      .eq("ref_tec", data.ref_tec);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });

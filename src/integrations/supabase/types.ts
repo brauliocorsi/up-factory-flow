@@ -300,6 +300,61 @@ export type Database = {
         }
         Relationships: []
       }
+      fabrics: {
+        Row: {
+          active: boolean
+          color_code: string | null
+          created_at: string
+          fabric_ref_code: string
+          fabric_type_code: string
+          ref_tec: string
+          supplier_ref: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          color_code?: string | null
+          created_at?: string
+          fabric_ref_code: string
+          fabric_type_code: string
+          ref_tec: string
+          supplier_ref: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          color_code?: string | null
+          created_at?: string
+          fabric_ref_code?: string
+          fabric_type_code?: string
+          ref_tec?: string
+          supplier_ref?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fabrics_color_code_fkey"
+            columns: ["color_code"]
+            isOneToOne: false
+            referencedRelation: "ref_colors"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "fabrics_fabric_ref_code_fkey"
+            columns: ["fabric_ref_code"]
+            isOneToOne: false
+            referencedRelation: "ref_fabric_refs"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "fabrics_fabric_type_code_fkey"
+            columns: ["fabric_type_code"]
+            isOneToOne: false
+            referencedRelation: "ref_fabric_types"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
       finished_goods: {
         Row: {
           barcode: string | null
@@ -490,6 +545,8 @@ export type Database = {
           id: string
           meters_per_unit: number | null
           name: string
+          sofa_family_code: string | null
+          structure_code: string | null
           updated_at: string
         }
         Insert: {
@@ -500,6 +557,8 @@ export type Database = {
           id?: string
           meters_per_unit?: number | null
           name: string
+          sofa_family_code?: string | null
+          structure_code?: string | null
           updated_at?: string
         }
         Update: {
@@ -510,6 +569,8 @@ export type Database = {
           id?: string
           meters_per_unit?: number | null
           name?: string
+          sofa_family_code?: string | null
+          structure_code?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -519,6 +580,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "ref_categories"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "models_sofa_family_code_fkey"
+            columns: ["sofa_family_code"]
+            isOneToOne: false
+            referencedRelation: "ref_sofa_families"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "models_structure_code_fkey"
+            columns: ["structure_code"]
+            isOneToOne: false
+            referencedRelation: "ref_structures"
+            referencedColumns: ["code"]
           },
         ]
       }
@@ -890,6 +965,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           customer_order: string | null
+          customization: string | null
           due_date: string | null
           entry_date: string | null
           fabric_ref: string | null
@@ -898,6 +974,7 @@ export type Database = {
           id: string
           is_stock_production: boolean
           is_test: boolean
+          line_kind: string
           measure: string | null
           model_id: string | null
           notes: string | null
@@ -905,10 +982,12 @@ export type Database = {
           order_number: string
           priority: number
           product_description: string
+          ref_tec: string | null
           reserved_cover_id: string | null
           reserved_cover_state: string | null
           reserved_shell_id: string | null
           reserved_shell_state: string | null
+          service_type: string | null
           status: Database["public"]["Enums"]["order_status"]
           stock_item_id: string | null
           stock_item_type: string | null
@@ -921,6 +1000,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           customer_order?: string | null
+          customization?: string | null
           due_date?: string | null
           entry_date?: string | null
           fabric_ref?: string | null
@@ -929,6 +1009,7 @@ export type Database = {
           id?: string
           is_stock_production?: boolean
           is_test?: boolean
+          line_kind?: string
           measure?: string | null
           model_id?: string | null
           notes?: string | null
@@ -936,10 +1017,12 @@ export type Database = {
           order_number: string
           priority?: number
           product_description: string
+          ref_tec?: string | null
           reserved_cover_id?: string | null
           reserved_cover_state?: string | null
           reserved_shell_id?: string | null
           reserved_shell_state?: string | null
+          service_type?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           stock_item_id?: string | null
           stock_item_type?: string | null
@@ -952,6 +1035,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           customer_order?: string | null
+          customization?: string | null
           due_date?: string | null
           entry_date?: string | null
           fabric_ref?: string | null
@@ -960,6 +1044,7 @@ export type Database = {
           id?: string
           is_stock_production?: boolean
           is_test?: boolean
+          line_kind?: string
           measure?: string | null
           model_id?: string | null
           notes?: string | null
@@ -967,10 +1052,12 @@ export type Database = {
           order_number?: string
           priority?: number
           product_description?: string
+          ref_tec?: string | null
           reserved_cover_id?: string | null
           reserved_cover_state?: string | null
           reserved_shell_id?: string | null
           reserved_shell_state?: string | null
+          service_type?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           stock_item_id?: string | null
           stock_item_type?: string | null
@@ -984,6 +1071,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "models"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_orders_ref_tec_fkey"
+            columns: ["ref_tec"]
+            isOneToOne: false
+            referencedRelation: "fabrics"
+            referencedColumns: ["ref_tec"]
           },
           {
             foreignKeyName: "production_orders_reserved_cover_id_fkey"
@@ -1228,6 +1322,7 @@ export type Database = {
           active: boolean
           code: string
           created_at: string
+          fabric_type_code: string | null
           fabric_type_id: string | null
           id: string
           name: string
@@ -1237,6 +1332,7 @@ export type Database = {
           active?: boolean
           code: string
           created_at?: string
+          fabric_type_code?: string | null
           fabric_type_id?: string | null
           id?: string
           name: string
@@ -1246,12 +1342,20 @@ export type Database = {
           active?: boolean
           code?: string
           created_at?: string
+          fabric_type_code?: string | null
           fabric_type_id?: string | null
           id?: string
           name?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "ref_fabric_refs_fabric_type_code_fkey"
+            columns: ["fabric_type_code"]
+            isOneToOne: false
+            referencedRelation: "ref_fabric_types"
+            referencedColumns: ["code"]
+          },
           {
             foreignKeyName: "ref_fabric_refs_fabric_type_id_fkey"
             columns: ["fabric_type_id"]
@@ -1292,6 +1396,33 @@ export type Database = {
         Relationships: []
       }
       ref_measures: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ref_sofa_families: {
         Row: {
           active: boolean
           code: string
