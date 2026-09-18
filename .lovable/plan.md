@@ -9,10 +9,12 @@
 - 161 ordens de produção, todas em curso (pendente/em produção). Destas: 8 com modelo, 2 com estrutura, 2 com referência de tecido, 152 com cor. Ou seja, quase nenhuma ordem depende dos campos que vamos passar a validar — o risco de partir ordens é muito baixo.
 - Colis por estrutura já estão corretos (Simples 2, Coxim 3, Alongada 4, Especial 3) e os cascos genéricos já usam ESTR+estrutura+medida.
 
-## Preciso de confirmação em dois pontos
+## Contas das coleções (já fechadas)
 
-1. **Quines** aparece na lista das 22 coleções a desativar e, ao mesmo tempo, na fusão ("manter Quines 34") e nas ativas de Microfibra. Assumo: **Quines (34) fica ativa**, Quinnes (37) desativada. Confirme, por favor.
-2. A lista de ativas soma **21** coleções (14 Aveludado + 6 Microfibra + 1 Pele), não 23. Com Quines fica 22. As duas que faltam podem ser Vénus e Quines contadas outra vez. Sigo com as coleções nomeadas e listo no fim as que ficarem sem tipo.
+Regra confirmada: só ficam ativas as 21 coleções a que deu tipo explicitamente. Tudo o resto é desativado.
+- Ativas: 14 Aveludado + 6 Microfibra + 1 Pele Sintética = **21**.
+- Desativadas: as 22 da sua lista (Quines incluída) + Venus (19) + Quinnes (37) = **24**.
+- 21 + 24 = 45, que é exatamente o total atual. Confirmei que **não sobra nenhuma coleção sem tipo**, portanto não haverá lista extra para confirmar.
 
 ## Parte 1 — Integridade referencial
 
@@ -32,7 +34,7 @@ Nova tabela com `ref_tec` (chave), tipo, coleção, `supplier_ref`, cor e `activ
 
 ## Parte 2 — Dados
 
-- Desativar as 22 coleções indicadas (`active = false`), mais Venus (19) e Quinnes (37). **Nada é apagado.**
+- Desativar as 24 coleções (as 22 da lista, com Quines, mais Venus 19 e Quinnes 37). **Nada é apagado.**
 - Atribuir tipo às coleções ativas: Aveludado (01) a Opera, Trota, Vena, Alicia, Mix, Pierre, Avanti, Lyla, Masseto, Ringo, Susan, Vénus, Bass, Chester; Microfibra (02) a Kenya, Célia, Sydney, Nice, Prince, Jakarta; Pele Sintética (03) a Mikonos.
 - Acrescentar 15 modelos de cama: Simples nos próximos códigos livres (010 em diante) e Coxim em 114 e 138.
 - Criar `ref_sofa_families` (01 Simples, 02 Deslizante, 03 Sofá-Cama) e os 33 modelos de sofá com os códigos indicados, na categoria SOF. As famílias ficam em tabela própria para não misturar significados com as estruturas de cama; cada modelo aponta para estrutura (cama) ou família (sofá), conforme a categoria.
@@ -54,6 +56,29 @@ Gerador central, usado pela criação de encomendas e pelas etiquetas:
 - Alongada e Especial: casco por modelo ESTR+modelo+estrutura+medida; onde faltar, é criado.
 - Colis: Simples 2, Coxim 3, Alongada 4, Especial 3, com exceção de Angel, Versace e Dublin em Alongada com 5 colis.
 
+## Parte 5 — Importação por Excel com reconhecimento automático
+
+Novo importador com pré-visualização obrigatória, sem nunca importar às cegas.
+
+Reconhecimento por linha de texto livre:
+- **Modelo**: procurado em qualquer posição da frase, com tolerância a acentos, maiúsculas e palavras pelo meio ("Cama cabeceira Alongada 258cm Angel" → Angel). Quando há mais de um candidato, a linha fica em DÚVIDA.
+- **Estrutura/família**: nunca lida do texto; vem sempre do modelo.
+- **Medida**: 190x140→140, 195x150→150, 200x160→160, 200x180→180, 190x90→090, 200x90→091. Aceita ×, vírgula decimal e erros como "190x900" ou "2000x120". Medidas precedidas de Cab., Cabeceira, Ilhargueiro ou Peseira são ignoradas para a medida da cama. Medidas fora da lista procuram-se na gama 5xx e, se não existirem, cria-se o próximo código livre 5xx marcado como sob-medida.
+- **Tecido**: procura o nome da coleção e o que vem a seguir (número do fornecedor e/ou cor) e liga ao `ref_tec` de `fabrics`. Sem correspondência exata → DÚVIDA.
+- **Variante**: cama com "flutuante"/"mural" → F, senão N. Sofá: ODF/VDF com Drt/Dir → D, com Esq → E, "chaise" sem lado → R, sem chaise → N.
+- **Personalizações** extraídas para campo próprio, sem entrar no código: altura de cabeceira (Cab. 300cm → cab:300), ilhargueiro, furos para tomadas, laminado, espelhos, listras, peseira.
+
+Fluxo: carregar Excel → pré-visualização linha a linha com modelo, estrutura, medida, tecido, variante, personalizações e código gerado, cada linha marcada RECONHECIDA / DÚVIDA / NÃO RECONHECIDA → correção manual por seletores nas linhas duvidosas → confirmação → importação → relatório final do que entrou e do que ficou de fora. A importação continua idempotente pelo mesmo mecanismo já usado hoje (`import_batches` com identificador de lote e resumo do ficheiro).
+
+## Parte 6 — Linhas livres nas encomendas
+
+Passa a ser possível registar numa encomenda linhas que não são produto de catálogo: assistências, reparações, portes, serviços, peças soltas e produtos de terceiros.
+- Cada linha livre tem descrição, quantidade, observações e um tipo opcional (Assistência, Reparação, Serviço, Peça, Outro).
+- Sem código de produto, modelo, tecido nem casco; não passa pelo gerador de códigos nem pelas validações de catálogo, o que exige que as validações novas só se apliquem a linhas de catálogo.
+- Distinção visual clara na encomenda e nas listas.
+- Entra na produção/expedição sem exigir receita nem volumes: fecha por conclusão direta, sem cascos nem colis.
+- Uma encomenda pode misturar linhas de catálogo e linhas livres.
+
 ## Como protejo as 161 ordens
 
 - Nenhum registo é apagado; desativação por `active = false`.
@@ -65,4 +90,7 @@ Gerador central, usado pela criação de encomendas e pelas etiquetas:
 
 - Migrações em Postgres: `models.structure_code`, `models.sofa_family_code`, `ref_fabric_refs.fabric_type_code`, `ref_sofa_families`, `fabrics`, `production_orders.ref_tec`, triggers de coerência e de formato de `ref_tec`, GRANT + RLS iguais aos das tabelas de catálogo já existentes.
 - Código: `src/lib/catalog.functions.ts` (novos campos e leitura de famílias/tecidos), novo módulo de geração de códigos e nomes, `src/routes/_authenticated/encomendas.nova.tsx` (ordem modelo → estrutura bloqueada, tecido pelo `ref_tec`, largura para sofá), `src/routes/_authenticated/admin.catalogo.tsx` (gestão de coleções por tipo, famílias de sofá e tabela de tecidos).
-- A tabela `fabrics` nasce vazia: não recebi a lista de tecidos concretos (referência do fornecedor + cor). Fica a interface para os criar, e o `ref_tec` só passa a obrigatório nas ordens novas quando existirem tecidos registados.
+- A tabela `fabrics` nasce vazia: não recebi a lista de tecidos concretos (referência do fornecedor + cor). Fica a interface para os criar, e o `ref_tec` só passa a obrigatório nas ordens novas quando existirem tecidos registados. Enquanto estiver vazia, o importador marca o tecido como DÚVIDA em vez de inventar correspondências.
+- Importador: novo módulo de reconhecimento de texto (`src/lib/productParse.ts`) com testes sobre as linhas de exemplo, funções de servidor para pré-visualizar e confirmar, e nova página de importação com pré-visualização editável, reutilizando `import_batches`.
+- Linhas livres: nova coluna de tipo de linha em `production_orders` (catálogo ou livre) com tipo de serviço opcional, triggers de catálogo condicionados a linhas de catálogo, criação de volumes ignorada nas linhas livres, e distinção visual em `/encomendas` e na produção.
+- Ordem de execução: (1) integridade e dados do catálogo, (2) gerador de códigos e nomes, (3) cascos e colis, (4) linhas livres, (5) importador com reconhecimento. Cada fase deixa a aplicação a funcionar.
