@@ -15,6 +15,8 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Upload, Trash2, Package } from "lucide-react";
 import { listRef, upsertRef, deleteRef, bulkImportRef, type RefKind, type RefRow } from "@/lib/catalog.functions";
+import { FabricsTable } from "@/components/catalog/FabricsTable";
+
 
 export const Route = createFileRoute("/_authenticated/admin/catalogo")({
   component: CatalogoPage,
