@@ -302,8 +302,13 @@ export const createOrder = createServerFn({ method: "POST" })
       notes: data.notes ?? null,
       observation: data.observation ?? null,
       finishing: data.finishing ?? null,
+      ref_tec: data.ref_tec ?? null,
+      customization: data.customization ?? null,
+      line_kind: data.line_kind ?? "catalogo",
+      service_type: data.service_type ?? null,
       created_by: userId,
     } as any;
+
 
     const rows: any[] = [];
     for (let i = 0; i < quantity; i++) {
