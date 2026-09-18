@@ -217,7 +217,14 @@ function EncomendasPage() {
                       o.order_number
                     )}
                   </TableCell>
-                  <TableCell>{o.product_description}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      {o.line_kind === "livre" && (
+                        <Badge variant="outline" className="border-dashed text-[10px]">Linha livre</Badge>
+                      )}
+                      <span>{o.product_description}</span>
+                    </div>
+                  </TableCell>
                   <TableCell>{o.model_name ?? "—"}</TableCell>
                   <TableCell>{o.measure ?? "—"}</TableCell>
                   <TableCell>{o.fabric_type ?? "—"}</TableCell>
@@ -271,7 +278,12 @@ function EncomendasPage() {
                   </span>
                   <Badge variant="secondary">{ORDER_STATUS_LABELS[o.status]}</Badge>
                 </div>
-                <div className="text-sm font-medium">{o.product_description}</div>
+                <div className="text-sm font-medium flex items-center gap-2">
+                  {o.line_kind === "livre" && (
+                    <Badge variant="outline" className="border-dashed text-[10px]">Linha livre</Badge>
+                  )}
+                  <span>{o.product_description}</span>
+                </div>
                 <div className="flex flex-wrap gap-1 text-xs text-muted-foreground">
                   {o.model_name && <span>{o.model_name}</span>}
                   {o.measure && <span>· {o.measure}</span>}
