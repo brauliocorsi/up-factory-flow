@@ -101,6 +101,9 @@ const upsertSchema = z.object({
   fabric_type_id: z.string().uuid().nullable().optional(),
   model_ids: z.array(z.string().uuid()).optional(),
   meters_per_unit: z.number().min(0).nullable().optional(),
+  structure_code: z.string().trim().max(8).nullable().optional(),
+  sofa_family_code: z.string().trim().max(8).nullable().optional(),
+  fabric_type_code: z.string().trim().max(8).nullable().optional(),
 });
 
 export const upsertRef = createServerFn({ method: "POST" })
@@ -112,13 +115,17 @@ export const upsertRef = createServerFn({ method: "POST" })
     if (data.kind === "models") {
       row.category_id = data.category_id ?? null;
       if (data.meters_per_unit !== undefined) row.meters_per_unit = data.meters_per_unit;
+      if (data.structure_code !== undefined) row.structure_code = data.structure_code;
+      if (data.sofa_family_code !== undefined) row.sofa_family_code = data.sofa_family_code;
     }
     if (data.kind === "fabric_types" && data.directional !== undefined) {
       row.directional = data.directional;
     }
-    if (data.kind === "fabric_refs" && data.fabric_type_id !== undefined) {
-      row.fabric_type_id = data.fabric_type_id;
+    if (data.kind === "fabric_refs") {
+      if (data.fabric_type_id !== undefined) row.fabric_type_id = data.fabric_type_id;
+      if (data.fabric_type_code !== undefined) row.fabric_type_code = data.fabric_type_code;
     }
+
     const table = REF_TABLE[data.kind];
     let structureId: string | undefined = data.id;
     if (data.id) {
