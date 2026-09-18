@@ -53,12 +53,13 @@ export const listRef = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<RefRow[]> => {
     const cols =
       data.kind === "models"
-        ? "id, code, name, active, category_id, meters_per_unit"
+        ? "id, code, name, active, category_id, meters_per_unit, structure_code, sofa_family_code"
         : data.kind === "fabric_types"
           ? "id, code, name, active, directional"
           : data.kind === "fabric_refs"
-            ? "id, code, name, active, fabric_type_id"
+            ? "id, code, name, active, fabric_type_id, fabric_type_code"
             : "id, code, name, active";
+
     const { data: rows, error } = await (context.supabase as any)
       .from(REF_TABLE[data.kind])
       .select(cols)
