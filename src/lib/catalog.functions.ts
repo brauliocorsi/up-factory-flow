@@ -192,22 +192,39 @@ export const bulkImportRef = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const table = REF_TABLE[data.kind];
     let catMap = new Map<string, string>();
+    let catCodeById = new Map<string, string>();
+    let defaultStructure = "01";
+    let defaultFamily = "01";
     if (data.kind === "models") {
       const { data: cats } = await context.supabase
         .from("ref_categories")
         .select("id, code");
       catMap = new Map((cats ?? []).map((c: any) => [c.code, c.id]));
+      catCodeById = new Map((cats ?? []).map((c: any) => [c.id, c.code]));
+      const [{ data: sts }, { data: fams }] = await Promise.all([
+        context.supabase.from("ref_structures").select("code").eq("active", true).order("code").limit(1),
+        (context.supabase as any).from("ref_sofa_families").select("code").eq("active", true).order("code").limit(1),
+      ]);
+      defaultStructure = (sts as any)?.[0]?.code ?? "01";
+      defaultFamily = (fams as any)?.[0]?.code ?? "01";
     }
     const payload = data.rows.map((r) => {
       const base: any = { code: r.code, name: r.name, active: true };
       if (data.kind === "models") {
         base.category_id = r.category_code ? catMap.get(r.category_code) ?? null : null;
+        const catCode = base.category_id ? catCodeById.get(base.category_id) ?? r.category_code ?? "" : (r.category_code ?? "");
+        // O modelo tem sempre estrutura fixa (ou família, nos sofás).
+        if ((catCode ?? "").toUpperCase() === "SOF") base.sofa_family_code = defaultFamily;
+        else base.structure_code = defaultStructure;
       }
       return base;
     });
     const { error, count } = await context.supabase
       .from(table as any)
-      .upsert(payload, { onConflict: "code", count: "exact" });
+      .upsert(payload, {
+        onConflict: data.kind === "models" ? "category_id,code" : "code",
+        count: "exact",
+      });
     if (error) throw new Error(error.message);
     return { inserted: count ?? payload.length };
   });
