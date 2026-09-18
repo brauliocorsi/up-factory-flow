@@ -83,6 +83,7 @@ export function FabricsTable() {
               <Button size="sm" className="gap-1.5"><Plus className="size-4" /> Nova referência</Button>
             </DialogTrigger>
             <FabricDialog
+              key={editing?.ref_tec ?? "nova"}
               editing={editing}
               collections={collections}
               types={types}
