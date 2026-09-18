@@ -14,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Upload, Trash2, Package } from "lucide-react";
-import { listRef, upsertRef, deleteRef, bulkImportRef, type RefKind, type RefRow } from "@/lib/catalog.functions";
+import { listRef, upsertRef, deleteRef, bulkImportRef, listSofaFamilies, type RefKind, type RefRow } from "@/lib/catalog.functions";
 import { FabricsTable } from "@/components/catalog/FabricsTable";
 
 
@@ -103,6 +103,18 @@ function RefTable({ kind, hint, hasCategory }: { kind: RefKind; hint: string; ha
     [modelsAll],
   );
 
+  const isModels = kind === "models";
+  const { data: structuresAll = [] } = useQuery({
+    queryKey: ["ref", "structures"],
+    queryFn: () => listRef({ data: { kind: "structures" } }),
+    enabled: isModels,
+  });
+  const { data: sofaFamilies = [] } = useQuery({
+    queryKey: ["sofa_families"],
+    queryFn: () => listSofaFamilies(),
+    enabled: isModels,
+  });
+
   const refresh = () => qc.invalidateQueries({ queryKey: ["ref", kind] });
 
   const del = useMutation({
@@ -129,7 +141,7 @@ function RefTable({ kind, hint, hasCategory }: { kind: RefKind; hint: string; ha
         <div className="text-xs text-muted-foreground">{hint}</div>
         <div className="flex gap-2">
           <ImportDialog kind={kind} hasCategory={hasCategory} onDone={refresh} />
-          <UpsertDialog kind={kind} hasCategory={hasCategory} cats={cats} fabricTypes={fabricTypes} modelsAll={modelsAll} onDone={refresh} />
+          <UpsertDialog kind={kind} hasCategory={hasCategory} cats={cats} fabricTypes={fabricTypes} modelsAll={modelsAll} structuresAll={structuresAll} sofaFamilies={sofaFamilies} onDone={refresh} />
         </div>
       </div>
       <div className="overflow-x-auto">
@@ -194,7 +206,34 @@ function RefTable({ kind, hint, hasCategory }: { kind: RefKind; hint: string; ha
                     )}
                   </TableCell>
                 )}
-                {showMeters && (
+                {isModels && !isSofaModel && (
+            <div className="space-y-1.5">
+              <Label className="text-xs">Estrutura fixa do modelo</Label>
+              <Select value={structureCode} onValueChange={setStructureCode}>
+                <SelectTrigger className="h-11"><SelectValue placeholder="Escolher estrutura…" /></SelectTrigger>
+                <SelectContent>
+                  {structuresAll.filter((s) => s.active || s.code === structureCode).map((s) => (
+                    <SelectItem key={s.code} value={s.code}>{s.code} · {s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">Cada modelo tem uma só estrutura; nas encomendas aparece preenchida e bloqueada.</p>
+            </div>
+          )}
+          {isModels && isSofaModel && (
+            <div className="space-y-1.5">
+              <Label className="text-xs">Família do sofá</Label>
+              <Select value={sofaFamilyCode} onValueChange={setSofaFamilyCode}>
+                <SelectTrigger className="h-11"><SelectValue placeholder="Escolher família…" /></SelectTrigger>
+                <SelectContent>
+                  {sofaFamilies.filter((f) => f.active || f.code === sofaFamilyCode).map((f) => (
+                    <SelectItem key={f.code} value={f.code}>{f.code} · {f.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          {showMeters && (
                   <TableCell className="text-right">
                     {r.meters_per_unit != null ? (
                       <span className="font-semibold">{Number(r.meters_per_unit).toFixed(1)} m</span>
@@ -215,7 +254,7 @@ function RefTable({ kind, hint, hasCategory }: { kind: RefKind; hint: string; ha
                   <Switch checked={r.active} onCheckedChange={() => toggle.mutate(r)} />
                 </TableCell>
                 <TableCell className="text-right space-x-1">
-                  <UpsertDialog kind={kind} hasCategory={hasCategory} cats={cats} fabricTypes={fabricTypes} modelsAll={modelsAll} editing={r} onDone={refresh} />
+                  <UpsertDialog kind={kind} hasCategory={hasCategory} cats={cats} fabricTypes={fabricTypes} modelsAll={modelsAll} structuresAll={structuresAll} sofaFamilies={sofaFamilies} editing={r} onDone={refresh} />
                   <Button variant="ghost" size="icon" onClick={() => { if (confirm(`Apagar ${r.code} — ${r.name}?`)) del.mutate(r.id); }}>
                     <Trash2 className="size-4 text-destructive" />
                   </Button>
@@ -229,7 +268,7 @@ function RefTable({ kind, hint, hasCategory }: { kind: RefKind; hint: string; ha
   );
 }
 
-function UpsertDialog({ kind, hasCategory, cats, fabricTypes = [], modelsAll = [], editing, onDone }: { kind: RefKind; hasCategory: boolean; cats: RefRow[]; fabricTypes?: RefRow[]; modelsAll?: RefRow[]; editing?: RefRow; onDone: () => void }) {
+function UpsertDialog({ kind, hasCategory, cats, fabricTypes = [], modelsAll = [], structuresAll = [], sofaFamilies = [], editing, onDone }: { kind: RefKind; hasCategory: boolean; cats: RefRow[]; fabricTypes?: RefRow[]; modelsAll?: RefRow[]; structuresAll?: RefRow[]; sofaFamilies?: { code: string; name: string; active: boolean }[]; editing?: RefRow; onDone: () => void }) {
   const [open, setOpen] = useState(false);
   const [code, setCode] = useState(editing?.code ?? "");
   const [name, setName] = useState(editing?.name ?? "");
@@ -239,9 +278,14 @@ function UpsertDialog({ kind, hasCategory, cats, fabricTypes = [], modelsAll = [
   const [metersPerUnit, setMetersPerUnit] = useState<string>(
     editing?.meters_per_unit != null ? String(editing.meters_per_unit) : "",
   );
+  const [structureCode, setStructureCode] = useState<string>(editing?.structure_code ?? "");
+  const [sofaFamilyCode, setSofaFamilyCode] = useState<string>(editing?.sofa_family_code ?? "");
   const showFabricType = kind === "fabric_refs";
   const showModels = kind === "structures";
   const showMeters = kind === "models";
+  const isModels = kind === "models";
+  const catCode = (cats.find((c) => c.id === categoryId)?.code ?? "").toUpperCase();
+  const isSofaModel = isModels && catCode === "SOF";
 
   const mut = useMutation({
     mutationFn: () =>
@@ -257,13 +301,15 @@ function UpsertDialog({ kind, hasCategory, cats, fabricTypes = [], modelsAll = [
           meters_per_unit: showMeters
             ? (metersPerUnit.trim() === "" ? null : Number(metersPerUnit))
             : undefined,
+          structure_code: isModels ? (isSofaModel ? null : (structureCode || null)) : undefined,
+          sofa_family_code: isModels ? (isSofaModel ? (sofaFamilyCode || null) : null) : undefined,
         },
       }),
     onSuccess: () => {
       toast.success(editing ? "Atualizado" : "Adicionado");
       setOpen(false);
       onDone();
-      if (!editing) { setCode(""); setName(""); setCategoryId(""); setFabricTypeId(""); setModelIds([]); setMetersPerUnit(""); }
+      if (!editing) { setCode(""); setName(""); setCategoryId(""); setFabricTypeId(""); setModelIds([]); setMetersPerUnit(""); setStructureCode(""); setSofaFamilyCode(""); }
     },
     onError: (e: any) => toast.error(e.message),
   });
