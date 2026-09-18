@@ -150,6 +150,9 @@ export type OrderListItem = {
   completed_at: string | null;
   /** Data em que a picagem/transferência foi registada, se já ocorreu. */
   picked_at: string | null;
+  /** "catalogo" ou "livre" (assistência, serviço, peça, porte…). */
+  line_kind: string;
+  service_type: string | null;
 };
 
 export const listOrders = createServerFn({ method: "POST" })
@@ -159,7 +162,7 @@ export const listOrders = createServerFn({ method: "POST" })
     const { supabase } = context;
     let q = supabase
       .from("production_orders")
-      .select("id, order_number, customer_order, product_description, measure, fabric_type, entry_date, due_date, status, models(name), order_stages(stage, status, finished_at)")
+      .select("id, order_number, customer_order, product_description, measure, fabric_type, entry_date, due_date, status, line_kind, service_type, models(name), order_stages(stage, status, finished_at)")
       .order("entry_date", { ascending: false, nullsFirst: false });
     if (data.search) {
       const s = data.search.replace(/[%,]/g, "");
@@ -192,6 +195,8 @@ export const listOrders = createServerFn({ method: "POST" })
         current_stage: current.stage,
         completed_at: packedAt ?? pickedAt,
         picked_at: pickedAt,
+        line_kind: o.line_kind ?? "catalogo",
+        service_type: o.service_type ?? null,
       };
     });
   });
