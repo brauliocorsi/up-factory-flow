@@ -35,6 +35,7 @@ import { Route as AuthenticatedPicagemConsultaRouteImport } from './routes/_auth
 import { Route as AuthenticatedEtiquetasImprimirRouteImport } from './routes/_authenticated/etiquetas.imprimir'
 import { Route as AuthenticatedEncomendasNovaRouteImport } from './routes/_authenticated/encomendas.nova'
 import { Route as AuthenticatedEncomendasImportarSimplesRouteImport } from './routes/_authenticated/encomendas.importar-simples'
+import { Route as AuthenticatedEncomendasImportarProdutosRouteImport } from './routes/_authenticated/encomendas.importar-produtos'
 import { Route as AuthenticatedAdminSlaRouteImport } from './routes/_authenticated/admin.sla'
 import { Route as AuthenticatedAdminRotasColisRouteImport } from './routes/_authenticated/admin.rotas-colis'
 import { Route as AuthenticatedAdminRelatoriosRouteImport } from './routes/_authenticated/admin.relatorios'
@@ -193,6 +194,12 @@ const AuthenticatedEncomendasImportarSimplesRoute =
     path: '/encomendas/importar-simples',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedEncomendasImportarProdutosRoute =
+  AuthenticatedEncomendasImportarProdutosRouteImport.update({
+    id: '/encomendas/importar-produtos',
+    path: '/encomendas/importar-produtos',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAdminSlaRoute = AuthenticatedAdminSlaRouteImport.update({
   id: '/admin/sla',
   path: '/admin/sla',
@@ -282,6 +289,7 @@ export interface FileRoutesByFullPath {
   '/admin/relatorios': typeof AuthenticatedAdminRelatoriosRoute
   '/admin/rotas-colis': typeof AuthenticatedAdminRotasColisRoute
   '/admin/sla': typeof AuthenticatedAdminSlaRoute
+  '/encomendas/importar-produtos': typeof AuthenticatedEncomendasImportarProdutosRoute
   '/encomendas/importar-simples': typeof AuthenticatedEncomendasImportarSimplesRoute
   '/encomendas/nova': typeof AuthenticatedEncomendasNovaRoute
   '/etiquetas/imprimir': typeof AuthenticatedEtiquetasImprimirRoute
@@ -321,6 +329,7 @@ export interface FileRoutesByTo {
   '/admin/relatorios': typeof AuthenticatedAdminRelatoriosRoute
   '/admin/rotas-colis': typeof AuthenticatedAdminRotasColisRoute
   '/admin/sla': typeof AuthenticatedAdminSlaRoute
+  '/encomendas/importar-produtos': typeof AuthenticatedEncomendasImportarProdutosRoute
   '/encomendas/importar-simples': typeof AuthenticatedEncomendasImportarSimplesRoute
   '/encomendas/nova': typeof AuthenticatedEncomendasNovaRoute
   '/etiquetas/imprimir': typeof AuthenticatedEtiquetasImprimirRoute
@@ -362,6 +371,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/relatorios': typeof AuthenticatedAdminRelatoriosRoute
   '/_authenticated/admin/rotas-colis': typeof AuthenticatedAdminRotasColisRoute
   '/_authenticated/admin/sla': typeof AuthenticatedAdminSlaRoute
+  '/_authenticated/encomendas/importar-produtos': typeof AuthenticatedEncomendasImportarProdutosRoute
   '/_authenticated/encomendas/importar-simples': typeof AuthenticatedEncomendasImportarSimplesRoute
   '/_authenticated/encomendas/nova': typeof AuthenticatedEncomendasNovaRoute
   '/_authenticated/etiquetas/imprimir': typeof AuthenticatedEtiquetasImprimirRoute
@@ -403,6 +413,7 @@ export interface FileRouteTypes {
     | '/admin/relatorios'
     | '/admin/rotas-colis'
     | '/admin/sla'
+    | '/encomendas/importar-produtos'
     | '/encomendas/importar-simples'
     | '/encomendas/nova'
     | '/etiquetas/imprimir'
@@ -442,6 +453,7 @@ export interface FileRouteTypes {
     | '/admin/relatorios'
     | '/admin/rotas-colis'
     | '/admin/sla'
+    | '/encomendas/importar-produtos'
     | '/encomendas/importar-simples'
     | '/encomendas/nova'
     | '/etiquetas/imprimir'
@@ -482,6 +494,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/relatorios'
     | '/_authenticated/admin/rotas-colis'
     | '/_authenticated/admin/sla'
+    | '/_authenticated/encomendas/importar-produtos'
     | '/_authenticated/encomendas/importar-simples'
     | '/_authenticated/encomendas/nova'
     | '/_authenticated/etiquetas/imprimir'
@@ -698,6 +711,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEncomendasImportarSimplesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/encomendas/importar-produtos': {
+      id: '/_authenticated/encomendas/importar-produtos'
+      path: '/encomendas/importar-produtos'
+      fullPath: '/encomendas/importar-produtos'
+      preLoaderRoute: typeof AuthenticatedEncomendasImportarProdutosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin/sla': {
       id: '/_authenticated/admin/sla'
       path: '/admin/sla'
@@ -810,6 +830,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRelatoriosRoute: typeof AuthenticatedAdminRelatoriosRoute
   AuthenticatedAdminRotasColisRoute: typeof AuthenticatedAdminRotasColisRoute
   AuthenticatedAdminSlaRoute: typeof AuthenticatedAdminSlaRoute
+  AuthenticatedEncomendasImportarProdutosRoute: typeof AuthenticatedEncomendasImportarProdutosRoute
   AuthenticatedEncomendasImportarSimplesRoute: typeof AuthenticatedEncomendasImportarSimplesRoute
   AuthenticatedEncomendasNovaRoute: typeof AuthenticatedEncomendasNovaRoute
   AuthenticatedEtiquetasImprimirRoute: typeof AuthenticatedEtiquetasImprimirRoute
@@ -841,6 +862,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRelatoriosRoute: AuthenticatedAdminRelatoriosRoute,
   AuthenticatedAdminRotasColisRoute: AuthenticatedAdminRotasColisRoute,
   AuthenticatedAdminSlaRoute: AuthenticatedAdminSlaRoute,
+  AuthenticatedEncomendasImportarProdutosRoute:
+    AuthenticatedEncomendasImportarProdutosRoute,
   AuthenticatedEncomendasImportarSimplesRoute:
     AuthenticatedEncomendasImportarSimplesRoute,
   AuthenticatedEncomendasNovaRoute: AuthenticatedEncomendasNovaRoute,
