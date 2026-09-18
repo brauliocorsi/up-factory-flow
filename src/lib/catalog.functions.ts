@@ -202,16 +202,31 @@ export const getCatalogs = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const s = context.supabase as any;
-    const [cats, models, structures, measures, fts, frs, colors, links] = await Promise.all([
-      s.from("ref_categories").select("id, code, name, active").eq("active", true).order("code"),
-      s.from("models").select("id, code, name, active, category_id, meters_per_unit").eq("active", true).order("code"),
-      s.from("ref_structures").select("id, code, name, active").eq("active", true).order("code"),
-      s.from("ref_measures").select("id, code, name, active").eq("active", true).order("code"),
-      s.from("ref_fabric_types").select("id, code, name, active").eq("active", true).order("code"),
-      s.from("ref_fabric_refs").select("id, code, name, active, fabric_type_id").eq("active", true).order("code"),
-      s.from("ref_colors").select("id, code, name, active").eq("active", true).order("code"),
-      s.from("model_structures").select("model_id, structure_id"),
-    ]);
+    const [cats, models, structures, measures, fts, frs, colors, links, families, fabrics] =
+      await Promise.all([
+        s.from("ref_categories").select("id, code, name, active").eq("active", true).order("code"),
+        s
+          .from("models")
+          .select("id, code, name, active, category_id, meters_per_unit, structure_code, sofa_family_code")
+          .eq("active", true)
+          .order("code"),
+        s.from("ref_structures").select("id, code, name, active").eq("active", true).order("code"),
+        s.from("ref_measures").select("id, code, name, active").eq("active", true).order("code"),
+        s.from("ref_fabric_types").select("id, code, name, active").eq("active", true).order("code"),
+        s
+          .from("ref_fabric_refs")
+          .select("id, code, name, active, fabric_type_id, fabric_type_code")
+          .eq("active", true)
+          .order("code"),
+        s.from("ref_colors").select("id, code, name, active").eq("active", true).order("code"),
+        s.from("model_structures").select("model_id, structure_id"),
+        s.from("ref_sofa_families").select("id, code, name, active").eq("active", true).order("code"),
+        s
+          .from("fabrics")
+          .select("ref_tec, fabric_type_code, fabric_ref_code, supplier_ref, color_code, active")
+          .eq("active", true)
+          .order("ref_tec"),
+      ]);
     const byStructure = new Map<string, string[]>();
     for (const l of links.data ?? []) {
       const arr = byStructure.get(l.structure_id) ?? [];
@@ -227,5 +242,81 @@ export const getCatalogs = createServerFn({ method: "GET" })
       fabric_types: fts.data ?? [],
       fabric_refs: frs.data ?? [],
       colors: colors.data ?? [],
+      sofa_families: families.data ?? [],
+      fabrics: fabrics.data ?? [],
     };
+  });
+
+// ---------- Tecidos (fabrics: coleção + referência do fornecedor + cor) ----------
+
+export type FabricRow = {
+  ref_tec: string;
+  fabric_type_code: string;
+  fabric_ref_code: string;
+  supplier_ref: string;
+  color_code: string | null;
+  active: boolean;
+};
+
+export const listFabrics = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<FabricRow[]> => {
+    const { data, error } = await (context.supabase as any)
+      .from("fabrics")
+      .select("ref_tec, fabric_type_code, fabric_ref_code, supplier_ref, color_code, active")
+      .order("ref_tec");
+    if (error) throw new Error(error.message);
+    return (data ?? []) as FabricRow[];
+  });
+
+const fabricSchema = z.object({
+  ref_tec: z.string().trim().max(12).optional().nullable(),
+  fabric_ref_code: z.string().trim().min(1).max(8),
+  supplier_ref: z.string().trim().min(1).max(120),
+  color_code: z.string().trim().max(8).nullable().optional(),
+  active: z.boolean().optional(),
+});
+
+export const upsertFabric = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => fabricSchema.parse(d))
+  .handler(async ({ data, context }) => {
+    const s = context.supabase as any;
+    // O tipo de tecido vem sempre da coleção — nunca é escolhido à mão.
+    const { data: coll, error: cErr } = await s
+      .from("ref_fabric_refs")
+      .select("code, fabric_type_code")
+      .eq("code", data.fabric_ref_code)
+      .maybeSingle();
+    if (cErr) throw new Error(cErr.message);
+    if (!coll) throw new Error("Coleção de tecido não encontrada.");
+    const row: any = {
+      fabric_type_code: coll.fabric_type_code,
+      fabric_ref_code: data.fabric_ref_code,
+      supplier_ref: data.supplier_ref,
+      color_code: data.color_code ?? null,
+    };
+    if (data.active !== undefined) row.active = data.active;
+    if (data.ref_tec) {
+      const { error } = await s.from("fabrics").update(row).eq("ref_tec", data.ref_tec);
+      if (error) throw new Error(error.message);
+      return { ref_tec: data.ref_tec };
+    }
+    const { data: ins, error } = await s.from("fabrics").insert(row).select("ref_tec").single();
+    if (error) throw new Error(error.message);
+    return { ref_tec: (ins as any).ref_tec as string };
+  });
+
+export const setFabricActive = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ ref_tec: z.string().trim().min(1).max(12), active: z.boolean() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await (context.supabase as any)
+      .from("fabrics")
+      .update({ active: data.active })
+      .eq("ref_tec", data.ref_tec);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });
