@@ -157,6 +157,11 @@ export const confirmProductImport = createServerFn({ method: "POST" })
       for (const r of (existing ?? []) as Array<{ order_number: string }>) taken.add(r.order_number);
     }
 
+    const { data: allMeasures } = await s.from("ref_measures").select("code, name");
+    const measureNameByCode = new Map<string, string>(
+      ((allMeasures ?? []) as Array<{ code: string; name: string }>).map((m) => [m.code, m.name]),
+    );
+
     const today = new Date().toISOString().slice(0, 10);
     const skipped: Array<{ order_number: string; reason: string }> = [];
     const payload: any[] = [];
@@ -186,7 +191,11 @@ export const confirmProductImport = createServerFn({ method: "POST" })
           customer_order: base,
           product_description: r.product_description,
           model_id: r.model_id ?? null,
-          measure: r.width_cm ? `${r.width_cm}cm` : r.measure_new ?? null,
+          measure: r.width_cm
+            ? `${r.width_cm}cm`
+            : measureCode
+              ? measureNameByCode.get(measureCode) ?? r.measure_new ?? null
+              : r.measure_new ?? null,
           structure_type: r.structure_name ?? null,
           fabric_type: r.fabric_type ?? null,
           fabric_ref: r.fabric_ref ?? null,
@@ -202,17 +211,6 @@ export const confirmProductImport = createServerFn({ method: "POST" })
           line_kind: "catalogo",
           created_by: userId,
         });
-      }
-    }
-
-    // Preenche a medida com o nome da tabela quando existe código.
-    if (payload.length > 0) {
-      const { data: measures } = await s.from("ref_measures").select("code, name");
-      const byCode = new Map<string, string>(((measures ?? []) as any[]).map((m) => [m.code, m.name]));
-      for (let i = 0; i < payload.length; i++) {
-        const src = data.rows.find((r) => (r.order_number ?? "") && payload[i].customer_order === r.order_number);
-        const code = src?.measure_code ?? null;
-        if (!payload[i].measure && code) payload[i].measure = byCode.get(code) ?? null;
       }
     }
 
