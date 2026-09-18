@@ -31,8 +31,7 @@ const TABS: { kind: RefKind; label: string; segment: string; hasCategory?: boole
 ];
 
 function CatalogoPage() {
-  const [tab, setTab] = useState<RefKind>("categories");
-  const meta = TABS.find((t) => t.kind === tab)!;
+  const [tab, setTab] = useState<RefKind | "fabrics">("categories");
 
   return (
     <div className="p-4 max-w-5xl mx-auto space-y-4">
@@ -46,21 +45,26 @@ function CatalogoPage() {
         </Button>
       </div>
 
-      <Tabs value={tab} onValueChange={(v) => setTab(v as RefKind)}>
+      <Tabs value={tab} onValueChange={(v) => setTab(v as RefKind | "fabrics")}>
         <TabsList className="flex flex-wrap h-auto">
           {TABS.map((t) => (
             <TabsTrigger key={t.kind} value={t.kind}>{t.label}</TabsTrigger>
           ))}
+          <TabsTrigger value="fabrics">Tecidos (TEC)</TabsTrigger>
         </TabsList>
         {TABS.map((t) => (
           <TabsContent key={t.kind} value={t.kind}>
             <RefTable kind={t.kind} hint={t.segment} hasCategory={!!t.hasCategory} />
           </TabsContent>
         ))}
+        <TabsContent value="fabrics">
+          <FabricsTable />
+        </TabsContent>
       </Tabs>
     </div>
   );
 }
+
 
 function RefTable({ kind, hint, hasCategory }: { kind: RefKind; hint: string; hasCategory: boolean }) {
   const qc = useQueryClient();
