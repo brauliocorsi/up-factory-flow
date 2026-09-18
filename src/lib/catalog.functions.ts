@@ -35,6 +35,13 @@ export type RefRow = {
   model_ids?: string[];
   /** Apenas para models: metros de tecido a consumir por unidade. */
   meters_per_unit?: number | null;
+  /** Apenas para models de cama/sommier: estrutura fixa do modelo. */
+  structure_code?: string | null;
+  /** Apenas para models de sofá: família do sofá. */
+  sofa_family_code?: string | null;
+  /** Apenas para fabric_refs: código do tipo de tecido. */
+  fabric_type_code?: string | null;
+
 };
 
 const kindSchema = z.enum([
