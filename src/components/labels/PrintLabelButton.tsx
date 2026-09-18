@@ -89,7 +89,6 @@ export function PrintLabelButton({
               toast.success("Diálogo de impressão preparado — confirma na impressora.");
             });
             win.addEventListener("afterprint", () => window.setTimeout(cleanup, 500));
-          }
           } else {
             toast.success("Etiqueta preparada — confirma o diálogo de impressão.");
           }
