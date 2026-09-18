@@ -9,10 +9,12 @@
 - 161 ordens de produção, todas em curso (pendente/em produção). Destas: 8 com modelo, 2 com estrutura, 2 com referência de tecido, 152 com cor. Ou seja, quase nenhuma ordem depende dos campos que vamos passar a validar — o risco de partir ordens é muito baixo.
 - Colis por estrutura já estão corretos (Simples 2, Coxim 3, Alongada 4, Especial 3) e os cascos genéricos já usam ESTR+estrutura+medida.
 
-## Preciso de confirmação em dois pontos
+## Contas das coleções (já fechadas)
 
-1. **Quines** aparece na lista das 22 coleções a desativar e, ao mesmo tempo, na fusão ("manter Quines 34") e nas ativas de Microfibra. Assumo: **Quines (34) fica ativa**, Quinnes (37) desativada. Confirme, por favor.
-2. A lista de ativas soma **21** coleções (14 Aveludado + 6 Microfibra + 1 Pele), não 23. Com Quines fica 22. As duas que faltam podem ser Vénus e Quines contadas outra vez. Sigo com as coleções nomeadas e listo no fim as que ficarem sem tipo.
+Regra confirmada: só ficam ativas as 21 coleções a que deu tipo explicitamente. Tudo o resto é desativado.
+- Ativas: 14 Aveludado + 6 Microfibra + 1 Pele Sintética = **21**.
+- Desativadas: as 22 da sua lista (Quines incluída) + Venus (19) + Quinnes (37) = **24**.
+- 21 + 24 = 45, que é exatamente o total atual. Confirmei que **não sobra nenhuma coleção sem tipo**, portanto não haverá lista extra para confirmar.
 
 ## Parte 1 — Integridade referencial
 
