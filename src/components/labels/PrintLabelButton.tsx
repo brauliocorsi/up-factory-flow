@@ -70,9 +70,14 @@ export function PrintLabelButton({
         cleanup();
         toast.error("Não foi possível preparar a etiqueta — tenta novamente.");
       };
-      timer = window.setTimeout(failFast, 15000);
+      // Só vale enquanto a página da etiqueta não carregar: depois do load a
+      // espera passa a ser longa, para nunca cancelar uma impressão lenta.
+      timer = window.setTimeout(failFast, 30000);
 
       iframe.addEventListener("load", () => {
+        window.clearTimeout(timer);
+        // Salvaguarda longa a partir do load: limpa o iframe sem dar erro.
+        timer = window.setTimeout(cleanup, 120000);
         try {
           const win = iframe.contentWindow;
           if (win) {
@@ -85,8 +90,12 @@ export function PrintLabelButton({
             });
             win.addEventListener("afterprint", () => window.setTimeout(cleanup, 500));
           }
+          } else {
+            toast.success("Etiqueta preparada — confirma o diálogo de impressão.");
+          }
         } catch {
-          /* sem acesso ao iframe — fica a salvaguarda */
+          /* sem acesso ao iframe — fica a salvaguarda longa */
+          toast.success("Etiqueta preparada — confirma o diálogo de impressão.");
         }
       });
 
