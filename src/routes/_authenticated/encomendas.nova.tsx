@@ -26,7 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
@@ -485,10 +485,10 @@ function NovaEncomendaPage() {
                     label={
                       <span className="flex items-center gap-1.5">
                         Chaise
-                        <Tooltip>
+                        <TooltipProvider><Tooltip>
                           <TooltipTrigger asChild><Info className="size-3.5 text-muted-foreground" /></TooltipTrigger>
                           <TooltipContent>O lado é sempre {ODF_LABEL}.</TooltipContent>
-                        </Tooltip>
+                        </Tooltip></TooltipProvider>
                       </span>
                     }
                   >
