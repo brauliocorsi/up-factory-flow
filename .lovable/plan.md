@@ -56,6 +56,29 @@ Gerador central, usado pela criação de encomendas e pelas etiquetas:
 - Alongada e Especial: casco por modelo ESTR+modelo+estrutura+medida; onde faltar, é criado.
 - Colis: Simples 2, Coxim 3, Alongada 4, Especial 3, com exceção de Angel, Versace e Dublin em Alongada com 5 colis.
 
+## Parte 5 — Importação por Excel com reconhecimento automático
+
+Novo importador com pré-visualização obrigatória, sem nunca importar às cegas.
+
+Reconhecimento por linha de texto livre:
+- **Modelo**: procurado em qualquer posição da frase, com tolerância a acentos, maiúsculas e palavras pelo meio ("Cama cabeceira Alongada 258cm Angel" → Angel). Quando há mais de um candidato, a linha fica em DÚVIDA.
+- **Estrutura/família**: nunca lida do texto; vem sempre do modelo.
+- **Medida**: 190x140→140, 195x150→150, 200x160→160, 200x180→180, 190x90→090, 200x90→091. Aceita ×, vírgula decimal e erros como "190x900" ou "2000x120". Medidas precedidas de Cab., Cabeceira, Ilhargueiro ou Peseira são ignoradas para a medida da cama. Medidas fora da lista procuram-se na gama 5xx e, se não existirem, cria-se o próximo código livre 5xx marcado como sob-medida.
+- **Tecido**: procura o nome da coleção e o que vem a seguir (número do fornecedor e/ou cor) e liga ao `ref_tec` de `fabrics`. Sem correspondência exata → DÚVIDA.
+- **Variante**: cama com "flutuante"/"mural" → F, senão N. Sofá: ODF/VDF com Drt/Dir → D, com Esq → E, "chaise" sem lado → R, sem chaise → N.
+- **Personalizações** extraídas para campo próprio, sem entrar no código: altura de cabeceira (Cab. 300cm → cab:300), ilhargueiro, furos para tomadas, laminado, espelhos, listras, peseira.
+
+Fluxo: carregar Excel → pré-visualização linha a linha com modelo, estrutura, medida, tecido, variante, personalizações e código gerado, cada linha marcada RECONHECIDA / DÚVIDA / NÃO RECONHECIDA → correção manual por seletores nas linhas duvidosas → confirmação → importação → relatório final do que entrou e do que ficou de fora. A importação continua idempotente pelo mesmo mecanismo já usado hoje (`import_batches` com identificador de lote e resumo do ficheiro).
+
+## Parte 6 — Linhas livres nas encomendas
+
+Passa a ser possível registar numa encomenda linhas que não são produto de catálogo: assistências, reparações, portes, serviços, peças soltas e produtos de terceiros.
+- Cada linha livre tem descrição, quantidade, observações e um tipo opcional (Assistência, Reparação, Serviço, Peça, Outro).
+- Sem código de produto, modelo, tecido nem casco; não passa pelo gerador de códigos nem pelas validações de catálogo, o que exige que as validações novas só se apliquem a linhas de catálogo.
+- Distinção visual clara na encomenda e nas listas.
+- Entra na produção/expedição sem exigir receita nem volumes: fecha por conclusão direta, sem cascos nem colis.
+- Uma encomenda pode misturar linhas de catálogo e linhas livres.
+
 ## Como protejo as 161 ordens
 
 - Nenhum registo é apagado; desativação por `active = false`.
