@@ -34,7 +34,7 @@ Nova tabela com `ref_tec` (chave), tipo, coleção, `supplier_ref`, cor e `activ
 
 ## Parte 2 — Dados
 
-- Desativar as 22 coleções indicadas (`active = false`), mais Venus (19) e Quinnes (37). **Nada é apagado.**
+- Desativar as 24 coleções (as 22 da lista, com Quines, mais Venus 19 e Quinnes 37). **Nada é apagado.**
 - Atribuir tipo às coleções ativas: Aveludado (01) a Opera, Trota, Vena, Alicia, Mix, Pierre, Avanti, Lyla, Masseto, Ringo, Susan, Vénus, Bass, Chester; Microfibra (02) a Kenya, Célia, Sydney, Nice, Prince, Jakarta; Pele Sintética (03) a Mikonos.
 - Acrescentar 15 modelos de cama: Simples nos próximos códigos livres (010 em diante) e Coxim em 114 e 138.
 - Criar `ref_sofa_families` (01 Simples, 02 Deslizante, 03 Sofá-Cama) e os 33 modelos de sofá com os códigos indicados, na categoria SOF. As famílias ficam em tabela própria para não misturar significados com as estruturas de cama; cada modelo aponta para estrutura (cama) ou família (sofá), conforme a categoria.
