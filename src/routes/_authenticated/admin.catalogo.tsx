@@ -206,34 +206,8 @@ function RefTable({ kind, hint, hasCategory }: { kind: RefKind; hint: string; ha
                     )}
                   </TableCell>
                 )}
-                {isModels && !isSofaModel && (
-            <div className="space-y-1.5">
-              <Label className="text-xs">Estrutura fixa do modelo</Label>
-              <Select value={structureCode} onValueChange={setStructureCode}>
-                <SelectTrigger className="h-11"><SelectValue placeholder="Escolher estrutura…" /></SelectTrigger>
-                <SelectContent>
-                  {structuresAll.filter((s) => s.active || s.code === structureCode).map((s) => (
-                    <SelectItem key={s.code} value={s.code}>{s.code} · {s.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">Cada modelo tem uma só estrutura; nas encomendas aparece preenchida e bloqueada.</p>
-            </div>
-          )}
-          {isModels && isSofaModel && (
-            <div className="space-y-1.5">
-              <Label className="text-xs">Família do sofá</Label>
-              <Select value={sofaFamilyCode} onValueChange={setSofaFamilyCode}>
-                <SelectTrigger className="h-11"><SelectValue placeholder="Escolher família…" /></SelectTrigger>
-                <SelectContent>
-                  {sofaFamilies.filter((f) => f.active || f.code === sofaFamilyCode).map((f) => (
-                    <SelectItem key={f.code} value={f.code}>{f.code} · {f.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-          {showMeters && (
+                {showMeters && (
+
                   <TableCell className="text-right">
                     {r.meters_per_unit != null ? (
                       <span className="font-semibold">{Number(r.meters_per_unit).toFixed(1)} m</span>
