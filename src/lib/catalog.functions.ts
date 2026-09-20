@@ -195,6 +195,8 @@ export const bulkImportRef = createServerFn({ method: "POST" })
     let catCodeById = new Map<string, string>();
     let defaultStructure = "01";
     let defaultFamily = "01";
+    // Modelos já existentes: a estrutura/família configurada nunca é substituída.
+    const existingByKey = new Map<string, { structure_code: string | null; sofa_family_code: string | null }>();
     if (data.kind === "models") {
       const { data: cats } = await context.supabase
         .from("ref_categories")
