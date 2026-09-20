@@ -209,6 +209,15 @@ export const bulkImportRef = createServerFn({ method: "POST" })
       ]);
       defaultStructure = (sts as any)?.[0]?.code ?? "01";
       defaultFamily = (fams as any)?.[0]?.code ?? "01";
+      const { data: existing } = await (context.supabase as any)
+        .from("models")
+        .select("code, category_id, structure_code, sofa_family_code");
+      for (const m of (existing as any[]) ?? []) {
+        existingByKey.set(`${m.category_id ?? ""}|${m.code}`, {
+          structure_code: m.structure_code ?? null,
+          sofa_family_code: m.sofa_family_code ?? null,
+        });
+      }
     }
     const payload = data.rows.map((r) => {
       const base: any = { code: r.code, name: r.name, active: true };
@@ -216,8 +225,13 @@ export const bulkImportRef = createServerFn({ method: "POST" })
         base.category_id = r.category_code ? catMap.get(r.category_code) ?? null : null;
         const catCode = base.category_id ? catCodeById.get(base.category_id) ?? r.category_code ?? "" : (r.category_code ?? "");
         // O modelo tem sempre estrutura fixa (ou família, nos sofás).
-        if ((catCode ?? "").toUpperCase() === "SOF") base.sofa_family_code = defaultFamily;
-        else base.structure_code = defaultStructure;
+        // Modelos já existentes mantêm a que foi configurada.
+        const prev = existingByKey.get(`${base.category_id ?? ""}|${r.code}`);
+        if ((catCode ?? "").toUpperCase() === "SOF") {
+          base.sofa_family_code = prev?.sofa_family_code ?? defaultFamily;
+        } else {
+          base.structure_code = prev?.structure_code ?? defaultStructure;
+        }
       }
       return base;
     });
