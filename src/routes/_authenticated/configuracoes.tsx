@@ -28,6 +28,7 @@ import {
   listStaffUsers, createStaffUser, setStaffRole, resetStaffPassword, deleteStaffUser,
 } from "@/lib/staffUsers.functions";
 import { useMySession } from "@/hooks/useMySession";
+import { useAuth } from "@/hooks/useAuth";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export const Route = createFileRoute("/_authenticated/configuracoes")({
@@ -44,8 +45,10 @@ function ConfigPage() {
   const upsertOpFn = useServerFn(upsertOperator);
   const deleteOpFn = useServerFn(deleteOperator);
 
-  const { data: settings } = useQuery({ queryKey: ["app-settings"], queryFn: () => fetchSettings() });
-  const { data: operators } = useQuery({ queryKey: ["operators-stages"], queryFn: () => fetchOps() });
+  const { session } = useAuth();
+  const authed = Boolean(session);
+  const { data: settings } = useQuery({ queryKey: ["app-settings"], queryFn: () => fetchSettings(), enabled: authed });
+  const { data: operators } = useQuery({ queryKey: ["operators-stages"], queryFn: () => fetchOps(), enabled: authed });
 
   const setMode = useMutation({
     mutationFn: (mode: "codigo"|"sessao") => updateSettingsFn({ data: { identification_mode: mode } }),
