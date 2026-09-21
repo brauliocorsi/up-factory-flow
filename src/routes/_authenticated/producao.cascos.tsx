@@ -17,6 +17,7 @@ import {
 } from "@/lib/shellBatches.functions";
 import { listOperatorsWithStages, getAppSettings } from "@/lib/production.functions";
 import { useRealtimeOrders } from "@/hooks/useRealtimeOrders";
+import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/_authenticated/producao/cascos")({
   component: CascosBulkPage,
