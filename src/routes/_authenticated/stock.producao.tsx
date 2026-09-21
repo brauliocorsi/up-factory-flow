@@ -14,7 +14,7 @@ const listStockProductions = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await (context.supabase as any)
       .from("production_orders")
-      .select("id, order_number, product_description, status, stock_item_type, stock_quantity, created_at")
+      .select("id, order_number, product_description, status, stock_item_type, stock_quantity, stock_stages, created_at")
       .eq("is_stock_production", true)
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
@@ -68,7 +68,14 @@ function StockProductionPage() {
               <TableRow key={r.id}>
                 <TableCell className="font-mono text-xs">{r.order_number}</TableCell>
                 <TableCell><Badge variant="secondary">{r.stock_item_type === "shell" ? "Casco" : "Capa"}</Badge></TableCell>
-                <TableCell className="text-sm">{r.product_description}</TableCell>
+                <TableCell className="text-sm">
+                  <div>{r.product_description}</div>
+                  {Array.isArray(r.stock_stages) && r.stock_stages.length > 0 && (
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      Etapas: {r.stock_stages.join(" → ")}
+                    </div>
+                  )}
+                </TableCell>
                 <TableCell className="text-right font-semibold">{r.stock_quantity}</TableCell>
                 <TableCell><Badge variant={r.status === "concluida" ? "outline" : "default"}>{r.status}</Badge></TableCell>
                 <TableCell className="text-right">
