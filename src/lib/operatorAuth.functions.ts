@@ -10,9 +10,9 @@ import { z } from "zod";
  * a role 'operador' em user_roles. Admin only.
  */
 
-function emailForCode(code: string) {
-  return `op-${code.trim().toLowerCase()}@upmoveis.local`;
-}
+import { operatorEmailForCode, operatorPasswordFromPin } from "./operatorPin";
+
+const emailForCode = operatorEmailForCode;
 
 const setPinSchema = z.object({
   operator_id: z.string().uuid(),

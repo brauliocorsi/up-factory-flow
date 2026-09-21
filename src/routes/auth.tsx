@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Factory } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { operatorEmailForCode, operatorPasswordFromPin } from "@/lib/operatorPin";
 
 /**
  * Destino inicial conforme o perfil: operador vai direto ao seu posto e
@@ -67,8 +68,16 @@ function AuthPage() {
     if (!/^\d{6}$/.test(pin)) { toast.error("PIN deve ter 6 dígitos"); return; }
     if (!code.trim()) { toast.error("Indica o código"); return; }
     setOpLoading(true);
-    const email = `op-${code.trim().toLowerCase()}@upmoveis.local`;
-    const { error } = await supabase.auth.signInWithPassword({ email, password: pin });
+    const email = operatorEmailForCode(code);
+    let { error } = await supabase.auth.signInWithPassword({
+      email,
+      password: operatorPasswordFromPin(code, pin),
+    });
+    if (error) {
+      // Contas antigas ainda podem ter o PIN como password.
+      const legacy = await supabase.auth.signInWithPassword({ email, password: pin });
+      error = legacy.error;
+    }
     setOpLoading(false);
     if (error) { toast.error("Código ou PIN inválido"); return; }
     toast.success("Sessão iniciada");
