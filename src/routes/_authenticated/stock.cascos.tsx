@@ -9,7 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus, Trash2, Factory, ArrowUpDown } from "lucide-react";
-import { listShells, upsertShell, deleteShell, adjustStock, createStockProduction } from "@/lib/stock.functions";
+import { listShells, upsertShell, deleteShell, adjustStock, createStockProduction, STOCK_STAGE_ORDER } from "@/lib/stock.functions";
+
+type StockStage = (typeof STOCK_STAGE_ORDER)[number];
 
 export const Route = createFileRoute("/_authenticated/stock/cascos")({
   component: CascosPage,
