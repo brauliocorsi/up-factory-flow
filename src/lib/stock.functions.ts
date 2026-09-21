@@ -254,10 +254,23 @@ export const getStockOverview = createServerFn({ method: "GET" })
   });
 
 // ============ PRODUCTION FOR STOCK ============
+/** Etapas possíveis num pedido de produção para stock (ordem de fábrica). */
+export const STOCK_STAGE_ORDER = [
+  "estrutura",
+  "corte",
+  "costura",
+  "branco",
+  "estofagem",
+  "qualidade",
+  "embalagem",
+] as const;
+
 const stockProdSchema = z.object({
   item_type: z.enum(["shell", "cover"]),
   item_id: z.string().uuid(),
   quantity: z.number().int().min(1).max(9999),
+  // Etapas que este pedido tem de passar antes de entrar no stock.
+  stages: z.array(z.enum(STOCK_STAGE_ORDER)).min(1).max(7),
 });
 
 export const createStockProduction = createServerFn({ method: "POST" })
@@ -268,6 +281,7 @@ export const createStockProduction = createServerFn({ method: "POST" })
     const table = data.item_type === "shell" ? "shells" : "covers";
     const { data: item, error: e1 } = await s.from(table).select("code, name").eq("id", data.item_id).single();
     if (e1) throw new Error(e1.message);
+    const stages = STOCK_STAGE_ORDER.filter((st) => data.stages.includes(st));
     const orderNumber = `STK-${data.item_type === "shell" ? "C" : "K"}-${Date.now().toString().slice(-8)}`;
     const desc = `[STOCK] ${item.code} · ${item.name} ×${data.quantity}`;
     const { data: ord, error } = await s.from("production_orders").insert({
@@ -277,6 +291,7 @@ export const createStockProduction = createServerFn({ method: "POST" })
       stock_item_type: data.item_type,
       stock_item_id: data.item_id,
       stock_quantity: data.quantity,
+      stock_stages: stages,
       created_by: context.userId,
     }).select("id, order_number").single();
     if (error) throw new Error(error.message);
