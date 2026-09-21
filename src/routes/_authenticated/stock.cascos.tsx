@@ -9,7 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus, Trash2, Factory, ArrowUpDown } from "lucide-react";
-import { listShells, upsertShell, deleteShell, adjustStock, createStockProduction } from "@/lib/stock.functions";
+import { listShells, upsertShell, deleteShell, adjustStock, createStockProduction, STOCK_STAGE_ORDER } from "@/lib/stock.functions";
+
+type StockStage = (typeof STOCK_STAGE_ORDER)[number];
 
 export const Route = createFileRoute("/_authenticated/stock/cascos")({
   component: CascosPage,
@@ -176,11 +178,28 @@ export function AdjustDialog({ itemType, itemId, label, onDone }: { itemType: "s
   );
 }
 
+const STAGE_LABELS: Record<StockStage, string> = {
+  estrutura: "Estrutura",
+  corte: "Corte",
+  costura: "Costura",
+  branco: "Branco",
+  estofagem: "Estofagem",
+  qualidade: "Qualidade",
+  embalagem: "Embalagem",
+};
+
 export function ProduceDialog({ itemType, itemId, label, onDone }: { itemType: "shell" | "cover"; itemId: string; label: string; onDone: () => void }) {
   const [open, setOpen] = useState(false);
   const [qty, setQty] = useState(1);
+  // Cascos entram em stock só com a Estrutura feita; capas com Corte + Costura.
+  const [stages, setStages] = useState<StockStage[]>(
+    itemType === "shell" ? ["estrutura"] : ["corte", "costura"],
+  );
+  const toggle = (st: StockStage) =>
+    setStages((prev) => (prev.includes(st) ? prev.filter((s) => s !== st) : [...prev, st]));
   const mut = useMutation({
-    mutationFn: () => createStockProduction({ data: { item_type: itemType, item_id: itemId, quantity: qty } }),
+    mutationFn: () =>
+      createStockProduction({ data: { item_type: itemType, item_id: itemId, quantity: qty, stages } }),
     onSuccess: (res: any) => { toast.success(`Ordem ${res.order_number} criada`); setOpen(false); onDone(); },
     onError: (e: any) => toast.error(e.message),
   });
@@ -191,9 +210,31 @@ export function ProduceDialog({ itemType, itemId, label, onDone }: { itemType: "
         <DialogHeader><DialogTitle>Produzir para stock</DialogTitle></DialogHeader>
         <p className="text-sm text-muted-foreground">{label}</p>
         <Field label="Quantidade"><Input type="number" min={1} value={qty} onChange={(e) => setQty(Number(e.target.value))} className="h-11" /></Field>
+        <Field label="Etapas que este pedido tem de passar">
+          <div className="grid grid-cols-2 gap-1.5">
+            {STOCK_STAGE_ORDER.map((st) => {
+              const active = stages.includes(st);
+              return (
+                <button
+                  type="button"
+                  key={st}
+                  onClick={() => toggle(st)}
+                  className={`h-10 rounded-md border px-3 text-sm text-left transition-colors ${
+                    active ? "border-primary bg-primary/10 font-medium" : "bg-background hover:bg-muted"
+                  }`}
+                >
+                  {STAGE_LABELS[st]}
+                </button>
+              );
+            })}
+          </div>
+        </Field>
+        <p className="text-xs text-muted-foreground">
+          Ao concluir a última etapa escolhida, a quantidade entra automaticamente no stock.
+        </p>
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-          <Button onClick={() => mut.mutate()} disabled={mut.isPending || qty < 1}>{mut.isPending ? "A criar…" : "Criar ordem"}</Button>
+          <Button onClick={() => mut.mutate()} disabled={mut.isPending || qty < 1 || stages.length === 0}>{mut.isPending ? "A criar…" : "Criar ordem"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
