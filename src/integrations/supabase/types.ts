@@ -992,6 +992,7 @@ export type Database = {
           stock_item_id: string | null
           stock_item_type: string | null
           stock_quantity: number | null
+          stock_stages: Database["public"]["Enums"]["production_stage"][] | null
           structure_type: string | null
         }
         Insert: {
@@ -1027,6 +1028,9 @@ export type Database = {
           stock_item_id?: string | null
           stock_item_type?: string | null
           stock_quantity?: number | null
+          stock_stages?:
+            | Database["public"]["Enums"]["production_stage"][]
+            | null
           structure_type?: string | null
         }
         Update: {
@@ -1062,6 +1066,9 @@ export type Database = {
           stock_item_id?: string | null
           stock_item_type?: string | null
           stock_quantity?: number | null
+          stock_stages?:
+            | Database["public"]["Enums"]["production_stage"][]
+            | null
           structure_type?: string | null
         }
         Relationships: [
@@ -2172,6 +2179,10 @@ export type Database = {
         Returns: Json
       }
       complete_stock_production: { Args: { _order_id: string }; Returns: Json }
+      complete_stock_production_internal: {
+        Args: { _order_id: string }
+        Returns: Json
+      }
       consume_fabric_for_order: {
         Args: {
           _meters: number
