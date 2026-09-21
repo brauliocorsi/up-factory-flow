@@ -46,7 +46,7 @@ export const setOperatorPin = createServerFn({ method: "POST" })
     // 3) Criar utilizador novo OU atualizar password
     if (userId) {
       const { error: updErr } = await supabaseAdmin.auth.admin.updateUserById(userId, {
-        password: data.pin,
+        password: operatorPasswordFromPin(op.code, data.pin),
         email,
         email_confirm: true,
       });
@@ -55,7 +55,7 @@ export const setOperatorPin = createServerFn({ method: "POST" })
       // Pode já existir um utilizador com este email (operador foi removido e re-criado)
       const { data: created, error: createErr } = await supabaseAdmin.auth.admin.createUser({
         email,
-        password: data.pin,
+        password: operatorPasswordFromPin(op.code, data.pin),
         email_confirm: true,
         user_metadata: { operator_code: op.code, operator_name: op.name },
       });
@@ -66,7 +66,7 @@ export const setOperatorPin = createServerFn({ method: "POST" })
         if (!found) throw new Error(`Falha a criar login: ${createErr.message}`);
         userId = found.id;
         const { error: updErr } = await supabaseAdmin.auth.admin.updateUserById(userId!, {
-          password: data.pin,
+          password: operatorPasswordFromPin(op.code, data.pin),
           email_confirm: true,
         });
         if (updErr) throw new Error(`Falha a repor PIN: ${updErr.message}`);
