@@ -42,10 +42,12 @@ function CascosBulkPage() {
   const eventFn = useServerFn(recordShellBatchEvent);
   const finalizeFn = useServerFn(finalizeShellBatch);
 
-  const { data: needs = [] } = useQuery({ queryKey: ["shell-needs"], queryFn: () => fetchNeeds(), refetchInterval: 30000 });
-  const { data: batches = [] } = useQuery({ queryKey: ["shell-batches-active"], queryFn: () => fetchBatches(), refetchInterval: 5000 });
-  const { data: operators } = useQuery({ queryKey: ["operators-stages"], queryFn: () => fetchOps() });
-  const { data: settings } = useQuery({ queryKey: ["app-settings"], queryFn: () => fetchSettings() });
+  const { session } = useAuth();
+  const authed = Boolean(session);
+  const { data: needs = [] } = useQuery({ queryKey: ["shell-needs"], queryFn: () => fetchNeeds(), refetchInterval: 30000, enabled: authed });
+  const { data: batches = [] } = useQuery({ queryKey: ["shell-batches-active"], queryFn: () => fetchBatches(), refetchInterval: 5000, enabled: authed });
+  const { data: operators } = useQuery({ queryKey: ["operators-stages"], queryFn: () => fetchOps(), enabled: authed });
+  const { data: settings } = useQuery({ queryKey: ["app-settings"], queryFn: () => fetchSettings(), enabled: authed });
 
   useRealtimeOrders([["shell-needs"], ["shell-batches-active"], ["production"], ["dashboard"]], {
     tables: ["shell_batches", "shell_batch_logs", "shells", "production_orders", "order_stages"],
