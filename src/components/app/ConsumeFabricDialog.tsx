@@ -14,7 +14,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Scissors } from "lucide-react";
+import { Scissors, Check, AlertTriangle } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { consumeFabric, getFabricConsumeContext, undoFabricConsumption } from "@/lib/stock.functions";
 
 type Ref = { id: string; code: string; name: string; fabric_type_id?: string | null };
@@ -24,11 +25,13 @@ type Roll = {
   fabric_ref_code: string | null;
   color_code: string | null;
   meters: number;
+  kind?: "match" | "same_ref" | "other";
 };
 
 /**
  * Consumo manual de metros de tecido na etapa de Corte.
- * Filtra por tipo de tecido → referência → cor, e usa os metros do modelo.
+ * O tecido da encomenda é identificado automaticamente e os rolos em stock
+ * aparecem sugeridos por ordem de confiança.
  */
 export function ConsumeFabricDialog({
   orderId,
@@ -50,6 +53,9 @@ export function ConsumeFabricDialog({
   const [refCode, setRefCode] = useState<string>("");
   const [colorCode, setColorCode] = useState<string>("");
   const [meters, setMeters] = useState<string>("");
+  const [rollId, setRollId] = useState<string>("");
+  const [showAll, setShowAll] = useState(false);
+  const [manual, setManual] = useState(false);
 
   const ctxQuery = useQuery({
     queryKey: ["fabric-consume-ctx", orderId],
@@ -60,18 +66,10 @@ export function ConsumeFabricDialog({
 
   useEffect(() => {
     if (!ctx?.ok) return;
-    // A encomenda guarda o NOME da referência/cor; os rolos e as listas usam o
-    // CÓDIGO. Traduzir nome → código para o pré-preenchimento funcionar.
-    const toCode = (list: Ref[], value: string | null | undefined) => {
-      if (!value) return "";
-      const v = String(value).trim().toLowerCase();
-      const hit = list.find(
-        (r) => r.code?.toLowerCase() === v || r.name?.toLowerCase() === v,
-      );
-      return hit?.code ?? "";
-    };
-    setRefCode((prev) => prev || toCode(ctx.fabric_refs ?? [], ctx.order?.fabric_ref));
-    setColorCode((prev) => prev || toCode(ctx.colors ?? [], ctx.order?.color));
+    // A identificação do tecido vem já resolvida do servidor (ficha TEC ou texto
+    // da encomenda), em códigos de catálogo.
+    setRefCode((prev) => prev || (ctx.suggestion?.fabric_ref_code ?? ""));
+    setColorCode((prev) => prev || (ctx.suggestion?.color_code ?? ""));
     setMeters((prev) => prev || (ctx.meters_per_unit != null ? String(ctx.meters_per_unit) : ""));
   }, [ctx]);
 
@@ -79,6 +77,8 @@ export function ConsumeFabricDialog({
   const colors: Ref[] = ctx?.colors ?? [];
   const types: Ref[] = ctx?.fabric_types ?? [];
   const rolls: Roll[] = ctx?.rolls ?? [];
+  const suggested: Roll[] = ctx?.suggested_rolls ?? [];
+  const suggestion = ctx?.suggestion ?? null;
   const consumption = ctx?.consumption ?? null;
 
   const filteredRefs = useMemo(
@@ -86,7 +86,10 @@ export function ConsumeFabricDialog({
     [refs, typeId],
   );
 
-  const matchingRolls = useMemo(
+  const needed = Number(meters || 0);
+
+  // Em modo manual (ou sem sugestão) manda a escolha por coleção/cor.
+  const manualRolls = useMemo(
     () =>
       rolls.filter(
         (r) =>
@@ -96,13 +99,30 @@ export function ConsumeFabricDialog({
     [rolls, refCode, colorCode],
   );
 
-  const needed = Number(meters || 0);
-  const roll = useMemo(() => {
-    const withEnough = matchingRolls
-      .filter((r) => Number(r.meters) >= needed && needed > 0)
-      .sort((a, b) => Number(a.meters) - Number(b.meters));
-    return withEnough[0] ?? matchingRolls.sort((a, b) => Number(b.meters) - Number(a.meters))[0] ?? null;
-  }, [matchingRolls, needed]);
+  const matchRolls = suggested.filter((r) => r.kind === "match");
+  const sameRefRolls = suggested.filter((r) => r.kind === "same_ref");
+  const otherRolls = suggested.filter((r) => r.kind === "other");
+  const hasSuggestion = matchRolls.length > 0 || sameRefRolls.length > 0;
+
+  const visibleRolls: Roll[] = manual
+    ? manualRolls
+    : showAll || !hasSuggestion
+      ? suggested
+      : [...matchRolls, ...sameRefRolls];
+
+  // Pré-seleciona o primeiro rolo que corresponde e tem metros suficientes.
+  useEffect(() => {
+    if (!ctx?.ok || consumption) return;
+    setRollId((prev) => {
+      if (prev && visibleRolls.some((r) => r.id === prev)) return prev;
+      const enough = visibleRolls.find((r) => needed > 0 && Number(r.meters) >= needed);
+      return (enough ?? visibleRolls[0])?.id ?? "";
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ctx, consumption, manual, showAll, refCode, colorCode, meters]);
+
+  const roll = visibleRolls.find((r) => r.id === rollId) ?? null;
+  const insufficient = Boolean(roll && needed > 0 && Number(roll.meters) < needed);
 
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ["fabric-consumptions"] });
@@ -147,7 +167,31 @@ export function ConsumeFabricDialog({
     onError: (e: any) => toast.error(e?.message ?? "Erro ao anular consumo"),
   });
 
-  const insufficient = Boolean(roll && needed > 0 && Number(roll.meters) < needed);
+  const RollRow = ({ r }: { r: Roll }) => {
+    const low = needed > 0 && Number(r.meters) < needed;
+    const selected = r.id === rollId;
+    return (
+      <button
+        type="button"
+        onClick={() => !low && setRollId(r.id)}
+        disabled={low}
+        className={cn(
+          "w-full text-left rounded-md border p-2.5 transition-colors",
+          selected ? "border-primary bg-primary/5" : "hover:bg-muted/50",
+          low && "opacity-60 cursor-not-allowed",
+        )}
+      >
+        <div className="flex items-center gap-2">
+          <span className="font-medium text-sm flex-1">{r.name}</span>
+          {selected && <Check className="size-4 text-primary shrink-0" />}
+        </div>
+        <div className="text-xs text-muted-foreground font-mono">
+          {r.fabric_ref_code ?? "—"} / {r.color_code ?? "—"} · disponível {Number(r.meters).toFixed(1)} m
+        </div>
+        {low && <div className="text-xs text-destructive">Metros insuficientes.</div>}
+      </button>
+    );
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -162,7 +206,7 @@ export function ConsumeFabricDialog({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Consumir tecido — {orderNumber}</DialogTitle>
         </DialogHeader>
@@ -198,97 +242,182 @@ export function ConsumeFabricDialog({
 
         {ctx?.ok && !consumption && (
           <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5 col-span-2">
-                <Label className="text-xs">Tipo de tecido (filtro)</Label>
-                <Select
-                  value={typeId || "__all__"}
-                  onValueChange={(v) => {
-                    setTypeId(v === "__all__" ? "" : v);
-                    setRefCode("");
-                  }}
-                >
-                  <SelectTrigger className="h-11">
-                    <SelectValue placeholder="— todos —" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__all__">— todos —</SelectItem>
-                    {types.map((t) => (
-                      <SelectItem key={t.id} value={t.id}>
-                        {t.code} · {t.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Referência</Label>
-                <Select value={refCode || undefined} onValueChange={setRefCode}>
-                  <SelectTrigger className="h-11">
-                    <SelectValue placeholder="—" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filteredRefs.map((r) => (
-                      <SelectItem key={r.id} value={r.code}>
-                        <span className="font-mono text-xs mr-2">{r.code}</span>
-                        {r.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Cor</Label>
-                <Select value={colorCode || undefined} onValueChange={setColorCode}>
-                  <SelectTrigger className="h-11">
-                    <SelectValue placeholder="—" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {colors.map((c) => (
-                      <SelectItem key={c.id} value={c.code}>
-                        <span className="font-mono text-xs mr-2">{c.code}</span>
-                        {c.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5 col-span-2">
-                <Label className="text-xs">Metros a consumir (do modelo)</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  step="0.1"
-                  value={meters}
-                  onChange={(e) => setMeters(e.target.value)}
-                  className="h-11"
-                />
-                {ctx.meters_per_unit == null && (
-                  <p className="text-xs text-destructive">
-                    O modelo {ctx.model?.code ?? ""} não tem metros por unidade definidos (Catálogo &gt; Modelos).
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="rounded-md border p-3 text-sm space-y-1">
-              {roll ? (
+            {/* Tecido identificado na encomenda */}
+            <div className="rounded-md border bg-muted/40 p-3 text-sm">
+              {suggestion?.fabric_ref_code ? (
                 <>
-                  <div className="font-medium">{roll.name}</div>
-                  <div className="text-xs text-muted-foreground font-mono">
-                    {roll.fabric_ref_code ?? "—"} / {roll.color_code ?? "—"} · disponível{" "}
-                    {Number(roll.meters).toFixed(1)} m
+                  <div className="font-medium">
+                    Tecido da encomenda: {suggestion.fabric_ref_name}
+                    {suggestion.color_name ? ` · ${suggestion.color_name}` : ""}
                   </div>
-                  {insufficient && (
-                    <div className="text-xs text-destructive">Metros insuficientes neste rolo.</div>
-                  )}
+                  <div className="text-xs text-muted-foreground">
+                    {suggestion.source === "ref_tec"
+                      ? "Identificado pela ficha de tecido da encomenda."
+                      : "Identificado pela descrição da encomenda."}
+                    {!suggestion.color_name && " Cor não registada — confirme no rolo."}
+                  </div>
                 </>
               ) : (
                 <div className="text-xs text-muted-foreground">
-                  Sem rolo em stock para esta referência/cor.
+                  Não foi possível identificar o tecido desta encomenda — escolha manualmente.
                 </div>
               )}
             </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs">Metros a consumir (do modelo)</Label>
+              <Input
+                type="number"
+                min={0}
+                step="0.1"
+                value={meters}
+                onChange={(e) => setMeters(e.target.value)}
+                className="h-11"
+              />
+              {ctx.meters_per_unit == null && (
+                <p className="text-xs text-destructive">
+                  O modelo {ctx.model?.code ?? ""} não tem metros por unidade definidos (Catálogo &gt; Modelos).
+                </p>
+              )}
+            </div>
+
+            {!manual ? (
+              <div className="space-y-2">
+                {matchRolls.length > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="text-xs font-medium text-muted-foreground">
+                      Corresponde ao tecido da encomenda
+                    </div>
+                    {matchRolls.map((r) => (
+                      <RollRow key={r.id} r={r} />
+                    ))}
+                  </div>
+                )}
+                {sameRefRolls.length > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                      <AlertTriangle className="size-3.5" /> Mesma coleção, cor diferente
+                    </div>
+                    {sameRefRolls.map((r) => (
+                      <RollRow key={r.id} r={r} />
+                    ))}
+                  </div>
+                )}
+                {!hasSuggestion && (
+                  <div className="space-y-1.5">
+                    <div className="text-xs text-destructive">
+                      Não há rolos em stock desta coleção — todos os rolos disponíveis:
+                    </div>
+                    {otherRolls.length === 0 ? (
+                      <div className="text-xs text-muted-foreground">Sem rolos em stock.</div>
+                    ) : (
+                      otherRolls.map((r) => <RollRow key={r.id} r={r} />)
+                    )}
+                  </div>
+                )}
+                {hasSuggestion && showAll && otherRolls.length > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="text-xs font-medium text-muted-foreground">Outros rolos</div>
+                    {otherRolls.map((r) => (
+                      <RollRow key={r.id} r={r} />
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-3 pt-1">
+                  {hasSuggestion && otherRolls.length > 0 && (
+                    <button
+                      type="button"
+                      className="text-xs underline text-muted-foreground"
+                      onClick={() => setShowAll((v) => !v)}
+                    >
+                      {showAll ? "Ver só os sugeridos" : "Ver todos os rolos"}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    className="text-xs underline text-muted-foreground"
+                    onClick={() => setManual(true)}
+                  >
+                    Escolher por coleção e cor
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5 col-span-2">
+                    <Label className="text-xs">Tipo de tecido (filtro)</Label>
+                    <Select
+                      value={typeId || "__all__"}
+                      onValueChange={(v) => {
+                        setTypeId(v === "__all__" ? "" : v);
+                        setRefCode("");
+                      }}
+                    >
+                      <SelectTrigger className="h-11">
+                        <SelectValue placeholder="— todos —" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">— todos —</SelectItem>
+                        {types.map((t) => (
+                          <SelectItem key={t.id} value={t.id}>
+                            {t.code} · {t.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Referência</Label>
+                    <Select value={refCode || undefined} onValueChange={setRefCode}>
+                      <SelectTrigger className="h-11">
+                        <SelectValue placeholder="—" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {filteredRefs.map((r) => (
+                          <SelectItem key={r.id} value={r.code}>
+                            <span className="font-mono text-xs mr-2">{r.code}</span>
+                            {r.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Cor</Label>
+                    <Select value={colorCode || undefined} onValueChange={setColorCode}>
+                      <SelectTrigger className="h-11">
+                        <SelectValue placeholder="—" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {colors.map((c) => (
+                          <SelectItem key={c.id} value={c.code}>
+                            <span className="font-mono text-xs mr-2">{c.code}</span>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  {manualRolls.length === 0 ? (
+                    <div className="text-xs text-muted-foreground">
+                      Sem rolo em stock para esta referência/cor.
+                    </div>
+                  ) : (
+                    manualRolls.map((r) => <RollRow key={r.id} r={r} />)
+                  )}
+                </div>
+                <button
+                  type="button"
+                  className="text-xs underline text-muted-foreground"
+                  onClick={() => setManual(false)}
+                >
+                  Voltar às sugestões
+                </button>
+              </div>
+            )}
           </div>
         )}
 
