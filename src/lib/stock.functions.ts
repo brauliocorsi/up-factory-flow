@@ -323,13 +323,13 @@ export const getFabricConsumeContext = createServerFn({ method: "POST" })
     const s = await operationalReader(context as any);
     const { data: order, error: oErr } = await s
       .from("production_orders")
-      .select("id, order_number, model_id, fabric_ref, color, fabric_type")
+      .select("id, order_number, model_id, fabric_ref, color, fabric_type, ref_tec")
       .eq("id", data.order_id)
       .maybeSingle();
     if (oErr) throw new Error(oErr.message);
     if (!order) return { ok: false as const, message: "Encomenda não encontrada." };
 
-    const [modelRes, rollsRes, typesRes, refsRes, colorsRes, consRes] = await Promise.all([
+    const [modelRes, rollsRes, typesRes, refsRes, colorsRes, consRes, fabricRes] = await Promise.all([
       order.model_id
         ? s.from("models").select("id, code, name, meters_per_unit").eq("id", order.model_id).maybeSingle()
         : Promise.resolve({ data: null }),
@@ -343,15 +343,79 @@ export const getFabricConsumeContext = createServerFn({ method: "POST" })
         .eq("order_id", data.order_id)
         .is("reverted_at", null)
         .maybeSingle(),
+      (order as any).ref_tec
+        ? s
+            .from("fabrics")
+            .select("ref_tec, fabric_type_code, fabric_ref_code, color_code")
+            .eq("ref_tec", (order as any).ref_tec)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
     ]);
 
     const rolls = rollsRes.data ?? [];
+    const refs = (refsRes.data ?? []) as Array<{ code: string; name: string }>;
+    const colors = (colorsRes.data ?? []) as Array<{ code: string; name: string }>;
+
+    // Traduz o que a encomenda tem escrito (nome ou código) para o código do catálogo.
+    const toCode = (
+      list: Array<{ code: string; name: string }>,
+      value: string | null | undefined,
+    ): string | null => {
+      const v = String(value ?? "").trim().toLowerCase();
+      if (!v) return null;
+      const hit = list.find(
+        (r) => r.code?.toLowerCase() === v || r.name?.toLowerCase() === v,
+      );
+      return hit?.code ?? null;
+    };
+
+    const fabric = (fabricRes as any)?.data ?? null;
+    const refFromTec = fabric?.fabric_ref_code ?? null;
+    const colorFromTec = fabric?.color_code ?? null;
+    const refFromText = toCode(refs, (order as any).fabric_ref);
+    const colorFromText = toCode(colors, (order as any).color);
+
+    const suggestedRef = refFromTec ?? refFromText;
+    const suggestedColor = colorFromTec ?? colorFromText;
+    const source: "ref_tec" | "texto" | null = refFromTec
+      ? "ref_tec"
+      : refFromText
+        ? "texto"
+        : null;
+
+    const kindOf = (r: { fabric_ref_code: string | null; color_code: string | null }) => {
+      if (!suggestedRef || r.fabric_ref_code !== suggestedRef) return "other" as const;
+      if (!suggestedColor) return "same_ref" as const;
+      if (r.color_code === suggestedColor || r.color_code == null) return "match" as const;
+      return "same_ref" as const;
+    };
+    const rank = { match: 0, same_ref: 1, other: 2 } as const;
+    const suggested_rolls = rolls
+      .map((r: any) => ({ ...r, kind: kindOf(r) }))
+      .sort(
+        (a: any, b: any) =>
+          rank[a.kind as keyof typeof rank] - rank[b.kind as keyof typeof rank] ||
+          Number(b.meters) - Number(a.meters),
+      );
+
     return {
       ok: true as const,
       order,
       model: modelRes?.data ?? null,
       meters_per_unit: modelRes?.data?.meters_per_unit ?? null,
       rolls,
+      suggested_rolls,
+      suggestion: {
+        fabric_ref_code: suggestedRef,
+        color_code: suggestedColor,
+        fabric_ref_name: suggestedRef
+          ? (refs.find((r) => r.code === suggestedRef)?.name ?? suggestedRef)
+          : null,
+        color_name: suggestedColor
+          ? (colors.find((c) => c.code === suggestedColor)?.name ?? suggestedColor)
+          : null,
+        source,
+      },
       // Distinguir "sem configuração" de "sem stock" (F04).
       no_rolls: rolls.length === 0,
       no_meters_configured: (modelRes?.data?.meters_per_unit ?? null) === null,
@@ -361,6 +425,7 @@ export const getFabricConsumeContext = createServerFn({ method: "POST" })
       consumption: consRes?.data ?? null,
     };
   });
+
 
 /** Consumos já registados para um conjunto de encomendas (badge no card). */
 export const listFabricConsumptions = createServerFn({ method: "POST" })
