@@ -26,6 +26,47 @@ const DOT_STYLE: Record<string, string> = {
   risco_saida: "bg-red-500",
 };
 
+type FilterKey = "todas" | "atrasadas" | "hoje" | "prazo";
+
+const FILTER_DEFS: { key: FilterKey; label: string; dot?: string }[] = [
+  { key: "todas", label: "Todas" },
+  { key: "atrasadas", label: "Atrasadas", dot: "bg-red-500" },
+  { key: "hoje", label: "Hoje", dot: "bg-amber-500" },
+  { key: "prazo", label: "No prazo", dot: "bg-emerald-500" },
+];
+
+function QueueFilters({
+  filter,
+  setFilter,
+  counts,
+  compact,
+}: {
+  filter: FilterKey;
+  setFilter: (f: FilterKey) => void;
+  counts: Record<FilterKey, number>;
+  compact?: boolean;
+}) {
+  return (
+    <div className={`flex gap-1 ${compact ? "px-1 pb-1.5" : "mb-2"}`}>
+      {FILTER_DEFS.map((f) => (
+        <button
+          key={f.key}
+          onClick={() => setFilter(f.key)}
+          className={`flex items-center justify-center gap-1 flex-1 ${compact ? "text-[10px] px-1.5 py-1" : "text-xs px-2 py-1"} rounded-md border transition ${
+            filter === f.key
+              ? "bg-primary text-primary-foreground border-primary"
+              : "bg-card text-muted-foreground border-border hover:bg-accent"
+          }`}
+        >
+          {f.dot && <span className={`inline-block size-1.5 rounded-full ${f.dot}`} />}
+          {f.label}
+          <span className="opacity-60">{counts[f.key]}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function StageQueuePanel({
   stage,
   variant = "panel",
@@ -38,6 +79,7 @@ export function StageQueuePanel({
   const fetchQueue = useServerFn(getStageQueue);
   const { session } = useAuth();
   const [showAll, setShowAll] = useState(false);
+  const [filter, setFilter] = useState<FilterKey>("todas");
   const { data, isLoading, error } = useQuery({
     queryKey: ["stage-queue", stage],
     queryFn: () => fetchQueue({ data: { stage } }),
@@ -47,8 +89,30 @@ export function StageQueuePanel({
 
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
+  const today = new Date().toISOString().slice(0, 10);
+
+  const counts: Record<FilterKey, number> = {
+    todas: items.length,
+    atrasadas: items.filter((it) => it.status === "atrasada_folga" || it.status === "risco_saida").length,
+    hoje: items.filter((it) => (it.target_date ?? "").slice(0, 10) === today).length,
+    prazo: items.filter((it) => it.status === "ok").length,
+  };
+
+  const filtered = items.filter((it) => {
+    if (filter === "atrasadas") return it.status === "atrasada_folga" || it.status === "risco_saida";
+    if (filter === "hoje") return (it.target_date ?? "").slice(0, 10) === today;
+    if (filter === "prazo") return it.status === "ok";
+    return true;
+  });
+
+  const sorted = [...filtered].sort((a, b) => {
+    const da = a.due_date ?? "9999-12-31";
+    const db = b.due_date ?? "9999-12-31";
+    return da.localeCompare(db);
+  });
+
   const cap = variant === "sidebar" ? 50 : 20;
-  const visible = showAll ? items : items.slice(0, cap);
+  const visible = showAll ? sorted : sorted.slice(0, cap);
 
   function handleClick(it: StageQueueItem) {
     if (onItemClick) {
@@ -70,6 +134,7 @@ export function StageQueuePanel({
           <ListTree className="size-4 text-muted-foreground" />
           Fila prioritária <span className="text-muted-foreground">({total})</span>
         </div>
+        <QueueFilters filter={filter} setFilter={setFilter} counts={counts} compact />
         {isLoading ? (
           <div className="text-xs text-muted-foreground py-3 px-1">A calcular fila…</div>
         ) : error ? (
@@ -108,10 +173,10 @@ export function StageQueuePanel({
                 </div>
               </button>
             ))}
-            {total > cap && (
+            {sorted.length > cap && (
               <Button variant="ghost" size="sm" onClick={() => setShowAll((v) => !v)} className="w-full gap-1 text-xs">
                 {showAll ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
-                {showAll ? `Ver top ${cap}` : `Ver todas (${total})`}
+                {showAll ? `Ver top ${cap}` : `Ver todas (${sorted.length})`}
               </Button>
             )}
           </div>
@@ -127,13 +192,14 @@ export function StageQueuePanel({
           <ListTree className="size-4 text-muted-foreground" />
           Fila prioritária ({total})
         </div>
-        {total > cap && (
+        {sorted.length > cap && (
           <Button variant="ghost" size="sm" onClick={() => setShowAll((v) => !v)} className="gap-1">
             {showAll ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
-            {showAll ? `Mostrar top ${cap}` : `Ver todas (${total})`}
+            {showAll ? `Mostrar top ${cap}` : `Ver todas (${sorted.length})`}
           </Button>
         )}
       </div>
+      <QueueFilters filter={filter} setFilter={setFilter} counts={counts} />
       {isLoading ? (
         <div className="text-xs text-muted-foreground py-3">A calcular fila…</div>
       ) : error ? (
