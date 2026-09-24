@@ -15,9 +15,9 @@ const STATUS_STYLE: Record<string, string> = {
   risco_saida: "bg-red-100 text-red-800 border-red-300",
 };
 const STATUS_LABEL: Record<string, string> = {
-  ok: "no prazo",
-  atrasada_folga: "atrasada",
-  risco_saida: "risco saída",
+  ok: "No prazo",
+  atrasada_folga: "Atrasada",
+  risco_saida: "Risco de atraso",
 };
 
 const DOT_STYLE: Record<string, string> = {
