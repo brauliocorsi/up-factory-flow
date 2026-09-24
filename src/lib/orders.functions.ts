@@ -977,6 +977,7 @@ export const listUrgentActive = createServerFn({ method: "GET" })
 // ============================================================
 
 export type EditableOrder = {
+  fabric_ref_tec?: string | null;
   id: string;
   order_number: string;
   customer_order: string | null;
@@ -1026,7 +1027,7 @@ export const getOrderForEdit = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<EditableOrder> => {
     const { data: o, error } = await (context.supabase as any)
       .from("production_orders")
-      .select("id, order_number, customer_order, product_description, model_id, measure, fabric_type, fabric_ref, color, structure_type, finishing, entry_date, due_date, priority, notes, observation, status")
+      .select("id, order_number, customer_order, product_description, model_id, measure, fabric_type, fabric_ref, fabric_ref_tec, color, structure_type, finishing, entry_date, due_date, priority, notes, observation, status")
       .eq("id", data.id)
       .maybeSingle();
     if (error) throw new Error(error.message);

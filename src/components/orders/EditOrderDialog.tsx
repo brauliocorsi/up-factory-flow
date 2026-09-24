@@ -4,6 +4,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { getOrderForEdit, updateOrder, type EditableOrder } from "@/lib/orders.functions";
 import { getCatalogs } from "@/lib/catalog.functions";
+import { listFabricAvailability } from "@/lib/stock.functions";
+import { StatusDot, STATUS_LABEL, FabricStockNotice } from "@/components/fabric/fabricUi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -70,6 +72,13 @@ export function EditOrderDialog({
     enabled: open,
   });
   const { data: cat } = useQuery({ queryKey: ["catalogs"], queryFn: () => getCatalogs(), enabled: open });
+
+  const { data: fabricsList = [] } = useQuery({
+    queryKey: ["fabric-availability"],
+    queryFn: () => listFabricAvailability(),
+    enabled: open && Boolean(order?.fabric_ref_tec),
+  });
+  const stockFabric = fabricsList.find((f) => f.ref_tec === order?.fabric_ref_tec) ?? null;
 
   useEffect(() => {
     if (order) setDraft(toDraft(order));
@@ -169,6 +178,21 @@ export function EditOrderDialog({
             <datalist id="dl-structures">
               {(cat?.structures ?? []).map((m: any) => <option key={m.id} value={m.name} />)}
             </datalist>
+
+            {order?.fabric_ref_tec && (
+              <div className="md:col-span-2 space-y-1.5 rounded-md border p-3">
+                <div className="flex items-center gap-2 text-sm">
+                  <StatusDot status={stockFabric?.status} />
+                  <span className="font-medium">{stockFabric?.name ?? order.fabric_ref_tec}</span>
+                  {stockFabric && (
+                    <span className="text-xs text-muted-foreground ml-auto">
+                      {stockFabric.meters.toFixed(1)} m · {STATUS_LABEL[stockFabric.status]}
+                    </span>
+                  )}
+                </div>
+                <FabricStockNotice fabric={stockFabric} />
+              </div>
+            )}
 
             <div className="md:col-span-2 space-y-1">
               <Label>Descrição do produto</Label>
