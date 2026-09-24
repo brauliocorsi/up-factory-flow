@@ -848,6 +848,36 @@ export type Database = {
           },
         ]
       }
+      pause_reasons: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          label: string
+          requires_note: boolean
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          label: string
+          requires_note?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          label?: string
+          requires_note?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       picking_dispatches: {
         Row: {
           batch_id: string
@@ -1860,6 +1890,67 @@ export type Database = {
         }
         Relationships: []
       }
+      stage_pauses: {
+        Row: {
+          created_at: string
+          ended_at: string | null
+          id: string
+          notes: string | null
+          operator_id: string | null
+          order_coli_stage_id: string
+          order_id: string | null
+          reason_id: string | null
+          stage: Database["public"]["Enums"]["production_stage"] | null
+          started_at: string
+        }
+        Insert: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          notes?: string | null
+          operator_id?: string | null
+          order_coli_stage_id: string
+          order_id?: string | null
+          reason_id?: string | null
+          stage?: Database["public"]["Enums"]["production_stage"] | null
+          started_at?: string
+        }
+        Update: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          notes?: string | null
+          operator_id?: string | null
+          order_coli_stage_id?: string
+          order_id?: string | null
+          reason_id?: string | null
+          stage?: Database["public"]["Enums"]["production_stage"] | null
+          started_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stage_pauses_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stage_pauses_order_coli_stage_id_fkey"
+            columns: ["order_coli_stage_id"]
+            isOneToOne: false
+            referencedRelation: "order_coli_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stage_pauses_reason_id_fkey"
+            columns: ["reason_id"]
+            isOneToOne: false
+            referencedRelation: "pause_reasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stage_sla_category: {
         Row: {
           category_code: string
@@ -2173,6 +2264,10 @@ export type Database = {
         Args: { _operator_code: string; _order_ids: string[] }
         Returns: Json
       }
+      cancel_coli_stage_start: {
+        Args: { _operator_code: string; _order_coli_stage_id: string }
+        Returns: Json
+      }
       cancel_order_with_recovery: { Args: { _order_id: string }; Returns: Json }
       cancel_order_with_recovery_impl: {
         Args: { _order_id: string }
@@ -2282,6 +2377,7 @@ export type Database = {
         Args: { _from: string; _to: string }
         Returns: Json
       }
+      get_idle_report: { Args: { _from: string; _to: string }; Returns: Json }
       get_order_progress: { Args: { _query: string }; Returns: Json }
       get_order_route_keys: {
         Args: { _order_id: string }
@@ -2326,6 +2422,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      idle_report_impl: { Args: { _from: string; _to: string }; Returns: Json }
       is_operator_only: { Args: { _user_id: string }; Returns: boolean }
       is_picker_only: { Args: { _user_id: string }; Returns: boolean }
       labor_by_person: {
@@ -2447,6 +2544,10 @@ export type Database = {
           _target_stage: Database["public"]["Enums"]["production_stage"]
         }
         Returns: Json
+      }
+      set_open_pause_reason: {
+        Args: { _notes: string; _operator_code: string; _reason_id: string }
+        Returns: number
       }
       set_orders_test_flag: {
         Args: { _is_test: boolean; _order_ids: string[] }
