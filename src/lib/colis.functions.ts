@@ -212,6 +212,8 @@ const eventSchema = z.object({
   order_coli_stage_id: z.string().uuid(),
   operator_code: z.string().trim().min(1).max(32),
   event: z.enum(["iniciar", "pausar", "retomar", "finalizar"]),
+  pause_reason_id: z.string().uuid().optional(),
+  pause_notes: z.string().max(300).optional(),
 });
 
 export const recordColiStageEvent = createServerFn({ method: "POST" })
@@ -231,5 +233,27 @@ export const recordColiStageEvent = createServerFn({ method: "POST" })
       // uma mensagem em vez de rebentar a UI.
       return { ok: false, message: error.message } as const;
     }
+    if (data.event === "pausar" && data.pause_reason_id) {
+      await (context.supabase as any).rpc("set_open_pause_reason", {
+        _operator_code: data.operator_code,
+        _reason_id: data.pause_reason_id,
+        _notes: data.pause_notes ?? null,
+      });
+    }
     return res;
+  });
+
+/** Cancela um início feito por engano (volta a Pendente, sem tempo contado). */
+export const cancelColiStageStart = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ order_coli_stage_id: z.string().uuid(), operator_code: z.string().trim().max(32) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await (context.supabase as any).rpc("cancel_coli_stage_start", {
+      _order_coli_stage_id: data.order_coli_stage_id,
+      _operator_code: data.operator_code,
+    });
+    if (error) return { ok: false as const, message: error.message as string };
+    return { ok: true as const };
   });
