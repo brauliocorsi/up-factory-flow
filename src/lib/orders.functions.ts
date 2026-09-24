@@ -231,6 +231,8 @@ const orderInputSchema = z.object({
   barcode: z.string().trim().max(64).nullable().optional(),
   /** Referência do tecido (TECnnnnnn) da tabela de tecidos. */
   ref_tec: z.string().trim().max(12).nullable().optional(),
+  /** Tecido completo do stock (fabric_catalog.ref_tec). */
+  fabric_ref_tec: z.string().trim().max(32).nullable().optional(),
   /** Personalizações extraídas do pedido (cab:300, ilhargueiro, furos, …). */
   customization: z.string().trim().max(500).nullable().optional(),
   /** Linha de catálogo ou linha livre (assistência, serviço, peça, …). */
@@ -308,6 +310,7 @@ export const createOrder = createServerFn({ method: "POST" })
       observation: data.observation ?? null,
       finishing: data.finishing ?? null,
       ref_tec: data.ref_tec ?? null,
+      fabric_ref_tec: data.fabric_ref_tec ?? null,
       customization: data.customization ?? null,
       line_kind: data.line_kind ?? "catalogo",
       service_type: data.service_type ?? null,

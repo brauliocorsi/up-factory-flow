@@ -145,34 +145,17 @@ function NovaEncomendaPage() {
 
   const measure = (cat?.measures ?? []).find((m: any) => m.id === form.measure_id);
 
-  // Tecidos: coleção → tipo (bloqueado) → referência do fornecedor.
-  const collections = cat?.fabric_refs ?? [];
-  const collection = collections.find((c: any) => c.code === form.collection_code);
-  const fabricType = (cat?.fabric_types ?? []).find(
-    (t: any) => t.code === (collection?.fabric_type_code ?? ""),
-  );
-  const fabricsForCollection = useMemo(
-    () => (cat?.fabrics ?? []).filter((f: any) => f.fabric_ref_code === form.collection_code),
-    [cat, form.collection_code],
-  );
-  const fabric = (cat?.fabrics ?? []).find((f: any) => f.ref_tec === form.ref_tec);
-  const fabricColor = (cat?.colors ?? []).find((c: any) => c.code === fabric?.color_code);
-
-  useEffect(() => {
-    if (!form.ref_tec) return;
-    if (!fabricsForCollection.some((f: any) => f.ref_tec === form.ref_tec)) set("ref_tec", "");
-  }, [fabricsForCollection, form.ref_tec]);
+  // Tecido: um só seletor sobre o stock de tecidos completos (fabric_availability).
+  const fabric = fabrics.find((f) => f.ref_tec === form.ref_tec) ?? null;
+  // Ficha antiga de tecidos (só para manter a ligação quando o código coincide).
+  const legacyFabric = (cat?.fabrics ?? []).find((f: any) => f.ref_tec === form.ref_tec);
 
   useEffect(() => {
     if (form.model_id && !modelsForCat.some((m: any) => m.id === form.model_id)) set("model_id", "");
   }, [modelsForCat, form.model_id]);
 
   const fabLabel = fabric
-    ? fabricLabel({
-        supplierRef: fabric.supplier_ref,
-        collectionName: collection?.name ?? null,
-        colorName: fabricColor?.name ?? null,
-      })
+    ? [fabric.collection, fabric.color].filter(Boolean).join(" ") || fabric.name
     : "";
 
   const generatedCode = isSofa
@@ -265,8 +248,7 @@ function NovaEncomendaPage() {
       const v = code.slice(17, 18) as BedVariant;
       if (["N", "F"].includes(v)) next.bed_variant = v;
     }
-    const fab = (cat.fabrics ?? []).find((f: any) => f.ref_tec === next.ref_tec);
-    next.collection_code = fab?.fabric_ref_code ?? "";
+    const fab = fabrics.find((f) => f.ref_tec === next.ref_tec);
     if (!fab) next.ref_tec = "";
     setForm(next);
     if (!silent) {
@@ -308,12 +290,13 @@ function NovaEncomendaPage() {
       product_description: generatedName,
       model_id: form.model_id || null,
       measure: isSofa ? (form.width_cm ? `${form.width_cm}cm` : null) : measure?.name ?? null,
-      fabric_type: fabricType?.name ?? null,
-      fabric_ref: collection?.name ?? null,
-      color: fabricColor?.name ?? fabric?.supplier_ref ?? null,
+      fabric_type: fabric?.fabric_type ?? null,
+      fabric_ref: fabric?.collection ?? null,
+      color: fabric?.color ?? null,
       structure_type: isSofa ? sofaFamily?.name ?? null : structure?.name ?? null,
       finishing: isSofa || isSommier ? null : form.bed_variant,
-      ref_tec: form.ref_tec || null,
+      ref_tec: legacyFabric ? form.ref_tec : null,
+      fabric_ref_tec: form.ref_tec || null,
       customization: form.customization.trim() || null,
       barcode: generatedCode,
       observation: form.observation || null,
@@ -454,31 +437,12 @@ function NovaEncomendaPage() {
                   </Field>
                 )}
 
-                <Field label="Coleção de tecido">
-                  <RefSelect
-                    items={collections}
-                    valueKey="code"
-                    value={form.collection_code}
-                    onChange={(v) => { set("collection_code", v); set("ref_tec", ""); }}
-                  />
-                </Field>
-                <Field label="Tipo de tecido (da coleção)">
-                  <LockedValue value={fabricType?.name} empty="Escolhe a coleção" />
-                </Field>
-                <Field label="Referência do tecido">
-                  <Select value={form.ref_tec} onValueChange={(v) => set("ref_tec", v)}>
-                    <SelectTrigger className="h-11">
-                      <SelectValue placeholder={form.collection_code ? "Escolher…" : "Escolhe a coleção primeiro"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {fabricsForCollection.map((f: any) => (
-                        <SelectItem key={f.ref_tec} value={f.ref_tec}>
-                          {f.supplier_ref} · {f.ref_tec}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </Field>
+                <div className="md:col-span-2 space-y-1.5">
+                  <Field label="Tecido">
+                    <FabricPicker fabrics={fabrics} value={form.ref_tec} onChange={(v) => set("ref_tec", v)} />
+                  </Field>
+                  <FabricStockNotice fabric={fabric} />
+                </div>
 
                 {isSofa ? (
                   <Field
