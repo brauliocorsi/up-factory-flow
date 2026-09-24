@@ -231,6 +231,8 @@ const orderInputSchema = z.object({
   barcode: z.string().trim().max(64).nullable().optional(),
   /** Referência do tecido (TECnnnnnn) da tabela de tecidos. */
   ref_tec: z.string().trim().max(12).nullable().optional(),
+  /** Tecido completo do stock (fabric_catalog.ref_tec). */
+  fabric_ref_tec: z.string().trim().max(32).nullable().optional(),
   /** Personalizações extraídas do pedido (cab:300, ilhargueiro, furos, …). */
   customization: z.string().trim().max(500).nullable().optional(),
   /** Linha de catálogo ou linha livre (assistência, serviço, peça, …). */
@@ -308,6 +310,7 @@ export const createOrder = createServerFn({ method: "POST" })
       observation: data.observation ?? null,
       finishing: data.finishing ?? null,
       ref_tec: data.ref_tec ?? null,
+      fabric_ref_tec: data.fabric_ref_tec ?? null,
       customization: data.customization ?? null,
       line_kind: data.line_kind ?? "catalogo",
       service_type: data.service_type ?? null,
@@ -974,6 +977,7 @@ export const listUrgentActive = createServerFn({ method: "GET" })
 // ============================================================
 
 export type EditableOrder = {
+  fabric_ref_tec?: string | null;
   id: string;
   order_number: string;
   customer_order: string | null;
@@ -1023,7 +1027,7 @@ export const getOrderForEdit = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<EditableOrder> => {
     const { data: o, error } = await (context.supabase as any)
       .from("production_orders")
-      .select("id, order_number, customer_order, product_description, model_id, measure, fabric_type, fabric_ref, color, structure_type, finishing, entry_date, due_date, priority, notes, observation, status")
+      .select("id, order_number, customer_order, product_description, model_id, measure, fabric_type, fabric_ref, fabric_ref_tec, color, structure_type, finishing, entry_date, due_date, priority, notes, observation, status")
       .eq("id", data.id)
       .maybeSingle();
     if (error) throw new Error(error.message);

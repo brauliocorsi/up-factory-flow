@@ -6,191 +6,212 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, AlertTriangle, CheckCircle2, Ruler, PackageOpen, TrendingDown } from "lucide-react";
-import { listRolls, upsertRoll, deleteRoll } from "@/lib/stock.functions";
-import { getCatalogs } from "@/lib/catalog.functions";
-import { AdjustDialog } from "./stock.cascos";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { AlertTriangle, ArrowDownToLine, ArrowUpFromLine, Ruler, PackageOpen, TrendingDown } from "lucide-react";
+import { listFabricAvailability, moveFabricStock, type FabricAvailability } from "@/lib/stock.functions";
+import { StatusDot, STATUS_LABEL, matchFabric } from "@/components/fabric/fabricUi";
+import { useAuth } from "@/hooks/useAuth";
 
 export const Route = createFileRoute("/_authenticated/stock/tecidos")({
+  head: () => ({
+    meta: [
+      { title: "Stock de tecidos — UP Fábrica" },
+      { name: "description", content: "Metros em stock por tecido completo." },
+    ],
+  }),
   component: TecidosPage,
 });
 
+const ALL = "__all__";
+
 function TecidosPage() {
-  const qc = useQueryClient();
-  const { data: rows = [], isLoading } = useQuery({ queryKey: ["rolls"], queryFn: () => listRolls() });
-  const { data: cat } = useQuery({ queryKey: ["catalogs"], queryFn: () => getCatalogs() });
-  const [typeId, setTypeId] = useState<string>("");
+  const { session } = useAuth() as any;
+  const { data: rows = [], isLoading } = useQuery({
+    queryKey: ["fabric-availability"],
+    queryFn: () => listFabricAvailability(),
+    enabled: Boolean(session),
+  });
   const [q, setQ] = useState("");
-  const [onlyLow, setOnlyLow] = useState(false);
+  const [type, setType] = useState(ALL);
+  const [collection, setCollection] = useState(ALL);
+  const [priceClass, setPriceClass] = useState(ALL);
+  const [showAll, setShowAll] = useState(false);
 
-  const refCodesForType = useMemo(() => {
-    if (!typeId) return null;
-    return new Set(((cat?.fabric_refs ?? []) as any[]).filter((r) => r.fabric_type_id === typeId).map((r) => r.code));
-  }, [cat, typeId]);
-
-  const filtered = useMemo(() => {
-    const term = q.trim().toLowerCase();
-    return (rows as any[]).filter((r) => {
-      if (refCodesForType && !refCodesForType.has(r.fabric_ref_code)) return false;
-      if (onlyLow && Number(r.meters) > Number(r.min_meters ?? 0)) return false;
-      if (!term) return true;
-      return [r.name, r.fabric_ref_code, r.color_code, r.location]
-        .filter(Boolean)
-        .some((v: string) => String(v).toLowerCase().includes(term));
-    });
-  }, [rows, refCodesForType, q, onlyLow]);
-
-  // Aggregated stats
-  const stats = useMemo(() => {
-    const all = rows as any[];
-    const totalMeters = all.reduce((s, r) => s + Number(r.meters ?? 0), 0);
-    const lowCount = all.filter((r) => Number(r.meters) <= Number(r.min_meters ?? 0)).length;
-    const outCount = all.filter((r) => Number(r.meters) <= 0).length;
-    const byRef = new Map<string, number>();
-    for (const r of all) {
-      const k = r.fabric_ref_code ?? "—";
-      byRef.set(k, (byRef.get(k) ?? 0) + Number(r.meters ?? 0));
-    }
-    return { totalMeters, lowCount, outCount, refCount: byRef.size, rollCount: all.length };
+  const opts = useMemo(() => {
+    const uniq = (k: keyof FabricAvailability) =>
+      [...new Set(rows.map((r) => r[k]).filter(Boolean) as string[])].sort((a, b) => a.localeCompare(b, "pt"));
+    return { types: uniq("fabric_type"), collections: uniq("collection"), classes: uniq("price_class") };
   }, [rows]);
 
-  const refresh = () => qc.invalidateQueries({ queryKey: ["rolls"] });
-  const del = useMutation({
-    mutationFn: (id: string) => deleteRoll({ data: { id } }),
-    onSuccess: () => { toast.success("Removido"); refresh(); },
-    onError: (e: any) => toast.error(e.message),
-  });
+  const filtered = useMemo(
+    () =>
+      rows.filter(
+        (r) =>
+          (showAll || r.meters > 0) &&
+          (type === ALL || r.fabric_type === type) &&
+          (collection === ALL || r.collection === collection) &&
+          (priceClass === ALL || r.price_class === priceClass) &&
+          matchFabric(r.name, q),
+      ),
+    [rows, showAll, type, collection, priceClass, q],
+  );
+
+  const stats = useMemo(() => {
+    const withStock = rows.filter((r) => r.meters > 0);
+    return {
+      total: rows.reduce((s, r) => s + r.meters, 0),
+      withStock: withStock.length,
+      low: rows.filter((r) => r.status === "POUCO").length,
+      out: rows.filter((r) => r.status === "SEM STOCK").length,
+    };
+  }, [rows]);
 
   return (
     <div className="p-4 max-w-5xl mx-auto space-y-4">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold">Rolos de tecido</h1>
-          <p className="text-sm text-muted-foreground">Matéria-prima em metros (consumida no Corte).</p>
-        </div>
-        <UpsertRoll onDone={refresh} />
+      <div>
+        <h1 className="text-2xl font-bold">Stock de tecidos</h1>
+        <p className="text-sm text-muted-foreground">Um código por tecido completo. Metros consumidos no Corte.</p>
       </div>
 
-      {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard icon={Ruler} label="Total em stock" value={`${stats.totalMeters.toFixed(1)} m`} />
-        <StatCard icon={PackageOpen} label="Rolos" value={stats.rollCount} sub={`${stats.refCount} referências`} />
-        <StatCard
-          icon={TrendingDown}
-          label="Abaixo do mínimo"
-          value={stats.lowCount}
-          highlight={stats.lowCount > 0}
-        />
-        <StatCard
-          icon={AlertTriangle}
-          label="Esgotados"
-          value={stats.outCount}
-          highlight={stats.outCount > 0}
-          danger
-        />
+        <StatCard icon={Ruler} label="Total em stock" value={`${stats.total.toFixed(1)} m`} />
+        <StatCard icon={PackageOpen} label="Tecidos com stock" value={stats.withStock} sub={`de ${rows.length}`} />
+        <StatCard icon={TrendingDown} label="Pouco stock" value={stats.low} highlight={stats.low > 0} />
+        <StatCard icon={AlertTriangle} label="Sem stock" value={stats.out} highlight={stats.out > 0} danger />
       </div>
 
-      {/* Filters */}
       <Card className="p-3 flex flex-wrap gap-3 items-end">
-        <div className="space-y-1.5 min-w-52">
-          <Label className="text-xs">Tipo de tecido</Label>
-          <Select value={typeId || "__all__"} onValueChange={(v) => setTypeId(v === "__all__" ? "" : v)}>
-            <SelectTrigger className="h-11"><SelectValue placeholder="— todos —" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all__">— todos —</SelectItem>
-              {((cat?.fabric_types ?? []) as any[]).map((t) => (
-                <SelectItem key={t.id} value={t.id}>{t.code} · {t.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1.5 flex-1 min-w-52">
+        <div className="space-y-1.5 flex-1 min-w-56">
           <Label className="text-xs">Pesquisar</Label>
-          <Input value={q} onChange={(e) => setQ(e.target.value)} className="h-11" placeholder="referência, cor, nome, localização" />
+          <Input value={q} onChange={(e) => setQ(e.target.value)} className="h-11" placeholder="ex: bass bege, célia light" />
         </div>
-        <div className="flex items-center gap-2 pb-1">
-          <Button
-            variant={onlyLow ? "default" : "outline"}
-            size="sm"
-            className="h-11 gap-2"
-            onClick={() => setOnlyLow((v) => !v)}
-          >
-            <AlertTriangle className="size-4" />
-            Só baixo stock
-          </Button>
-        </div>
-        <div className="text-xs text-muted-foreground pb-3">{filtered.length} rolo(s)</div>
+        <FilterSelect label="Tipo" value={type} onChange={setType} items={opts.types} />
+        <FilterSelect label="Coleção" value={collection} onChange={setCollection} items={opts.collections} />
+        <FilterSelect label="Classe" value={priceClass} onChange={setPriceClass} items={opts.classes} width="w-28" />
+        <label className="flex items-center gap-2 pb-3 text-sm">
+          <Switch checked={showAll} onCheckedChange={setShowAll} />
+          Mostrar todos os {rows.length}
+        </label>
+        <div className="text-xs text-muted-foreground pb-3">{filtered.length} tecido(s)</div>
       </Card>
 
-      {/* Table */}
       <Card className="p-2 overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Ref.</TableHead>
-              <TableHead>Cor</TableHead>
-              <TableHead>Nome</TableHead>
+              <TableHead className="w-8" />
+              <TableHead>Tecido</TableHead>
+              <TableHead>Classe</TableHead>
               <TableHead className="text-right">Metros</TableHead>
-              <TableHead className="w-32">Nível</TableHead>
               <TableHead>Localização</TableHead>
-              <TableHead className="text-right">Ações</TableHead>
+              <TableHead className="text-right">Movimentos</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-6">A carregar…</TableCell></TableRow>}
-            {!isLoading && filtered.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-6">Sem rolos</TableCell></TableRow>}
-            {filtered.map((r: any) => {
-              const meters = Number(r.meters ?? 0);
-              const min = Number(r.min_meters ?? 0);
-              const pct = min > 0 ? Math.min(100, Math.round((meters / (min * 2)) * 100)) : meters > 0 ? 100 : 0;
-              const status = meters <= 0 ? "out" : meters <= min ? "low" : "ok";
-              return (
-                <TableRow key={r.id} className={status !== "ok" ? "bg-destructive/5" : ""}>
-                  <TableCell className="font-mono text-xs">{r.fabric_ref_code ?? "—"}</TableCell>
-                  <TableCell className="font-mono text-xs">{r.color_code ?? "—"}</TableCell>
-                  <TableCell className="font-medium">{r.name}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="font-semibold">{meters.toFixed(1)} m</div>
-                    <div className="text-[11px] text-muted-foreground">mín. {min.toFixed(1)} m</div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden min-w-12">
-                        <div
-                          className={`h-full rounded-full transition-all ${
-                            status === "out" ? "bg-destructive" : status === "low" ? "bg-warning" : "bg-emerald-500"
-                          }`}
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                      {status === "ok" ? (
-                        <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
-                      ) : status === "low" ? (
-                        <AlertTriangle className="size-4 text-warning shrink-0" />
-                      ) : (
-                        <AlertTriangle className="size-4 text-destructive shrink-0" />
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-xs">{r.location ?? "—"}</TableCell>
-                  <TableCell className="text-right space-x-1 whitespace-nowrap">
-                    <AdjustDialog itemType="fabric" itemId={r.id} label={r.name} onDone={refresh} />
-                    <UpsertRoll editing={r} onDone={refresh} />
-                    <Button variant="ghost" size="icon" onClick={() => { if (confirm(`Apagar ${r.name}?`)) del.mutate(r.id); }}>
-                      <Trash2 className="size-4 text-destructive" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
+            {isLoading && (
+              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-6">A carregar…</TableCell></TableRow>
+            )}
+            {!isLoading && filtered.length === 0 && (
+              <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-6">Sem tecidos para estes filtros</TableCell></TableRow>
+            )}
+            {filtered.map((r) => (
+              <TableRow key={r.ref_tec}>
+                <TableCell><StatusDot status={r.status} /></TableCell>
+                <TableCell>
+                  <div className="font-medium flex items-center gap-1.5">
+                    {r.name}
+                    {r.needs_review && (
+                      <TooltipProvider><Tooltip>
+                        <TooltipTrigger asChild><AlertTriangle className="size-3.5 text-warning" /></TooltipTrigger>
+                        <TooltipContent>A rever: {r.needs_review}</TooltipContent>
+                      </Tooltip></TooltipProvider>
+                    )}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground font-mono">{r.ref_tec} · {STATUS_LABEL[r.status]}</div>
+                </TableCell>
+                <TableCell className="text-xs">{r.price_class ?? "—"}</TableCell>
+                <TableCell className="text-right">
+                  <div className="font-semibold tabular-nums">{r.meters.toFixed(1)} m</div>
+                  <div className="text-[11px] text-muted-foreground">mín. {r.min_meters.toFixed(1)} m</div>
+                </TableCell>
+                <TableCell className="text-xs">{r.location ?? "—"}</TableCell>
+                <TableCell className="text-right whitespace-nowrap space-x-1">
+                  <MoveDialog fabric={r} direction="entrada" />
+                  <MoveDialog fabric={r} direction="saida" />
+                </TableCell>
+              </TableRow>
+            ))}
           </TableBody>
         </Table>
       </Card>
     </div>
+  );
+}
+
+function FilterSelect({ label, value, onChange, items, width = "w-44" }: { label: string; value: string; onChange: (v: string) => void; items: string[]; width?: string }) {
+  return (
+    <div className={`space-y-1.5 ${width}`}>
+      <Label className="text-xs">{label}</Label>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value={ALL}>Todos</SelectItem>
+          {items.map((i) => <SelectItem key={i} value={i}>{i}</SelectItem>)}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+function MoveDialog({ fabric, direction }: { fabric: FabricAvailability; direction: "entrada" | "saida" }) {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [meters, setMeters] = useState("");
+  const [reason, setReason] = useState("");
+  const isIn = direction === "entrada";
+  const mut = useMutation({
+    mutationFn: () => moveFabricStock({ data: { ref_tec: fabric.ref_tec, meters: Number(meters), direction, reason } }),
+    onSuccess: (res: any) => {
+      if (!res?.ok) { toast.error(res?.message ?? "Não foi possível registar"); return; }
+      toast.success(`${fabric.name}: agora ${Number(res.meters).toFixed(1)} m`);
+      setOpen(false); setMeters(""); setReason("");
+      qc.invalidateQueries({ queryKey: ["fabric-availability"] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Erro"),
+  });
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline" className="gap-1">
+          {isIn ? <ArrowDownToLine className="size-3.5" /> : <ArrowUpFromLine className="size-3.5" />}
+          {isIn ? "Entrada" : "Saída"}
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader><DialogTitle>{isIn ? "Entrada" : "Saída"} de tecido — {fabric.name}</DialogTitle></DialogHeader>
+        <div className="space-y-3">
+          <div className="text-sm text-muted-foreground">Em stock: {fabric.meters.toFixed(1)} m</div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Metros</Label>
+            <Input type="number" min={0} step="0.1" value={meters} onChange={(e) => setMeters(e.target.value)} className="h-11" autoFocus />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Motivo (opcional)</Label>
+            <Input value={reason} onChange={(e) => setReason(e.target.value)} className="h-11" placeholder={isIn ? "ex: receção fornecedor" : "ex: amostra, defeito"} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+          <Button disabled={!(Number(meters) > 0) || mut.isPending} onClick={() => mut.mutate()}>
+            {mut.isPending ? "A registar…" : "Registar"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -204,68 +225,4 @@ function StatCard({ icon: Icon, label, value, sub, highlight, danger }: any) {
       {sub && <div className="text-[11px] text-muted-foreground mt-0.5">{sub}</div>}
     </Card>
   );
-}
-
-function UpsertRoll({ editing, onDone }: { editing?: any; onDone: () => void }) {
-  const [open, setOpen] = useState(false);
-  const { data: cat } = useQuery({ queryKey: ["catalogs"], queryFn: () => getCatalogs(), enabled: open });
-  const [typeFilter, setTypeFilter] = useState<string>("");
-  const [f, setF] = useState<any>({
-    name: editing?.name ?? "",
-    fabric_ref_code: editing?.fabric_ref_code ?? "",
-    color_code: editing?.color_code ?? "",
-    meters: editing?.meters ?? 0,
-    min_meters: editing?.min_meters ?? 0,
-    location: editing?.location ?? "",
-  });
-  const mut = useMutation({
-    mutationFn: () => upsertRoll({ data: { id: editing?.id, ...f, meters: Number(f.meters), min_meters: Number(f.min_meters) } }),
-    onSuccess: () => { toast.success(editing ? "Atualizado" : "Adicionado"); setOpen(false); onDone(); },
-    onError: (e: any) => toast.error(e.message),
-  });
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {editing ? <Button variant="ghost" size="sm">Editar</Button> : <Button className="gap-2"><Plus className="size-4" /> Novo rolo</Button>}
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader><DialogTitle>{editing ? "Editar" : "Novo"} rolo</DialogTitle></DialogHeader>
-        <div className="grid grid-cols-2 gap-3">
-          <Fld label="Tipo de tecido (filtro)" cls="col-span-2">
-            <Select value={typeFilter || "__all__"} onValueChange={(v) => setTypeFilter(v === "__all__" ? "" : v)}>
-              <SelectTrigger className="h-11"><SelectValue placeholder="— todos —" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">— todos —</SelectItem>
-                {((cat?.fabric_types ?? []) as any[]).map((t: any) => <SelectItem key={t.id} value={t.id}>{t.code} · {t.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </Fld>
-          <Fld label="Ref. Tecido">
-            <Select value={f.fabric_ref_code || undefined} onValueChange={(v) => setF({ ...f, fabric_ref_code: v })}>
-              <SelectTrigger className="h-11"><SelectValue placeholder="—" /></SelectTrigger>
-              <SelectContent>{((cat?.fabric_refs ?? []) as any[]).filter((m: any) => !typeFilter || m.fabric_type_id === typeFilter).map((m: any) => <SelectItem key={m.id} value={m.code}><span className="font-mono text-xs mr-2">{m.code}</span>{m.name}</SelectItem>)}</SelectContent>
-            </Select>
-          </Fld>
-          <Fld label="Cor">
-            <Select value={f.color_code || undefined} onValueChange={(v) => setF({ ...f, color_code: v })}>
-              <SelectTrigger className="h-11"><SelectValue placeholder="—" /></SelectTrigger>
-              <SelectContent>{(cat?.colors ?? []).map((m: any) => <SelectItem key={m.id} value={m.code}><span className="font-mono text-xs mr-2">{m.code}</span>{m.name}</SelectItem>)}</SelectContent>
-            </Select>
-          </Fld>
-          <Fld label="Nome" cls="col-span-2"><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} className="h-11" placeholder="Opera Bege" /></Fld>
-          <Fld label="Metros"><Input type="number" min={0} step="0.1" value={f.meters} onChange={(e) => setF({ ...f, meters: Number(e.target.value) })} className="h-11" /></Fld>
-          <Fld label="Mínimo (m)"><Input type="number" min={0} step="0.1" value={f.min_meters} onChange={(e) => setF({ ...f, min_meters: Number(e.target.value) })} className="h-11" /></Fld>
-          <Fld label="Localização" cls="col-span-2"><Input value={f.location} onChange={(e) => setF({ ...f, location: e.target.value })} className="h-11" /></Fld>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-          <Button onClick={() => mut.mutate()} disabled={mut.isPending || !f.name}>{mut.isPending ? "A guardar…" : "Guardar"}</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function Fld({ label, children, cls }: { label: React.ReactNode; children: React.ReactNode; cls?: string }) {
-  return <div className={`space-y-1.5 ${cls ?? ""}`}><Label className="text-xs text-muted-foreground">{label}</Label>{children}</div>;
 }
