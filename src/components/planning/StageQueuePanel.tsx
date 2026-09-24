@@ -159,7 +159,7 @@ export function StageQueuePanel({
               </div>
               <div className="flex items-center gap-2 shrink-0 text-[11px] text-muted-foreground">
                 <span title="Data-alvo da etapa">→ {formatDatePT(it.target_date)}</span>
-                <span className="hidden sm:inline" title="Data de saída">saída {formatDatePT(it.due_date)}</span>
+                <span className="font-semibold text-foreground/70" title="Data de saída">Saída {formatDatePT(it.due_date)}</span>
               </div>
             </button>
           ))}
