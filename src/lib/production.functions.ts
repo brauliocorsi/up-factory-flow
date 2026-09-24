@@ -71,10 +71,10 @@ function isWeekend(d: Date) {
   const w = d.getUTCDay();
   return w === 0 || w === 6;
 }
-/** Último dia útil antes da data (igual a prev_business_day na BD). */
+/** Dia útil igual ou anterior à data (igual a prev_business_day na BD). */
 function prevBusinessDay(iso: string): string {
   const d = new Date(iso + "T00:00:00Z");
-  do d.setUTCDate(d.getUTCDate() - 1); while (isWeekend(d));
+  while (isWeekend(d)) d.setUTCDate(d.getUTCDate() - 1);
   return isoDate(d);
 }
 function addBusinessDays(iso: string, n: number): string {
