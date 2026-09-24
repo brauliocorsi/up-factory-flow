@@ -1897,8 +1897,9 @@ export type Database = {
           id: string
           notes: string | null
           operator_id: string | null
-          order_coli_stage_id: string
+          order_coli_stage_id: string | null
           order_id: string | null
+          order_stage_id: string | null
           reason_id: string | null
           stage: Database["public"]["Enums"]["production_stage"] | null
           started_at: string
@@ -1909,8 +1910,9 @@ export type Database = {
           id?: string
           notes?: string | null
           operator_id?: string | null
-          order_coli_stage_id: string
+          order_coli_stage_id?: string | null
           order_id?: string | null
+          order_stage_id?: string | null
           reason_id?: string | null
           stage?: Database["public"]["Enums"]["production_stage"] | null
           started_at?: string
@@ -1921,8 +1923,9 @@ export type Database = {
           id?: string
           notes?: string | null
           operator_id?: string | null
-          order_coli_stage_id?: string
+          order_coli_stage_id?: string | null
           order_id?: string | null
+          order_stage_id?: string | null
           reason_id?: string | null
           stage?: Database["public"]["Enums"]["production_stage"] | null
           started_at?: string
@@ -1940,6 +1943,13 @@ export type Database = {
             columns: ["order_coli_stage_id"]
             isOneToOne: false
             referencedRelation: "order_coli_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stage_pauses_order_stage_id_fkey"
+            columns: ["order_stage_id"]
+            isOneToOne: false
+            referencedRelation: "order_stages"
             referencedColumns: ["id"]
           },
           {
@@ -2079,6 +2089,57 @@ export type Database = {
           },
           {
             foreignKeyName: "stage_time_logs_order_stage_id_fkey"
+            columns: ["order_stage_id"]
+            isOneToOne: false
+            referencedRelation: "order_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stage_work_intervals: {
+        Row: {
+          created_at: string
+          ended_at: string
+          id: string
+          operator_id: string | null
+          order_id: string | null
+          order_stage_id: string
+          seconds: number
+          stage: Database["public"]["Enums"]["production_stage"] | null
+          started_at: string
+        }
+        Insert: {
+          created_at?: string
+          ended_at: string
+          id?: string
+          operator_id?: string | null
+          order_id?: string | null
+          order_stage_id: string
+          seconds?: number
+          stage?: Database["public"]["Enums"]["production_stage"] | null
+          started_at: string
+        }
+        Update: {
+          created_at?: string
+          ended_at?: string
+          id?: string
+          operator_id?: string | null
+          order_id?: string | null
+          order_stage_id?: string
+          seconds?: number
+          stage?: Database["public"]["Enums"]["production_stage"] | null
+          started_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stage_work_intervals_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stage_work_intervals_order_stage_id_fkey"
             columns: ["order_stage_id"]
             isOneToOne: false
             referencedRelation: "order_stages"
