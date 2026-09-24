@@ -310,124 +310,98 @@ export const completeStockProduction = createServerFn({ method: "POST" })
     if (error) return { ok: false as const, message: error.message };
     return { ok: true as const };
   });
-// ============ CONSUMO MANUAL DE TECIDO (etapa de Corte) ============
+// ============ STOCK DE TECIDOS POR TECIDO COMPLETO (fabric_catalog) ============
 
-/** Contexto para o diálogo "Consumir tecido": metros do modelo + rolos disponíveis. */
+export type FabricAvailability = {
+  ref_tec: string;
+  name: string;
+  fabric_type: string;
+  collection: string;
+  color: string | null;
+  price_class: string | null;
+  meters: number;
+  min_meters: number;
+  location: string | null;
+  needs_review: string | null;
+  status: "DISPONIVEL" | "POUCO" | "SEM STOCK";
+};
+
+/** Lista completa (ativos) de fabric_availability. Leitura para qualquer sessão válida. */
+export const listFabricAvailability = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<FabricAvailability[]> => {
+    const { operationalReader } = await import("./operationalRead.server");
+    const s = await operationalReader(context as any);
+    const { data, error } = await s.from("fabric_availability").select("*").order("name").limit(5000);
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((r: any) => ({ ...r, meters: Number(r.meters ?? 0), min_meters: Number(r.min_meters ?? 0) }));
+  });
+
+/** Entrada (+) ou saída (−) de metros no armazém — sempre via receive_fabric. */
+export const moveFabricStock = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z
+      .object({
+        ref_tec: z.string().trim().min(1).max(32),
+        meters: z.number().positive().max(100000),
+        direction: z.enum(["entrada", "saida"]),
+        reason: z.string().trim().max(200).optional(),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const delta = data.direction === "entrada" ? data.meters : -data.meters;
+    const { data: res, error } = await (context.supabase as any).rpc("receive_fabric", {
+      p_ref_tec: data.ref_tec,
+      p_meters: delta,
+      p_reason: data.reason?.trim() || data.direction,
+      p_user: context.userId,
+    });
+    if (error) return { ok: false as const, message: error.message };
+    return { ok: true as const, meters: Number(res) };
+  });
+
+/** Contexto para o diálogo "Consumir tecido" (Corte). */
 export const getFabricConsumeContext = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ order_id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    // Leitura autorizada: o posto de corte precisa de ver modelo, rolos e
-    // referências mesmo com perfil "apenas operador" (F04).
     const { operationalReader } = await import("./operationalRead.server");
     const s = await operationalReader(context as any);
     const { data: order, error: oErr } = await s
       .from("production_orders")
-      .select("id, order_number, model_id, fabric_ref, color, fabric_type, ref_tec")
+      .select("id, order_number, model_id, fabric_ref, color, fabric_type, fabric_ref_tec")
       .eq("id", data.order_id)
       .maybeSingle();
     if (oErr) throw new Error(oErr.message);
     if (!order) return { ok: false as const, message: "Encomenda não encontrada." };
 
-    const [modelRes, rollsRes, typesRes, refsRes, colorsRes, consRes, fabricRes] = await Promise.all([
+    const [modelRes, consRes] = await Promise.all([
       order.model_id
         ? s.from("models").select("id, code, name, meters_per_unit").eq("id", order.model_id).maybeSingle()
         : Promise.resolve({ data: null }),
-      s.from("fabric_rolls").select("id, name, fabric_ref_code, color_code, meters").eq("active", true).order("name"),
-      s.from("ref_fabric_types").select("id, code, name").eq("active", true).order("code"),
-      s.from("ref_fabric_refs").select("id, code, name, fabric_type_id").eq("active", true).order("code"),
-      s.from("ref_colors").select("id, code, name").eq("active", true).order("code"),
-      s
-        .from("fabric_consumptions")
-        .select("*")
-        .eq("order_id", data.order_id)
-        .is("reverted_at", null)
-        .maybeSingle(),
-      (order as any).ref_tec
-        ? s
-            .from("fabrics")
-            .select("ref_tec, fabric_type_code, fabric_ref_code, color_code")
-            .eq("ref_tec", (order as any).ref_tec)
-            .maybeSingle()
-        : Promise.resolve({ data: null }),
+      // UNIQUE(order_id): no máximo uma linha por OF.
+      s.from("fabric_consumptions").select("*").eq("order_id", data.order_id).maybeSingle(),
     ]);
-
-    const rolls = rollsRes.data ?? [];
-    const refs = (refsRes.data ?? []) as Array<{ code: string; name: string }>;
-    const colors = (colorsRes.data ?? []) as Array<{ code: string; name: string }>;
-
-    // Traduz o que a encomenda tem escrito (nome ou código) para o código do catálogo.
-    const toCode = (
-      list: Array<{ code: string; name: string }>,
-      value: string | null | undefined,
-    ): string | null => {
-      const v = String(value ?? "").trim().toLowerCase();
-      if (!v) return null;
-      const hit = list.find(
-        (r) => r.code?.toLowerCase() === v || r.name?.toLowerCase() === v,
-      );
-      return hit?.code ?? null;
-    };
-
-    const fabric = (fabricRes as any)?.data ?? null;
-    const refFromTec = fabric?.fabric_ref_code ?? null;
-    const colorFromTec = fabric?.color_code ?? null;
-    const refFromText = toCode(refs, (order as any).fabric_ref);
-    const colorFromText = toCode(colors, (order as any).color);
-
-    const suggestedRef = refFromTec ?? refFromText;
-    const suggestedColor = colorFromTec ?? colorFromText;
-    const source: "ref_tec" | "texto" | null = refFromTec
-      ? "ref_tec"
-      : refFromText
-        ? "texto"
-        : null;
-
-    const kindOf = (r: { fabric_ref_code: string | null; color_code: string | null }) => {
-      if (!suggestedRef || r.fabric_ref_code !== suggestedRef) return "other" as const;
-      if (!suggestedColor) return "same_ref" as const;
-      if (r.color_code === suggestedColor || r.color_code == null) return "match" as const;
-      return "same_ref" as const;
-    };
-    const rank = { match: 0, same_ref: 1, other: 2 } as const;
-    const suggested_rolls = rolls
-      .map((r: any) => ({ ...r, kind: kindOf(r) }))
-      .sort(
-        (a: any, b: any) =>
-          rank[a.kind as keyof typeof rank] - rank[b.kind as keyof typeof rank] ||
-          Number(b.meters) - Number(a.meters),
-      );
-
+    const cons = (consRes as any)?.data ?? null;
+    let consName: string | null = null;
+    if (cons?.ref_tec) {
+      const { data: f } = await s.from("fabric_catalog").select("name").eq("ref_tec", cons.ref_tec).maybeSingle();
+      consName = f?.name ?? null;
+    }
     return {
       ok: true as const,
       order,
       model: modelRes?.data ?? null,
       meters_per_unit: modelRes?.data?.meters_per_unit ?? null,
-      rolls,
-      suggested_rolls,
-      suggestion: {
-        fabric_ref_code: suggestedRef,
-        color_code: suggestedColor,
-        fabric_ref_name: suggestedRef
-          ? (refs.find((r) => r.code === suggestedRef)?.name ?? suggestedRef)
-          : null,
-        color_name: suggestedColor
-          ? (colors.find((c) => c.code === suggestedColor)?.name ?? suggestedColor)
-          : null,
-        source,
-      },
-      // Distinguir "sem configuração" de "sem stock" (F04).
-      no_rolls: rolls.length === 0,
-      no_meters_configured: (modelRes?.data?.meters_per_unit ?? null) === null,
-      fabric_types: typesRes.data ?? [],
-      fabric_refs: refsRes.data ?? [],
-      colors: colorsRes.data ?? [],
-      consumption: consRes?.data ?? null,
+      suggested_ref_tec: (order as any).fabric_ref_tec ?? null,
+      consumption: cons && !cons.reverted_at ? { ...cons, fabric_name: consName } : null,
+      reverted_consumption: Boolean(cons?.reverted_at),
     };
   });
 
-
-/** Consumos já registados para um conjunto de encomendas (badge no card). */
+/** Consumos ativos para um conjunto de encomendas (badge no card). */
 export const listFabricConsumptions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
@@ -437,36 +411,61 @@ export const listFabricConsumptions = createServerFn({ method: "POST" })
     if (data.order_ids.length === 0) return [];
     const { data: rows, error } = await (context.supabase as any)
       .from("fabric_consumptions")
-      .select("order_id, roll_id, fabric_ref_code, color_code, meters, created_at")
+      .select("order_id, roll_id, ref_tec, fabric_ref_code, color_code, meters, created_at")
       .is("reverted_at", null)
       .in("order_id", data.order_ids.slice(0, 500));
     if (error) throw new Error(error.message);
-    return rows ?? [];
+    const list = (rows ?? []) as any[];
+    const tecs = [...new Set(list.map((r) => r.ref_tec).filter(Boolean))];
+    const names = new Map<string, string>();
+    if (tecs.length) {
+      const { operationalReader } = await import("./operationalRead.server");
+      const s = await operationalReader(context as any);
+      const { data: fc } = await s.from("fabric_catalog").select("ref_tec, name").in("ref_tec", tecs);
+      for (const f of fc ?? []) names.set(f.ref_tec, f.name);
+    }
+    // Consumos novos: mostram "TEC… / Nome do tecido" nos cards existentes.
+    return list.map((r) =>
+      r.ref_tec
+        ? { ...r, fabric_ref_code: r.ref_tec, color_code: names.get(r.ref_tec) ?? null }
+        : r,
+    );
   });
 
+/** Baixa de tecido para uma OF — chama consume_fabric; erros da BD são mostrados tal como vêm. */
 export const consumeFabric = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
     z
       .object({
         order_id: z.string().uuid(),
-        roll_id: z.string().uuid(),
+        ref_tec: z.string().trim().min(1).max(32),
         meters: z.number().positive().max(10000),
         operator_code: z.string().trim().max(32).optional(),
       })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { data: res, error } = await (context.supabase as any).rpc("consume_fabric_for_order", {
-      _order_id: data.order_id,
-      _roll_id: data.roll_id,
-      _meters: data.meters,
-      _operator_code: data.operator_code ?? null,
+    let operatorId: string | null = null;
+    if (data.operator_code) {
+      const { operationalReader } = await import("./operationalRead.server");
+      const s = await operationalReader(context as any);
+      const { data: op } = await s
+        .from("operators")
+        .select("id")
+        .eq("code", data.operator_code)
+        .eq("active", true)
+        .maybeSingle();
+      operatorId = op?.id ?? null;
+    }
+    const { data: left, error } = await (context.supabase as any).rpc("consume_fabric", {
+      p_ref_tec: data.ref_tec,
+      p_meters: data.meters,
+      p_order_id: data.order_id,
+      p_operator: operatorId,
     });
     if (error) return { ok: false as const, message: error.message };
-    const r = (res ?? {}) as { ok?: boolean; message?: string };
-    if (!r.ok) return { ok: false as const, message: r.message ?? "Não foi possível consumir o tecido." };
-    return { ok: true as const, result: res };
+    return { ok: true as const, remaining: Number(left) };
   });
 
 export const undoFabricConsumption = createServerFn({ method: "POST" })
