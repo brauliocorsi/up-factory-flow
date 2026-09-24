@@ -11,6 +11,7 @@ import { ShiftClock } from "@/components/panel/ShiftClock";
 import { PerformanceGauge } from "@/components/panel/PerformanceGauge";
 import { ShiftBlocksChart } from "@/components/panel/ShiftBlocksChart";
 import { LiveOperatorsPanel } from "@/components/panel/LiveOperatorsPanel";
+import { IdlePausePanel } from "@/components/panel/IdlePausePanel";
 import { TONE_CLASSES, elapsedUsefulMinutes, toneFor } from "@/lib/shift";
 
 const STORAGE_KEY = "factory-panel-code";
@@ -174,6 +175,7 @@ function PanelView({ data, now }: { data: PanelData; now: Date }) {
             />
           </div>
           <ShiftBlocksChart blocks={data.blocks} operators={data.active_operators} now={now} />
+          <IdlePausePanel rows={data.idle_today ?? []} />
         </div>
         <div className="xl:h-[calc(100vh-7rem)] xl:sticky xl:top-6">
           <LiveOperatorsPanel operators={data.operators} now={now} />
