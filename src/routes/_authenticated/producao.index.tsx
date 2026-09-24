@@ -109,7 +109,7 @@ function ProducaoPage() {
         // Estrutura e Corte operam sempre pelo cartão da encomenda. Os lotes
         // destas etapas são uma alternativa explícita através de "Agrupar",
         // nunca um motivo para esconder ou substituir o cartão individual.
-        if (s === "estrutura" || s === "corte") {
+        if (s === "corte") {
           out[s].push(it);
           continue;
         }
@@ -390,7 +390,7 @@ function ProducaoPage() {
     }
     // Estrutura/Corte são iniciadas pelo cartão normal. O facto de a
     // encomenda ter vários colis só interessa ao modo "Agrupar".
-    if (it.stage !== "estrutura" && it.stage !== "corte" && (it.coli_count ?? 0) > 1) {
+    if (it.stage !== "corte" && (it.coli_count ?? 0) > 1) {
       const activeColis = colisByStageMap[it.stage]?.byOrder?.[it.order_id] ?? [];
       return activeColis.some((c) => c.status !== "em_curso");
     }
@@ -704,7 +704,7 @@ function ProducaoPage() {
               operatorCode={operatorCode.trim()}
               expectedMinutes={expectedMap?.[it.order_id]?.[it.stage] ?? null}
               colis={colisByStage?.byOrder?.[it.order_id] ?? []}
-              isMultiColiOrder={activeStage !== "estrutura" && activeStage !== "corte" && (colisByStage?.multiColiOrderIds ?? []).includes(it.order_id)}
+              isMultiColiOrder={activeStage !== "corte" && (colisByStage?.multiColiOrderIds ?? []).includes(it.order_id)}
               coliTotal={colisByStage?.coliCountByOrder?.[it.order_id] ?? 0}
               onColiAction={(coli_stage_id, event) => {
                 if (busyIds[coli_stage_id]) return;
