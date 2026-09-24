@@ -200,6 +200,57 @@ export type Database = {
         }
         Relationships: []
       }
+      fabric_catalog: {
+        Row: {
+          active: boolean
+          collection: string
+          color: string | null
+          color_code: string | null
+          created_at: string
+          fabric_type: string
+          location: string | null
+          meters: number
+          min_meters: number
+          name: string
+          needs_review: string | null
+          price_class: string | null
+          ref_tec: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          collection: string
+          color?: string | null
+          color_code?: string | null
+          created_at?: string
+          fabric_type: string
+          location?: string | null
+          meters?: number
+          min_meters?: number
+          name: string
+          needs_review?: string | null
+          price_class?: string | null
+          ref_tec: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          collection?: string
+          color?: string | null
+          color_code?: string | null
+          created_at?: string
+          fabric_type?: string
+          location?: string | null
+          meters?: number
+          min_meters?: number
+          name?: string
+          needs_review?: string | null
+          price_class?: string | null
+          ref_tec?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       fabric_consumptions: {
         Row: {
           color_code: string | null
@@ -209,6 +260,7 @@ export type Database = {
           meters: number
           operator_id: string | null
           order_id: string
+          ref_tec: string | null
           reverted_at: string | null
           reverted_by: string | null
           roll_id: string | null
@@ -221,6 +273,7 @@ export type Database = {
           meters: number
           operator_id?: string | null
           order_id: string
+          ref_tec?: string | null
           reverted_at?: string | null
           reverted_by?: string | null
           roll_id?: string | null
@@ -233,6 +286,7 @@ export type Database = {
           meters?: number
           operator_id?: string | null
           order_id?: string
+          ref_tec?: string | null
           reverted_at?: string | null
           reverted_by?: string | null
           roll_id?: string | null
@@ -251,6 +305,20 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "production_orders"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fabric_consumptions_ref_tec_fkey"
+            columns: ["ref_tec"]
+            isOneToOne: false
+            referencedRelation: "fabric_availability"
+            referencedColumns: ["ref_tec"]
+          },
+          {
+            foreignKeyName: "fabric_consumptions_ref_tec_fkey"
+            columns: ["ref_tec"]
+            isOneToOne: false
+            referencedRelation: "fabric_catalog"
+            referencedColumns: ["ref_tec"]
           },
           {
             foreignKeyName: "fabric_consumptions_roll_id_fkey"
@@ -272,6 +340,7 @@ export type Database = {
           meters: number
           min_meters: number
           name: string
+          ref_tec: string | null
           updated_at: string
         }
         Insert: {
@@ -284,6 +353,7 @@ export type Database = {
           meters?: number
           min_meters?: number
           name: string
+          ref_tec?: string | null
           updated_at?: string
         }
         Update: {
@@ -296,9 +366,25 @@ export type Database = {
           meters?: number
           min_meters?: number
           name?: string
+          ref_tec?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fabric_rolls_ref_tec_fkey"
+            columns: ["ref_tec"]
+            isOneToOne: false
+            referencedRelation: "fabric_availability"
+            referencedColumns: ["ref_tec"]
+          },
+          {
+            foreignKeyName: "fabric_rolls_ref_tec_fkey"
+            columns: ["ref_tec"]
+            isOneToOne: false
+            referencedRelation: "fabric_catalog"
+            referencedColumns: ["ref_tec"]
+          },
+        ]
       }
       fabrics: {
         Row: {
@@ -999,6 +1085,7 @@ export type Database = {
           due_date: string | null
           entry_date: string | null
           fabric_ref: string | null
+          fabric_ref_tec: string | null
           fabric_type: string | null
           finishing: string | null
           id: string
@@ -1035,6 +1122,7 @@ export type Database = {
           due_date?: string | null
           entry_date?: string | null
           fabric_ref?: string | null
+          fabric_ref_tec?: string | null
           fabric_type?: string | null
           finishing?: string | null
           id?: string
@@ -1073,6 +1161,7 @@ export type Database = {
           due_date?: string | null
           entry_date?: string | null
           fabric_ref?: string | null
+          fabric_ref_tec?: string | null
           fabric_type?: string | null
           finishing?: string | null
           id?: string
@@ -1102,6 +1191,20 @@ export type Database = {
           structure_type?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "production_orders_fabric_ref_tec_fkey"
+            columns: ["fabric_ref_tec"]
+            isOneToOne: false
+            referencedRelation: "fabric_availability"
+            referencedColumns: ["ref_tec"]
+          },
+          {
+            foreignKeyName: "production_orders_fabric_ref_tec_fkey"
+            columns: ["fabric_ref_tec"]
+            isOneToOne: false
+            referencedRelation: "fabric_catalog"
+            referencedColumns: ["ref_tec"]
+          },
           {
             foreignKeyName: "production_orders_model_id_fkey"
             columns: ["model_id"]
@@ -2262,7 +2365,48 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      fabric_availability: {
+        Row: {
+          collection: string | null
+          color: string | null
+          fabric_type: string | null
+          location: string | null
+          meters: number | null
+          min_meters: number | null
+          name: string | null
+          needs_review: string | null
+          price_class: string | null
+          ref_tec: string | null
+          status: string | null
+        }
+        Insert: {
+          collection?: string | null
+          color?: string | null
+          fabric_type?: string | null
+          location?: string | null
+          meters?: number | null
+          min_meters?: number | null
+          name?: string | null
+          needs_review?: string | null
+          price_class?: string | null
+          ref_tec?: string | null
+          status?: never
+        }
+        Update: {
+          collection?: string | null
+          color?: string | null
+          fabric_type?: string | null
+          location?: string | null
+          meters?: number | null
+          min_meters?: number | null
+          name?: string | null
+          needs_review?: string | null
+          price_class?: string | null
+          ref_tec?: string | null
+          status?: never
+        }
+        Relationships: []
+      }
     }
     Functions: {
       activate_orders: { Args: { _order_ids: string[] }; Returns: Json }
@@ -2342,6 +2486,15 @@ export type Database = {
       complete_stock_production_internal: {
         Args: { _order_id: string }
         Returns: Json
+      }
+      consume_fabric: {
+        Args: {
+          p_meters: number
+          p_operator?: string
+          p_order_id: string
+          p_ref_tec: string
+        }
+        Returns: number
       }
       consume_fabric_for_order: {
         Args: {
@@ -2535,6 +2688,15 @@ export type Database = {
       }
       prev_business_day: { Args: { _d: string }; Returns: string }
       preview_cancel_order: { Args: { _order_id: string }; Returns: Json }
+      receive_fabric: {
+        Args: {
+          p_meters: number
+          p_reason?: string
+          p_ref_tec: string
+          p_user?: string
+        }
+        Returns: number
+      }
       record_coli_stage_event: {
         Args: {
           _event: string
