@@ -96,10 +96,15 @@ export function StageQueuePanel({
                   <Badge className={`text-[9px] px-1.5 py-0 ${STATUS_STYLE[it.status]}`} variant="outline">
                     {STATUS_LABEL[it.status]}
                   </Badge>
-                  <span className="text-[10px] text-muted-foreground">→ {formatDatePT(it.target_date)}</span>
+                  <span className="text-[10px] text-muted-foreground" title="Data-alvo da etapa">→ {formatDatePT(it.target_date)}</span>
                 </div>
-                <div className="mt-1 text-[10px] text-muted-foreground truncate">
-                  {it.product_description}
+                <div className="mt-1 flex items-center justify-between gap-1">
+                  <span className="text-[10px] text-muted-foreground truncate flex-1">
+                    {it.product_description}
+                  </span>
+                  <span className="text-[10px] font-semibold text-foreground/70 shrink-0" title="Data de saída">
+                    Saída {formatDatePT(it.due_date)}
+                  </span>
                 </div>
               </button>
             ))}
