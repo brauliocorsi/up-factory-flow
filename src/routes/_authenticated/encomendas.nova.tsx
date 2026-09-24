@@ -88,6 +88,7 @@ function autoOrderNumber() {
 function NovaEncomendaPage() {
   const navigate = useNavigate();
   const { data: cat } = useQuery({ queryKey: ["catalogs"], queryFn: () => getCatalogs() });
+  const { data: fabrics = [] } = useQuery({ queryKey: ["fabric-availability"], queryFn: () => listFabricAvailability() });
   const today = new Date().toISOString().slice(0, 10);
   const scanRef = useRef<HTMLInputElement>(null);
   const [scanValue, setScanValue] = useState("");
