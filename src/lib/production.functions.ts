@@ -460,3 +460,17 @@ export const getStageDetail = createServerFn({ method: "GET" })
       .order("event_at", { ascending: true });
     return { stage, logs: logs ?? [] };
   });
+/** Cancela um início feito por engano ao nível da etapa da encomenda. */
+export const cancelOrderStageStart = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ order_stage_id: z.string().uuid(), operator_code: z.string().trim().max(32) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await (context.supabase as any).rpc("cancel_order_stage_start", {
+      _order_stage_id: data.order_stage_id,
+      _operator_code: data.operator_code,
+    });
+    if (error) return { ok: false as const, message: error.message as string };
+    return { ok: true as const };
+  });
