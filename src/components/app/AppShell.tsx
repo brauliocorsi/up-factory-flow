@@ -64,6 +64,7 @@ const groups: NavGroup[] = [
     items: [
       { to: "/admin/catalogo", label: "Catálogo", icon: Library },
       { to: "/admin/relatorios", label: "Relatórios", icon: BarChart3 },
+      { to: "/admin/ocioso", label: "Ocioso e pausas", icon: Clock },
       { to: "/admin/rotas-colis", label: "Rotas Colis", icon: Truck },
       { to: "/admin/qualidade", label: "Qualidade", icon: ClipboardCheck },
       { to: "/admin/sla", label: "SLA", icon: Clock },

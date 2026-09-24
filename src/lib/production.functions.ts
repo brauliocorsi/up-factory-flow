@@ -53,11 +53,40 @@ export type ProductionStageOrder = {
   current_segment_started_at?: string | null;
   /** Estado de todas as etapas da encomenda (rota completa). */
   stage_states?: Array<{ stage: Stage; status: string }>;
+  /** Data de saída da encomenda (YYYY-MM-DD). */
+  due_date?: string | null;
+  priority?: number | null;
+  /** Data até à qual esta etapa deve estar feita (saída − folga da etapa). */
+  target_date?: string | null;
 };
 
 export type ProductionData = {
   byStage: Record<Stage, ProductionStageOrder[]>;
 };
+
+function isoDate(d: Date) {
+  return d.toISOString().slice(0, 10);
+}
+function isWeekend(d: Date) {
+  const w = d.getUTCDay();
+  return w === 0 || w === 6;
+}
+/** Dia útil igual ou anterior à data (igual a prev_business_day na BD). */
+function prevBusinessDay(iso: string): string {
+  const d = new Date(iso + "T00:00:00Z");
+  while (isWeekend(d)) d.setUTCDate(d.getUTCDate() - 1);
+  return isoDate(d);
+}
+function addBusinessDays(iso: string, n: number): string {
+  const d = new Date(iso + "T00:00:00Z");
+  const step = n < 0 ? -1 : 1;
+  let left = Math.abs(n);
+  while (left > 0) {
+    d.setUTCDate(d.getUTCDate() + step);
+    if (!isWeekend(d)) left--;
+  }
+  return isoDate(d);
+}
 
 /**
  * Lê todas as páginas de uma consulta. Sem isto, o PostgREST devolve no
@@ -83,7 +112,7 @@ export const getProductionData = createServerFn({ method: "GET" })
     const data = await fetchAllPages((from, to) =>
       (supabase as any)
         .from("order_stages")
-        .select("id, stage, status, started_at, finished_at, productive_seconds, paused_seconds, is_paused, is_rework, rework_seconds, rework_count, production_orders!inner(id, order_number, product_description, observation, status), operators(code)")
+        .select("id, stage, status, started_at, finished_at, productive_seconds, paused_seconds, is_paused, is_rework, rework_seconds, rework_count, production_orders!inner(id, order_number, product_description, observation, status, due_date, priority), operators(code)")
         .neq("production_orders.status", "cancelada")
         .order("started_at", { ascending: true, nullsFirst: false })
         .order("id", { ascending: true })
@@ -158,6 +187,13 @@ export const getProductionData = createServerFn({ method: "GET" })
       }
     }
 
+    // Folga por etapa (dias úteis antes da data de saída)
+    const { data: offsets } = await (supabase as any)
+      .from("stage_lead_offsets")
+      .select("stage, days_before_estofo");
+    const offsetByStage = new Map<string, number>();
+    for (const o of (offsets ?? []) as any[]) offsetByStage.set(o.stage, o.days_before_estofo ?? 0);
+
     for (const row of (data ?? []) as any[]) {
       const o = row.production_orders;
       const coliCount = coliCountByOrder.get(o.id) ?? 0;
@@ -188,6 +224,11 @@ export const getProductionData = createServerFn({ method: "GET" })
         rework_count: row.rework_count ?? 0,
         current_segment_started_at: segmentStartByStageId.get(row.id) ?? null,
         stage_states: stageStatesByOrder.get(o.id) ?? [],
+        due_date: o.due_date ?? null,
+        priority: o.priority ?? null,
+        target_date: o.due_date
+          ? addBusinessDays(prevBusinessDay(o.due_date), -(offsetByStage.get(row.stage) ?? 0))
+          : null,
       });
     }
     return { byStage };
@@ -197,6 +238,8 @@ const eventSchema = z.object({
   order_stage_id: z.string().uuid(),
   operator_code: z.string().trim().min(1).max(32),
   event: z.enum(["iniciar","pausar","retomar","finalizar"]),
+  pause_reason_id: z.string().uuid().optional(),
+  pause_notes: z.string().max(300).optional(),
 });
 
 export const recordStageEvent = createServerFn({ method: "POST" })
@@ -211,6 +254,13 @@ export const recordStageEvent = createServerFn({ method: "POST" })
     // Erros de regra de negócio (ex.: "Etapa já concluída") não devem
     // rebentar como exceção — devolvemos um resultado tratável na UI.
     if (error) return { ok: false as const, message: error.message as string };
+    if (data.event === "pausar" && data.pause_reason_id) {
+      await (context.supabase as any).rpc("set_open_pause_reason", {
+        _operator_code: data.operator_code,
+        _reason_id: data.pause_reason_id,
+        _notes: data.pause_notes ?? null,
+      });
+    }
     return { ok: true as const, result: res };
   });
 
@@ -409,4 +459,18 @@ export const getStageDetail = createServerFn({ method: "GET" })
       .eq("order_stage_id", data.order_stage_id)
       .order("event_at", { ascending: true });
     return { stage, logs: logs ?? [] };
+  });
+/** Cancela um início feito por engano ao nível da etapa da encomenda. */
+export const cancelOrderStageStart = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ order_stage_id: z.string().uuid(), operator_code: z.string().trim().max(32) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await (context.supabase as any).rpc("cancel_order_stage_start", {
+      _order_stage_id: data.order_stage_id,
+      _operator_code: data.operator_code,
+    });
+    if (error) return { ok: false as const, message: error.message as string };
+    return { ok: true as const };
   });

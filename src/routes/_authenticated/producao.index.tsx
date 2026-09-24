@@ -34,6 +34,10 @@ import { StageQueuePanel } from "@/components/planning/StageQueuePanel";
 import { UrgentBar } from "@/components/production/UrgentBar";
 import { ConsumeFabricDialog } from "@/components/app/ConsumeFabricDialog";
 import { listFabricConsumptions } from "@/lib/stock.functions";
+import { PauseReasonDialog } from "@/components/production/PauseReasonDialog";
+import { cancelColiStageStart } from "@/lib/colis.functions";
+import { cancelOrderStageStart } from "@/lib/production.functions";
+import { Undo2, CalendarClock } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/producao/")({
   validateSearch: (search: Record<string, unknown>): { q?: string; stage?: string } => {
@@ -195,7 +199,7 @@ function ProducaoPage() {
   };
 
   const coliMutation = useMutation({
-    mutationFn: (vars: { order_coli_stage_id: string; event: "iniciar"|"pausar"|"retomar"|"finalizar" }) => {
+    mutationFn: (vars: { order_coli_stage_id: string; event: "iniciar"|"pausar"|"retomar"|"finalizar"; pause_reason_id?: string; pause_notes?: string }) => {
       const code = operatorCodeRef.current.trim();
       if (!code) throw new Error("Indica o teu código primeiro");
       return recordColiFn({ data: { ...vars, operator_code: code } });
@@ -304,7 +308,7 @@ function ProducaoPage() {
   const isStaff = role === "admin" || role === "escritorio";
 
   const mutation = useMutation({
-    mutationFn: (vars: { order_stage_id: string; event: "iniciar"|"pausar"|"retomar"|"finalizar" }) => {
+    mutationFn: (vars: { order_stage_id: string; event: "iniciar"|"pausar"|"retomar"|"finalizar"; pause_reason_id?: string; pause_notes?: string }) => {
       const code = operatorCode.trim();
       if (!code) throw new Error("Indica o teu código primeiro");
       return recordFn({ data: { ...vars, operator_code: code } });
@@ -338,6 +342,32 @@ function ProducaoPage() {
     },
     onSettled: (_d, _e, vars) => clearBusy(vars.order_stage_id),
   });
+
+  const [pauseTarget, setPauseTarget] = useState<{ kind: "stage" | "coli"; id: string; label: string } | null>(null);
+  const cancelColiFn = useServerFn(cancelColiStageStart);
+  const cancelStageFn = useServerFn(cancelOrderStageStart);
+  const cancelMutation = useMutation({
+    mutationFn: async (vars: { kind: "stage" | "coli"; id: string }) => {
+      const code = operatorCode.trim();
+      return vars.kind === "coli"
+        ? cancelColiFn({ data: { order_coli_stage_id: vars.id, operator_code: code } })
+        : cancelStageFn({ data: { order_stage_id: vars.id, operator_code: code } });
+    },
+    onMutate: (vars) => markBusy(vars.id),
+    onSuccess: (res: any) => {
+      if (res && res.ok === false) toast.error(res.message ?? "Não foi possível cancelar");
+      else toast.success("Início cancelado — a encomenda voltou a pendente");
+      qc.invalidateQueries({ queryKey: ["production"] });
+      VISIBLE_STAGES.forEach((stage) => qc.invalidateQueries({ queryKey: ["production-colis", stage] }));
+    },
+    onError: (e: any) => toast.error(e?.message ?? "Erro ao cancelar"),
+    onSettled: (_d, _e, vars) => clearBusy(vars.id),
+  });
+  const askCancel = (kind: "stage" | "coli", id: string, label: string) => {
+    if (busyIds[id]) return;
+    if (!window.confirm(`Iniciaste ${label} por engano?\nA etapa volta a pendente e o tempo não conta.`)) return;
+    cancelMutation.mutate({ kind, id });
+  };
 
   const codeInputRef = useRef<HTMLInputElement>(null);
   function saveCode() {
@@ -391,7 +421,11 @@ function ProducaoPage() {
         if (onlyReady && it.status !== "em_curso" && !isReadyToStart(it)) return false;
         return true;
       })
-      .sort((a, b) => rank(a) - rank(b));
+      .sort((a, b) =>
+        rank(a) - rank(b)
+        || (a.target_date ?? "9999-12-31").localeCompare(b.target_date ?? "9999-12-31")
+        || (a.priority ?? 9) - (b.priority ?? 9)
+        || (a.due_date ?? "9999-12-31").localeCompare(b.due_date ?? "9999-12-31"));
   }, [allItems, searchQuery, onlyMine, showRunning, showDone, showPending, onlyReady, currentOp]);
   const hiddenCount = allItems.length - items.length;
 
@@ -634,6 +668,18 @@ function ProducaoPage() {
               </Button>
             </div>
           )}
+          <PauseReasonDialog
+            open={!!pauseTarget}
+            title={pauseTarget ? `Encomenda ${pauseTarget.label}` : undefined}
+            onCancel={() => setPauseTarget(null)}
+            onConfirm={(reasonId, notes) => {
+              const t = pauseTarget;
+              setPauseTarget(null);
+              if (!t) return;
+              if (t.kind === "coli") coliMutation.mutate({ order_coli_stage_id: t.id, event: "pausar", pause_reason_id: reasonId, pause_notes: notes });
+              else mutation.mutate({ order_stage_id: t.id, event: "pausar", pause_reason_id: reasonId, pause_notes: notes });
+            }}
+          />
           {(activeStage === "corte" || activeStage === "estrutura") && groupMode ? (
             <StageGroupView
               stage={activeStage}
@@ -651,6 +697,7 @@ function ProducaoPage() {
               canAct={canActOnStage(activeStage) && !!currentOp}
               onAction={(event) => {
                 if (busyIds[it.id]) return;
+                if (event === "pausar") { setPauseTarget({ kind: "stage", id: it.id, label: it.order_number }); return; }
                 mutation.mutate({ order_stage_id: it.id, event });
               }}
               pending={Boolean(busyIds[it.id])}
@@ -661,12 +708,16 @@ function ProducaoPage() {
               coliTotal={colisByStage?.coliCountByOrder?.[it.order_id] ?? 0}
               onColiAction={(coli_stage_id, event) => {
                 if (busyIds[coli_stage_id]) return;
+                if (event === "pausar") { setPauseTarget({ kind: "coli", id: coli_stage_id, label: it.order_number }); return; }
                 coliMutation.mutate({ order_coli_stage_id: coli_stage_id, event });
               }}
               coliPending={(id: string) => Boolean(busyIds[id])}
               fabricConsumption={consumptionByOrder[it.order_id] ?? null}
               canUndoFabric={isStaff}
               canQuality={canActOnStage("qualidade")}
+              isStaff={isStaff}
+              onCancelStart={() => askCancel("stage", it.id, it.order_number)}
+              onCancelColi={(id) => askCancel("coli", id, it.order_number)}
             />
           ))}
         </div>
@@ -679,8 +730,11 @@ function ProducaoPage() {
 }
 
 
-function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinutes, colis, isMultiColiOrder, coliTotal = 0, onColiAction, coliPending, fabricConsumption, canUndoFabric, canQuality = false }: {
+function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinutes, colis, isMultiColiOrder, coliTotal = 0, onColiAction, coliPending, fabricConsumption, canUndoFabric, canQuality = false, isStaff = false, onCancelStart, onCancelColi }: {
   item: ProductionStageOrder;
+  isStaff?: boolean;
+  onCancelStart?: () => void;
+  onCancelColi?: (id: string) => void;
   canAct: boolean;
   onAction: (event: "iniciar"|"pausar"|"retomar"|"finalizar") => void;
   pending: boolean;
@@ -755,6 +809,14 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
   const slaWarn = !slaExceeded && slaRatio >= 0.8;
 
   const blocked = item.status === "bloqueada";
+  const startedMs = item.started_at ? new Date(item.started_at).getTime() : 0;
+  const canCancelStart = item.status === "em_curso" && (
+    isStaff || (
+      !!operatorCode && item.operator_code === operatorCode &&
+      !item.is_paused && item.paused_seconds === 0 &&
+      Date.now() - startedMs < 10 * 60 * 1000
+    )
+  );
   // Etapas anteriores em falta (Estrutura→Branco, Corte→Costura, …)
   const missingPrereqs = pendingPrereqs(item.stage, item.stage_states);
   const prereqBlocked = missingPrereqs.length > 0 && item.status !== "em_curso" && item.status !== "concluida";
@@ -829,6 +891,7 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
             )}
           </div>
           <div className="text-sm font-medium mt-1">{item.product_description}</div>
+          <DeadlineRow target={item.target_date ?? null} due={item.due_date ?? null} done={item.status === "concluida"} />
           {(item.stage_states?.length ?? 0) > 0 && (
             <div className="flex flex-wrap items-center gap-1 mt-2">
               {item.stage_states!.map((st) => {
@@ -929,6 +992,11 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
                 <RotateCcw className="size-4" /> Retomar
               </Button>
             )}
+            {!isQuality && !operateByColis && canCancelStart && onCancelStart && (
+              <Button size="lg" variant="ghost" disabled={pending} onClick={onCancelStart} className="gap-2 h-12 text-destructive hover:text-destructive">
+                <Undo2 className="size-4" /> Cancelar início
+              </Button>
+            )}
             {!isQuality && !operateByColis && item.status === "em_curso" && (
               <Button
                 size="lg"
@@ -1017,6 +1085,8 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
               operatorCode={operatorCode}
               pending={coliPending(c.id)}
               onAction={(ev) => onColiAction(c.id, ev)}
+              isStaff={isStaff}
+              onCancel={onCancelColi ? () => onCancelColi(c.id) : undefined}
             />
           ))}
         </div>
@@ -1025,8 +1095,10 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
   );
 }
 
-function ColiRow({ coli, coliTotal, canAct, operatorCode, pending, onAction, showLabel = false }: {
+function ColiRow({ coli, coliTotal, canAct, operatorCode, pending, onAction, showLabel = false, isStaff = false, onCancel }: {
   coli: ColiStageItem;
+  isStaff?: boolean;
+  onCancel?: () => void;
   coliTotal?: number;
   showLabel?: boolean;
   canAct: boolean;
@@ -1038,6 +1110,12 @@ function ColiRow({ coli, coliTotal, canAct, operatorCode, pending, onAction, sho
   const paused = coli.is_paused;
   const ownedByOther = Boolean(
     coli.status === "em_curso" && coli.operator_code && operatorCode && coli.operator_code !== operatorCode
+  );
+  const canCancel = coli.status === "em_curso" && (
+    isStaff || (
+      !!operatorCode && coli.operator_code === operatorCode && !coli.is_paused && coli.paused_seconds === 0 &&
+      !!coli.started_at && Date.now() - new Date(coli.started_at).getTime() < 10 * 60 * 1000
+    )
   );
   const segStart = coli.last_resume_at ? new Date(coli.last_resume_at).getTime() : null;
   const live = running && segStart
@@ -1101,6 +1179,11 @@ function ColiRow({ coli, coliTotal, canAct, operatorCode, pending, onAction, sho
               <Button size="sm" disabled={pending || ownedByOther} onClick={() => onAction("finalizar")}
                 className="h-8 gap-1 bg-emerald-600 hover:bg-emerald-700">
                 <Check className="size-3" /> Finalizar
+              </Button>
+            )}
+            {canCancel && onCancel && (
+              <Button size="sm" variant="ghost" disabled={pending} onClick={onCancel} className="h-8 gap-1 text-destructive hover:text-destructive" title="Cancelar início (engano)">
+                <Undo2 className="size-3" /> Cancelar
               </Button>
             )}
             {ownedByOther && (
@@ -1201,6 +1284,39 @@ function LastQualityCheckSummary({ orderId }: { orderId: string }) {
       {last.notes && (
         <div className="mt-1 italic text-muted-foreground">{last.notes}</div>
       )}
+    </div>
+  );
+}
+function fmtDM(iso: string) {
+  const [, m, d] = iso.split("-");
+  return `${d}/${m}`;
+}
+
+/** Data de produção da etapa (saída − folga) + saída, com estado do prazo. */
+function DeadlineRow({ target, due, done }: { target: string | null; due: string | null; done: boolean }) {
+  if (!due) {
+    return (
+      <div className="mt-1 text-[11px] text-muted-foreground inline-flex items-center gap-1">
+        <CalendarClock className="size-3" /> Sem data de saída
+      </div>
+    );
+  }
+  const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Lisbon" });
+  const t = target ?? due;
+  const state = done ? "ok" : t < today ? "late" : t === today ? "today" : "ok";
+  const cls = state === "late"
+    ? "bg-destructive text-destructive-foreground"
+    : state === "today"
+    ? "bg-amber-500 text-white"
+    : "bg-emerald-600 text-white";
+  const label = state === "late" ? "Atrasado" : state === "today" ? "Hoje" : "No prazo";
+  return (
+    <div className="mt-1.5 flex items-center gap-2 flex-wrap text-xs">
+      <span className="inline-flex items-center gap-1 font-semibold">
+        <CalendarClock className="size-3" /> Produzir até {fmtDM(t)}
+      </span>
+      <span className="text-muted-foreground">Saída {fmtDM(due)}</span>
+      <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase ${cls}`}>{label}</span>
     </div>
   );
 }

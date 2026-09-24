@@ -17,6 +17,7 @@ import {
 import { listFabricConsumptions } from "@/lib/stock.functions";
 import { ConsumeFabricDialog } from "@/components/app/ConsumeFabricDialog";
 import { useAuth } from "@/hooks/useAuth";
+import { PauseReasonDialog } from "@/components/production/PauseReasonDialog";
 
 type FabricConsumption = {
   order_id: string;
@@ -95,15 +96,16 @@ export function StageGroupView({ stage, canAct, operatorCode }: Props) {
     onError: (e: any) => toast.error(e?.message ?? "Erro ao concluir grupo"),
   });
 
+  const [pauseIds, setPauseIds] = useState<string[] | null>(null);
   // Iniciar/Pausar/Retomar em grupo: aplica o ciclo normal de cada peça.
   const eventMut = useMutation({
-    mutationFn: async (vars: { ids: string[]; event: "iniciar" | "pausar" | "retomar" }) => {
+    mutationFn: async (vars: { ids: string[]; event: "iniciar" | "pausar" | "retomar"; reasonId?: string; notes?: string }) => {
       const code = operatorCode.trim();
       if (!code) throw new Error("Indica o teu código primeiro");
       let ok = 0;
       const problems: string[] = [];
       for (const id of vars.ids) {
-        const res = await eventFn({ data: { order_stage_id: id, operator_code: code, event: vars.event } });
+        const res = await eventFn({ data: { order_stage_id: id, operator_code: code, event: vars.event, pause_reason_id: vars.reasonId, pause_notes: vars.notes } });
         if ((res as any)?.ok === false) problems.push((res as any).message as string);
         else ok += 1;
       }
@@ -144,6 +146,16 @@ export function StageGroupView({ stage, canAct, operatorCode }: Props) {
 
   return (
     <div className="space-y-3">
+      <PauseReasonDialog
+        open={!!pauseIds}
+        title={pauseIds ? `Pausar ${pauseIds.length} peça(s) do grupo` : undefined}
+        onCancel={() => setPauseIds(null)}
+        onConfirm={(reasonId, notes) => {
+          const ids = pauseIds;
+          setPauseIds(null);
+          if (ids) eventMut.mutate({ ids, event: "pausar", reasonId, notes });
+        }}
+      />
       {groups.map((g) => (
         <GroupCard
           key={g.key}
@@ -153,7 +165,7 @@ export function StageGroupView({ stage, canAct, operatorCode }: Props) {
           consumptionByOrder={consumptionByOrder}
           pending={finalizeMut.isPending || eventMut.isPending}
           onFinalize={(ids) => finalizeMut.mutate({ order_stage_ids: ids })}
-          onEvent={(ids, event) => eventMut.mutate({ ids, event })}
+          onEvent={(ids, event) => (event === "pausar" ? setPauseIds(ids) : eventMut.mutate({ ids, event }))}
         />
       ))}
     </div>

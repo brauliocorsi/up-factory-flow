@@ -16,6 +16,28 @@ export type PanelOperator = {
   last_resume_at: string | null;
   productive_seconds: number;
   order_count?: number;
+  orders?: Array<{
+    id: string;
+    order_number: string;
+    stage: string;
+    coli_number: number | null;
+    coli_total: number | null;
+    is_paused: boolean;
+    pause_reason: string | null;
+    last_resume_at: string | null;
+    productive_seconds: number;
+  }>;
+};
+
+export type PanelIdle = {
+  operator_id: string;
+  operator_name: string;
+  operator_code: string;
+  productive_min: number;
+  pause_min: number;
+  idle_min: number;
+  shift_min: number;
+  current_pause_reason: string | null;
 };
 
 export type PanelData = {
@@ -29,6 +51,7 @@ export type PanelData = {
   sla_actual_minutes: number;
   blocks: Array<{ block: number; minutes: number }>;
   operators: PanelOperator[];
+  idle_today?: PanelIdle[];
 };
 
 export type PanelResult =

@@ -40,6 +40,7 @@ import { Route as AuthenticatedAdminSlaRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedAdminRotasColisRouteImport } from './routes/_authenticated/admin.rotas-colis'
 import { Route as AuthenticatedAdminRelatoriosRouteImport } from './routes/_authenticated/admin.relatorios'
 import { Route as AuthenticatedAdminQualidadeRouteImport } from './routes/_authenticated/admin.qualidade'
+import { Route as AuthenticatedAdminOciosoRouteImport } from './routes/_authenticated/admin.ocioso'
 import { Route as AuthenticatedAdminColisRouteImport } from './routes/_authenticated/admin.colis'
 import { Route as AuthenticatedAdminCatalogoRouteImport } from './routes/_authenticated/admin.catalogo'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
@@ -223,6 +224,12 @@ const AuthenticatedAdminQualidadeRoute =
     path: '/admin/qualidade',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAdminOciosoRoute =
+  AuthenticatedAdminOciosoRouteImport.update({
+    id: '/admin/ocioso',
+    path: '/admin/ocioso',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAdminColisRoute = AuthenticatedAdminColisRouteImport.update({
   id: '/admin/colis',
   path: '/admin/colis',
@@ -285,6 +292,7 @@ export interface FileRoutesByFullPath {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/admin/catalogo': typeof AuthenticatedAdminCatalogoRoute
   '/admin/colis': typeof AuthenticatedAdminColisRoute
+  '/admin/ocioso': typeof AuthenticatedAdminOciosoRoute
   '/admin/qualidade': typeof AuthenticatedAdminQualidadeRoute
   '/admin/relatorios': typeof AuthenticatedAdminRelatoriosRoute
   '/admin/rotas-colis': typeof AuthenticatedAdminRotasColisRoute
@@ -325,6 +333,7 @@ export interface FileRoutesByTo {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/admin/catalogo': typeof AuthenticatedAdminCatalogoRoute
   '/admin/colis': typeof AuthenticatedAdminColisRoute
+  '/admin/ocioso': typeof AuthenticatedAdminOciosoRoute
   '/admin/qualidade': typeof AuthenticatedAdminQualidadeRoute
   '/admin/relatorios': typeof AuthenticatedAdminRelatoriosRoute
   '/admin/rotas-colis': typeof AuthenticatedAdminRotasColisRoute
@@ -367,6 +376,7 @@ export interface FileRoutesById {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/admin/catalogo': typeof AuthenticatedAdminCatalogoRoute
   '/_authenticated/admin/colis': typeof AuthenticatedAdminColisRoute
+  '/_authenticated/admin/ocioso': typeof AuthenticatedAdminOciosoRoute
   '/_authenticated/admin/qualidade': typeof AuthenticatedAdminQualidadeRoute
   '/_authenticated/admin/relatorios': typeof AuthenticatedAdminRelatoriosRoute
   '/_authenticated/admin/rotas-colis': typeof AuthenticatedAdminRotasColisRoute
@@ -409,6 +419,7 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/admin/catalogo'
     | '/admin/colis'
+    | '/admin/ocioso'
     | '/admin/qualidade'
     | '/admin/relatorios'
     | '/admin/rotas-colis'
@@ -449,6 +460,7 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/admin/catalogo'
     | '/admin/colis'
+    | '/admin/ocioso'
     | '/admin/qualidade'
     | '/admin/relatorios'
     | '/admin/rotas-colis'
@@ -490,6 +502,7 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/_authenticated/admin/catalogo'
     | '/_authenticated/admin/colis'
+    | '/_authenticated/admin/ocioso'
     | '/_authenticated/admin/qualidade'
     | '/_authenticated/admin/relatorios'
     | '/_authenticated/admin/rotas-colis'
@@ -746,6 +759,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminQualidadeRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin/ocioso': {
+      id: '/_authenticated/admin/ocioso'
+      path: '/admin/ocioso'
+      fullPath: '/admin/ocioso'
+      preLoaderRoute: typeof AuthenticatedAdminOciosoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin/colis': {
       id: '/_authenticated/admin/colis'
       path: '/admin/colis'
@@ -826,6 +846,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedAdminCatalogoRoute: typeof AuthenticatedAdminCatalogoRoute
   AuthenticatedAdminColisRoute: typeof AuthenticatedAdminColisRoute
+  AuthenticatedAdminOciosoRoute: typeof AuthenticatedAdminOciosoRoute
   AuthenticatedAdminQualidadeRoute: typeof AuthenticatedAdminQualidadeRoute
   AuthenticatedAdminRelatoriosRoute: typeof AuthenticatedAdminRelatoriosRoute
   AuthenticatedAdminRotasColisRoute: typeof AuthenticatedAdminRotasColisRoute
@@ -858,6 +879,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedAdminCatalogoRoute: AuthenticatedAdminCatalogoRoute,
   AuthenticatedAdminColisRoute: AuthenticatedAdminColisRoute,
+  AuthenticatedAdminOciosoRoute: AuthenticatedAdminOciosoRoute,
   AuthenticatedAdminQualidadeRoute: AuthenticatedAdminQualidadeRoute,
   AuthenticatedAdminRelatoriosRoute: AuthenticatedAdminRelatoriosRoute,
   AuthenticatedAdminRotasColisRoute: AuthenticatedAdminRotasColisRoute,
