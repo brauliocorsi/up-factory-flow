@@ -2268,6 +2268,10 @@ export type Database = {
         Args: { _operator_code: string; _order_coli_stage_id: string }
         Returns: Json
       }
+      cancel_order_stage_start: {
+        Args: { _operator_code: string; _order_stage_id: string }
+        Returns: Json
+      }
       cancel_order_with_recovery: { Args: { _order_id: string }; Returns: Json }
       cancel_order_with_recovery_impl: {
         Args: { _order_id: string }
