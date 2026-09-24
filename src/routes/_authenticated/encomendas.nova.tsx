@@ -3,6 +3,8 @@ import { useMemo, useRef, useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { createOrder } from "@/lib/orders.functions";
 import { getCatalogs } from "@/lib/catalog.functions";
+import { listFabricAvailability } from "@/lib/stock.functions";
+import { FabricPicker, FabricStockNotice } from "@/components/fabric/fabricUi";
 import {
   buildBedCode,
   buildSofaCode,
@@ -99,7 +101,6 @@ function NovaEncomendaPage() {
     model_id: "",
     measure_id: "",
     ref_tec: "",
-    collection_code: "",
     width_cm: "",
     elevatorio: false,
     fundos: false,
