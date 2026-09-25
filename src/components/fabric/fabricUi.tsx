@@ -126,7 +126,7 @@ export function FabricPicker({
           autoFocus
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Pesquisar (ex: bass bege)"
+          placeholder="Pesquisar (ex: célia 02, bass bege)"
           className="h-10 mb-2"
         />
         <div className="max-h-72 overflow-y-auto space-y-0.5">
