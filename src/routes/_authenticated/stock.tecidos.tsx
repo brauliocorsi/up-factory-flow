@@ -55,7 +55,7 @@ function TecidosPage() {
           (type === ALL || r.fabric_type === type) &&
           (collection === ALL || r.collection === collection) &&
           (priceClass === ALL || r.price_class === priceClass) &&
-          matchFabric(r.name, q),
+          matchFabric(r, q),
       ),
     [rows, showAll, type, collection, priceClass, q],
   );
