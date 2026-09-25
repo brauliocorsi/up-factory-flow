@@ -380,3 +380,108 @@ export const listSofaFamilies = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     return (data ?? []) as { code: string; name: string; active: boolean }[];
   });
+
+// ---------- Catálogo de tecidos (fabric_catalog) — MESMA lista do Stock ----------
+
+export type FabricCatalogRow = {
+  ref_tec: string;
+  name: string;
+  supplier_ref: string | null;
+  supplier_number: string | null;
+  fabric_type: string;
+  collection: string;
+  color: string | null;
+  color_code: string | null;
+  price_class: string | null;
+  meters: number;
+  min_meters: number;
+  location: string | null;
+  needs_review: string | null;
+  active: boolean;
+};
+
+/** Lista completa (ativos e inativos) do catálogo de tecidos. */
+export const listFabricCatalog = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<FabricCatalogRow[]> => {
+    const { data, error } = await (context.supabase as any)
+      .from("fabric_catalog")
+      .select(
+        "ref_tec, name, supplier_ref, supplier_number, fabric_type, collection, color, color_code, price_class, meters, min_meters, location, needs_review, active",
+      )
+      .order("name")
+      .limit(5000);
+    if (error) throw new Error(error.message);
+    return (data ?? []).map((r: any) => ({
+      ...r,
+      meters: Number(r.meters ?? 0),
+      min_meters: Number(r.min_meters ?? 0),
+    })) as FabricCatalogRow[];
+  });
+
+const fabricCatalogSchema = z.object({
+  ref_tec: z.string().trim().max(32).optional().nullable(),
+  name: z.string().trim().min(1).max(160),
+  fabric_type: z.string().trim().min(1).max(60),
+  collection: z.string().trim().min(1).max(60),
+  supplier_ref: z.string().trim().max(160).optional().nullable(),
+  supplier_number: z.string().trim().max(20).optional().nullable(),
+  color: z.string().trim().max(60).optional().nullable(),
+  price_class: z.string().trim().max(4).optional().nullable(),
+  min_meters: z.number().min(0).max(100000).optional(),
+  location: z.string().trim().max(60).optional().nullable(),
+});
+
+/** Cria ou edita a ficha de um tecido. Os metros nunca são alterados aqui (só no Stock). */
+export const upsertFabricCatalog = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => fabricCatalogSchema.parse(d))
+  .handler(async ({ data, context }) => {
+    const s = context.supabase as any;
+    const row: any = {
+      name: data.name,
+      fabric_type: data.fabric_type,
+      collection: data.collection,
+      supplier_ref: data.supplier_ref?.trim() || null,
+      supplier_number: data.supplier_number?.trim() || null,
+      color: data.color?.trim() || null,
+      price_class: data.price_class?.trim() || null,
+      location: data.location?.trim() || null,
+    };
+    if (data.min_meters !== undefined) row.min_meters = data.min_meters;
+
+    if (data.ref_tec) {
+      const { error } = await s.from("fabric_catalog").update(row).eq("ref_tec", data.ref_tec);
+      if (error) throw new Error(error.message);
+      return { ref_tec: data.ref_tec };
+    }
+    // Código novo: TEC + sequência de 6 dígitos a seguir ao maior existente.
+    const { data: last, error: lErr } = await s
+      .from("fabric_catalog")
+      .select("ref_tec")
+      .order("ref_tec", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (lErr) throw new Error(lErr.message);
+    const n = Number(String(last?.ref_tec ?? "TEC000000").replace(/\D/g, "")) + 1;
+    const ref_tec = `TEC${String(n).padStart(6, "0")}`;
+    const { error } = await s
+      .from("fabric_catalog")
+      .insert({ ...row, ref_tec, meters: 0, min_meters: row.min_meters ?? 0, active: true });
+    if (error) throw new Error(error.message);
+    return { ref_tec };
+  });
+
+export const setFabricCatalogActive = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ ref_tec: z.string().trim().min(1).max(32), active: z.boolean() }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await (context.supabase as any)
+      .from("fabric_catalog")
+      .update({ active: data.active })
+      .eq("ref_tec", data.ref_tec);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
