@@ -39,14 +39,24 @@ function isSubsequence(t: string, w: string) {
   return i === t.length;
 }
 
-/** Pesquisa tolerante: "bass bege" encontra "Bass Beige", "célia light" encontra "Célia Light Grey". */
-export function matchFabric(name: string, query: string) {
+/** Pesquisa tolerante: procura em name, supplier_ref e supplier_number —
+ * "bass bege" encontra "Aveludado Bass Beige", "02" ou "célia 02" encontram "Microfibra Célia 02 Beige". */
+export function matchFabric(
+  f: { name: string; supplier_ref?: string | null; supplier_number?: string | null },
+  query: string,
+) {
   const q = norm(query).trim();
   if (!q) return true;
-  const words = norm(name).split(/[\s\-/]+/).filter(Boolean);
-  const full = norm(name);
+  const words = norm(f.name).split(/[\s\-/]+/).filter(Boolean);
+  const full = norm(f.name);
+  const supplier = norm(f.supplier_ref ?? "");
+  const number = norm(f.supplier_number ?? "");
   return q.split(/\s+/).every(
-    (t) => full.includes(t) || words.some((w) => w[0] === t[0] && isSubsequence(t, w)),
+    (t) =>
+      full.includes(t) ||
+      words.some((w) => w[0] === t[0] && isSubsequence(t, w)) ||
+      (number && (number === t || number.includes(t))) ||
+      (supplier && supplier.includes(t)),
   );
 }
 
@@ -88,7 +98,7 @@ export function FabricPicker({
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const selected = fabrics.find((f) => f.ref_tec === value) ?? null;
-  const list = useMemo(() => fabrics.filter((f) => matchFabric(f.name, q)).slice(0, 200), [fabrics, q]);
+  const list = useMemo(() => fabrics.filter((f) => matchFabric(f, q)).slice(0, 200), [fabrics, q]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -116,7 +126,7 @@ export function FabricPicker({
           autoFocus
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Pesquisar (ex: bass bege)"
+          placeholder="Pesquisar (ex: célia 02, bass bege)"
           className="h-10 mb-2"
         />
         <div className="max-h-72 overflow-y-auto space-y-0.5">

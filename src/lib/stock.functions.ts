@@ -315,6 +315,8 @@ export const completeStockProduction = createServerFn({ method: "POST" })
 export type FabricAvailability = {
   ref_tec: string;
   name: string;
+  supplier_ref: string | null;
+  supplier_number: string | null;
   fabric_type: string;
   collection: string;
   color: string | null;

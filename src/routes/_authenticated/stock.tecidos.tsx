@@ -55,7 +55,7 @@ function TecidosPage() {
           (type === ALL || r.fabric_type === type) &&
           (collection === ALL || r.collection === collection) &&
           (priceClass === ALL || r.price_class === priceClass) &&
-          matchFabric(r.name, q),
+          matchFabric(r, q),
       ),
     [rows, showAll, type, collection, priceClass, q],
   );
@@ -87,7 +87,7 @@ function TecidosPage() {
       <Card className="p-3 flex flex-wrap gap-3 items-end">
         <div className="space-y-1.5 flex-1 min-w-56">
           <Label className="text-xs">Pesquisar</Label>
-          <Input value={q} onChange={(e) => setQ(e.target.value)} className="h-11" placeholder="ex: bass bege, célia light" />
+          <Input value={q} onChange={(e) => setQ(e.target.value)} className="h-11" placeholder="ex: célia 02, bass bege" />
         </div>
         <FilterSelect label="Tipo" value={type} onChange={setType} items={opts.types} />
         <FilterSelect label="Coleção" value={collection} onChange={setCollection} items={opts.collections} />
