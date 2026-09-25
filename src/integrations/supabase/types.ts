@@ -215,6 +215,8 @@ export type Database = {
           needs_review: string | null
           price_class: string | null
           ref_tec: string
+          supplier_number: string | null
+          supplier_ref: string | null
           updated_at: string
         }
         Insert: {
@@ -231,6 +233,8 @@ export type Database = {
           needs_review?: string | null
           price_class?: string | null
           ref_tec: string
+          supplier_number?: string | null
+          supplier_ref?: string | null
           updated_at?: string
         }
         Update: {
@@ -247,6 +251,8 @@ export type Database = {
           needs_review?: string | null
           price_class?: string | null
           ref_tec?: string
+          supplier_number?: string | null
+          supplier_ref?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -2369,6 +2375,7 @@ export type Database = {
         Row: {
           collection: string | null
           color: string | null
+          color_code: string | null
           fabric_type: string | null
           location: string | null
           meters: number | null
@@ -2378,10 +2385,13 @@ export type Database = {
           price_class: string | null
           ref_tec: string | null
           status: string | null
+          supplier_number: string | null
+          supplier_ref: string | null
         }
         Insert: {
           collection?: string | null
           color?: string | null
+          color_code?: string | null
           fabric_type?: string | null
           location?: string | null
           meters?: number | null
@@ -2391,10 +2401,13 @@ export type Database = {
           price_class?: string | null
           ref_tec?: string | null
           status?: never
+          supplier_number?: string | null
+          supplier_ref?: string | null
         }
         Update: {
           collection?: string | null
           color?: string | null
+          color_code?: string | null
           fabric_type?: string | null
           location?: string | null
           meters?: number | null
@@ -2404,6 +2417,8 @@ export type Database = {
           price_class?: string | null
           ref_tec?: string | null
           status?: never
+          supplier_number?: string | null
+          supplier_ref?: string | null
         }
         Relationships: []
       }
