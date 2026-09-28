@@ -1,0 +1,1 @@
+ALTER TABLE public.fabric_catalog DROP CONSTRAINT IF EXISTS fabric_catalog_meters_nonneg;
