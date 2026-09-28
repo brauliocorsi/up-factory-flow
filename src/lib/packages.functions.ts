@@ -133,6 +133,12 @@ export const getLabelsForOrders = createServerFn({ method: "POST" })
       .eq("active", true);
     if (measuresError) throw new Error(measuresError.message);
 
+    const { data: fabrics, error: fabricsError } = await (supabase as any)
+      .from("fabric_catalog")
+      .select("ref_tec, name, supplier_ref")
+      .eq("active", true);
+    if (fabricsError) throw new Error(fabricsError.message);
+
     let pkgs: any[] = [];
     if (modelIds.length) {
       const { data: p, error: pe } = await supabase
@@ -178,7 +184,7 @@ export const getLabelsForOrders = createServerFn({ method: "POST" })
           ? rawBarcode.slice(0, -orderSuffix.length)
           : /^(CAM|SOF|SOM)[A-Z0-9]+$/i.test(rawBarcode)
             ? rawBarcode
-            : buildProductCode(o, measures ?? []);
+            : buildProductCode(o, measures ?? [], fabrics ?? []);
         return {
           order: {
             id: o.id,
@@ -209,10 +215,31 @@ export const getLabelsForOrders = createServerFn({ method: "POST" })
       });
   });
 
-function buildProductCode(order: any, measures: Array<{ code: string; name: string }>): string | null {
+function normalizeLookup(value: unknown): string {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function buildProductCode(
+  order: any,
+  measures: Array<{ code: string; name: string }>,
+  fabrics: Array<{ ref_tec: string; name: string; supplier_ref: string | null }>,
+): string | null {
   const model = order.models;
   const category = String(model?.ref_categories?.code ?? "").toUpperCase();
-  const refTec = order.fabric_ref_tec ?? null;
+  const description = normalizeLookup(order.product_description);
+  const matchedFabric = fabrics
+    .filter((fabric) => {
+      const supplier = normalizeLookup(fabric.supplier_ref);
+      const name = normalizeLookup(fabric.name);
+      return (supplier.length >= 4 && description.includes(supplier)) || (name.length >= 4 && description.includes(name));
+    })
+    .sort((a, b) => normalizeLookup(b.supplier_ref || b.name).length - normalizeLookup(a.supplier_ref || a.name).length)[0];
+  const refTec = order.fabric_ref_tec ?? matchedFabric?.ref_tec ?? null;
   if (!model?.code || !refTec) return null;
 
   if (category === "SOF") {
