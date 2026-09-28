@@ -430,6 +430,9 @@ function GroupCard({
                 <Badge variant="outline" className="text-[10px]">
                   {it.status}
                 </Badge>
+                {isCut && (
+                  <PrintLabelButton orderId={it.order_id} label="Etiqueta" className="h-8 gap-1 px-2" />
+                )}
                 {isCut && it.status !== "concluida" && (
                   <ConsumeFabricDialog
                     compact
