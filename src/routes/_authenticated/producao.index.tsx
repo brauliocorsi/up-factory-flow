@@ -1049,6 +1049,7 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
         )}
         {item.stage === "corte" && (
           <>
+            <PrintLabelButton orderId={item.order_id} label="Imprimir etiqueta" />
             {fabricConsumption ? (
               <Badge variant="secondary" className="h-12 px-3 flex items-center gap-1 text-xs">
                 Tecido consumido: {Number(fabricConsumption.meters).toFixed(1)} m
@@ -1080,7 +1081,7 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
               key={c.id}
               coli={c}
               coliTotal={coliTotal}
-              showLabel={isPacking}
+              showLabel={isPacking || item.stage === "corte"}
               canAct={canAct}
               operatorCode={operatorCode}
               pending={coliPending(c.id)}

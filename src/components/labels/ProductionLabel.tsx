@@ -85,7 +85,10 @@ export function ProductionLabel(props: LabelProps) {
             <div className="label-code-block">
               <div className="label-code-title">CÓDIGO DO PRODUTO</div>
               <svg ref={productBarcodeRef} />
-              <div className="label-product-code">{formattedProductCode}</div>
+              <div className="label-product-code">
+                {formattedProductCode}
+                {props.packageNumber ? ` · C${props.packageNumber}` : ""}
+              </div>
             </div>
           ) : (
             <div className="label-code-missing">Código de produto indisponível</div>
