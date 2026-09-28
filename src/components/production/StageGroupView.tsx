@@ -16,6 +16,7 @@ import {
 } from "@/lib/grouping.functions";
 import { listFabricConsumptions } from "@/lib/stock.functions";
 import { ConsumeFabricDialog } from "@/components/app/ConsumeFabricDialog";
+import { PrintLabelButton } from "@/components/labels/PrintLabelButton";
 import { useAuth } from "@/hooks/useAuth";
 import { PauseReasonDialog } from "@/components/production/PauseReasonDialog";
 
