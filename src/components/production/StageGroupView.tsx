@@ -16,6 +16,7 @@ import {
 } from "@/lib/grouping.functions";
 import { listFabricConsumptions } from "@/lib/stock.functions";
 import { ConsumeFabricDialog } from "@/components/app/ConsumeFabricDialog";
+import { PrintLabelButton } from "@/components/labels/PrintLabelButton";
 import { useAuth } from "@/hooks/useAuth";
 import { PauseReasonDialog } from "@/components/production/PauseReasonDialog";
 
@@ -430,6 +431,9 @@ function GroupCard({
                 <Badge variant="outline" className="text-[10px]">
                   {it.status}
                 </Badge>
+                {isCut && (
+                  <PrintLabelButton orderId={it.order_id} label="Etiqueta" className="h-8 gap-1 px-2" />
+                )}
                 {isCut && it.status !== "concluida" && (
                   <ConsumeFabricDialog
                     compact
