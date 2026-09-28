@@ -150,6 +150,8 @@ export type OrderListItem = {
   completed_at: string | null;
   /** Data em que a picagem/transferência foi registada, se já ocorreu. */
   picked_at: string | null;
+  /** Estado operacional depois da Embalagem e antes da entrada no armazém. */
+  picking_state: "aguarda_picagem" | "em_picagem" | "pronta_armazem" | null;
   /** "catalogo" ou "livre" (assistência, serviço, peça, porte…). */
   line_kind: string;
   service_type: string | null;
@@ -169,12 +171,13 @@ export const listOrders = createServerFn({ method: "POST" })
       q = q.or(`order_number.ilike.%${s}%,customer_order.ilike.%${s}%`);
     }
     if (data.only_completed) {
-      q = q.in("status", ["concluida", "em_armazem"] as any);
+      q = q.eq("status", "em_armazem");
     } else if (data.status) {
       q = q.eq("status", data.status as any);
     } else if (!data.include_completed) {
-      // Encomendas produzidas/picadas vivem só no histórico
-      q = q.not("status", "in", "(concluida,em_armazem)");
+      // A produção pode estar concluída na Embalagem, mas a encomenda continua
+      // operacional até a Picagem a transferir efetivamente para o armazém.
+      q = q.neq("status", "em_armazem");
     }
 
     if (data.modelId) q = q.eq("model_id", data.modelId);
@@ -187,6 +190,13 @@ export const listOrders = createServerFn({ method: "POST" })
       const packing = stages.find((s) => s.stage === "embalagem");
       const packedAt = packing?.status === "concluida" ? (packing.finished_at ?? null) : null;
       const pickedAt = picking?.status === "concluida" ? (picking.finished_at ?? null) : null;
+      const pickingState = o.status === "concluida"
+        ? picking?.status === "concluida"
+          ? "pronta_armazem"
+          : picking?.status === "em_curso"
+            ? "em_picagem"
+            : "aguarda_picagem"
+        : null;
       return {
         id: o.id, order_number: o.order_number, customer_order: o.customer_order ?? null,
         product_description: o.product_description,
@@ -195,6 +205,7 @@ export const listOrders = createServerFn({ method: "POST" })
         current_stage: current.stage,
         completed_at: packedAt ?? pickedAt,
         picked_at: pickedAt,
+        picking_state: pickingState,
         line_kind: o.line_kind ?? "catalogo",
         service_type: o.service_type ?? null,
       };

@@ -155,8 +155,8 @@ function EncomendasPage() {
           <SelectContent>
             <SelectItem value="all">Todos os estados</SelectItem>
             {Object.entries(ORDER_STATUS_LABELS)
-              .filter(([v]) => v !== "concluida" && v !== "em_armazem")
-              .map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
+              .filter(([v]) => v !== "em_armazem")
+              .map(([v, l]) => <SelectItem key={v} value={v}>{v === "concluida" ? "Na Picagem / pronta para armazém" : l}</SelectItem>)}
           </SelectContent>
         </Select>
 
@@ -230,7 +230,7 @@ function EncomendasPage() {
                   <TableCell>{o.fabric_type ?? "—"}</TableCell>
                   <TableCell>{formatDatePT(o.entry_date)}</TableCell>
                   <TableCell>{formatDatePT(o.due_date)}</TableCell>
-                  <TableCell><Badge variant="secondary">{ORDER_STATUS_LABELS[o.status]}</Badge></TableCell>
+                  <TableCell><OrderStateBadge order={o} /></TableCell>
                   <TableCell><Badge>{STAGE_LABELS[o.current_stage]}</Badge></TableCell>
                   <TableCell>
                     <Button size="sm" variant="ghost" className="gap-1 h-8" onClick={() => printOne(o.id)}>
@@ -276,7 +276,7 @@ function EncomendasPage() {
                   <span className="font-mono text-xs font-bold text-muted-foreground">
                     {o.customer_order ? `${o.customer_order} · ${o.order_number}` : o.order_number}
                   </span>
-                  <Badge variant="secondary">{ORDER_STATUS_LABELS[o.status]}</Badge>
+                   <OrderStateBadge order={o} />
                 </div>
                 <div className="text-sm font-medium flex items-center gap-2">
                   {o.line_kind === "livre" && (
@@ -340,7 +340,7 @@ function EncomendasPage() {
             />
           </div>
           <p className="text-sm text-muted-foreground">
-            Encomendas produzidas e picadas — saíram da lista de encomendas e do planeamento.
+            Encomendas já transferidas para o armazém.
           </p>
           <Card className="overflow-hidden">
             <Table>
@@ -439,4 +439,11 @@ function EncomendasPage() {
       </Dialog>
     </div>
   );
+}
+
+function OrderStateBadge({ order }: { order: { status: string; picking_state: "aguarda_picagem" | "em_picagem" | "pronta_armazem" | null } }) {
+  if (order.picking_state === "aguarda_picagem") return <Badge variant="outline">A aguardar picagem</Badge>;
+  if (order.picking_state === "em_picagem") return <Badge variant="secondary">Em picagem</Badge>;
+  if (order.picking_state === "pronta_armazem") return <Badge>Pronta para armazém</Badge>;
+  return <Badge variant="secondary">{ORDER_STATUS_LABELS[order.status] ?? order.status}</Badge>;
 }

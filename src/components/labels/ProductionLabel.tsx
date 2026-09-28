@@ -3,7 +3,8 @@ import JsBarcode from "jsbarcode";
 
 export type LabelProps = {
   orderNumber: string;
-  barcodeValue: string;
+  productCode?: string | null;
+  coliBarcode: string;
   productDescription: string;
   modelName?: string | null;
   measure?: string | null;
@@ -20,24 +21,40 @@ export type LabelProps = {
  * Brother QL 62×29mm label. Exact physical size; one per page on print.
  */
 export function ProductionLabel(props: LabelProps) {
-  const svgRef = useRef<SVGSVGElement>(null);
+  const productBarcodeRef = useRef<SVGSVGElement>(null);
+  const coliBarcodeRef = useRef<SVGSVGElement>(null);
+
+  const formattedProductCode = formatProductCode(props.productCode);
 
   useEffect(() => {
-    if (!svgRef.current) return;
+    if (!productBarcodeRef.current || !props.productCode) return;
     try {
-      JsBarcode(svgRef.current, props.barcodeValue, {
+      JsBarcode(productBarcodeRef.current, props.productCode, {
         format: "CODE128",
-        width: 1.4,
-        height: 36,
-        displayValue: true,
-        fontSize: 9,
-        margin: 2,
-        textMargin: 0,
+        width: 1.1,
+        height: 28,
+        displayValue: false,
+        margin: 0,
       });
     } catch (e) {
       console.error("Barcode error", e);
     }
-  }, [props.barcodeValue]);
+  }, [props.productCode]);
+
+  useEffect(() => {
+    if (!coliBarcodeRef.current) return;
+    try {
+      JsBarcode(coliBarcodeRef.current, props.coliBarcode, {
+        format: "CODE128",
+        width: 1,
+        height: 18,
+        displayValue: false,
+        margin: 0,
+      });
+    } catch (e) {
+      console.error("Coli barcode error", e);
+    }
+  }, [props.coliBarcode]);
 
   const fabricLine = [props.fabricType, props.color].filter(Boolean).join(" · ");
   // Avoid duplicating the measure when it is already part of the description
@@ -64,7 +81,20 @@ export function ProductionLabel(props: LabelProps) {
           <div className="label-order">Nº {props.orderNumber}</div>
         </div>
         <div className="label-right">
-          <svg ref={svgRef} />
+          {props.productCode ? (
+            <div className="label-code-block">
+              <div className="label-code-title">CÓDIGO DO PRODUTO</div>
+              <svg ref={productBarcodeRef} />
+              <div className="label-product-code">{formattedProductCode}</div>
+            </div>
+          ) : (
+            <div className="label-code-missing">Código de produto indisponível</div>
+          )}
+          <div className="label-coli-code">
+            <span>CÓDIGO DO VOLUME</span>
+            <svg ref={coliBarcodeRef} />
+            <b>{props.coliBarcode}</b>
+          </div>
         </div>
       </div>
     </div>
@@ -145,12 +175,43 @@ export function LabelPrintStyles() {
         color: #333;
       }
       .label-right {
-        flex: 0 0 24mm;
+        flex: 0 0 29mm;
         display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
+        gap: 0.8mm;
+        min-width: 0;
       }
-      .label-right svg { width: 24mm; height: auto; max-height: 24mm; }
+      .label-code-block, .label-coli-code {
+        width: 100%;
+        min-width: 0;
+        text-align: center;
+      }
+      .label-code-title, .label-coli-code span {
+        display: block;
+        font-size: 4.7pt;
+        font-weight: 800;
+        line-height: 1;
+      }
+      .label-code-block svg { width: 28mm; height: 7mm; display: block; margin: 0 auto; }
+      .label-product-code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 5.4pt;
+        font-weight: 800;
+        line-height: 1.05;
+        overflow-wrap: anywhere;
+      }
+      .label-coli-code { border-top: 0.25mm solid #000; padding-top: 0.5mm; }
+      .label-coli-code svg { width: 28mm; height: 4.5mm; display: block; margin: 0 auto; }
+      .label-coli-code b {
+        display: block;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 5pt;
+        line-height: 1;
+        overflow-wrap: anywhere;
+      }
+      .label-code-missing { font-size: 6pt; font-weight: 700; }
 
       @media print {
         @page { size: 62mm 29mm; margin: 0; }
@@ -163,4 +224,15 @@ export function LabelPrintStyles() {
       }
     `}</style>
   );
+}
+
+function formatProductCode(code?: string | null): string {
+  const clean = (code ?? "").replace(/\s+/g, "").toUpperCase();
+  if (/^CAM[A-Z0-9]{15}$/.test(clean) || /^SOF[A-Z0-9]{15}$/.test(clean)) {
+    return [clean.slice(0, 3), clean.slice(3, 6), clean.slice(6, 8), clean.slice(8, 11), clean.slice(11, 17), clean.slice(17)].join(" ");
+  }
+  if (/^SOM[A-Z0-9]{14}$/.test(clean)) {
+    return [clean.slice(0, 3), clean.slice(3, 6), clean.slice(6, 7), clean.slice(7, 8), clean.slice(8, 11), clean.slice(11)].join(" ");
+  }
+  return clean;
 }
