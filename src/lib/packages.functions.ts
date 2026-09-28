@@ -84,6 +84,8 @@ export type LabelRow = {
     id: string;
     order_number: string;
     barcode: string | null;
+    /** Código comercial completo, sem o sufixo do número da encomenda. */
+    product_code: string | null;
     product_description: string;
     measure: string | null;
     fabric_type: string | null;
@@ -163,11 +165,19 @@ export const getLabelsForOrders = createServerFn({ method: "POST" })
         );
         const generic = candidates.filter((p) => !p.structure_type);
         const chosen = matched.length ? matched : generic.length ? generic : candidates;
+        const rawBarcode = String(o.barcode ?? "").trim();
+        const orderSuffix = `-${o.order_number}`;
+        const productCode = rawBarcode.endsWith(orderSuffix)
+          ? rawBarcode.slice(0, -orderSuffix.length)
+          : /^(CAM|SOF|SOM)[A-Z0-9]+$/i.test(rawBarcode)
+            ? rawBarcode
+            : null;
         return {
           order: {
             id: o.id,
             order_number: o.order_number,
             barcode: o.barcode,
+            product_code: productCode,
             product_description: o.product_description,
             measure: o.measure,
             fabric_type: o.fabric_type,

@@ -163,7 +163,8 @@ function renderLabelsForOrder(row: LabelRow, copies: number) {
         <ProductionLabel
           key={key}
           orderNumber={order.order_number}
-          barcodeValue={pkg?.barcode || order.barcode || order.order_number}
+          productCode={order.product_code}
+          coliBarcode={pkg?.barcode || order.order_number}
           productDescription={order.product_description}
           modelName={order.model_name}
           measure={order.measure}
