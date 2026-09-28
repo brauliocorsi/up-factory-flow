@@ -168,7 +168,7 @@ export function ConsumeFabricDialog({
               )}
               {insufficient && (
                 <p className="text-xs text-destructive">
-                  Só existem {fabric!.meters.toFixed(1)} m deste tecido.
+                  Só existem {fabric!.meters.toFixed(1)} m deste tecido — o stock fica negativo ({(fabric!.meters - needed).toFixed(1)} m) e será descontado na próxima entrada.
                 </p>
               )}
             </div>
