@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import { buildBedCode, buildSofaCode, buildSommierCode, type SofaVariant } from "@/lib/productCodes";
 
 export type ModelPackage = {
   id: string;
@@ -117,7 +118,7 @@ export const getLabelsForOrders = createServerFn({ method: "POST" })
     const { data: orders, error } = await (supabase as any)
       .from("production_orders")
       .select(
-        "id, order_number, barcode, product_description, measure, fabric_type, fabric_ref, color, structure_type, model_id, observation, models(name)",
+        "id, order_number, barcode, product_description, measure, fabric_type, fabric_ref, fabric_ref_tec, color, structure_type, model_id, observation, finishing, models(name, code, structure_code, sofa_family_code, ref_categories(code))",
       )
       .in("id", data.ids);
     if (error) throw new Error(error.message);
@@ -125,6 +126,12 @@ export const getLabelsForOrders = createServerFn({ method: "POST" })
     const modelIds: string[] = Array.from(
       new Set((orders ?? []).map((o: any) => o.model_id).filter(Boolean)),
     );
+
+    const { data: measures, error: measuresError } = await supabase
+      .from("ref_measures")
+      .select("code, name")
+      .eq("active", true);
+    if (measuresError) throw new Error(measuresError.message);
 
     let pkgs: any[] = [];
     if (modelIds.length) {
@@ -171,7 +178,7 @@ export const getLabelsForOrders = createServerFn({ method: "POST" })
           ? rawBarcode.slice(0, -orderSuffix.length)
           : /^(CAM|SOF|SOM)[A-Z0-9]+$/i.test(rawBarcode)
             ? rawBarcode
-            : null;
+            : buildProductCode(o, measures ?? []);
         return {
           order: {
             id: o.id,
@@ -201,3 +208,54 @@ export const getLabelsForOrders = createServerFn({ method: "POST" })
         };
       });
   });
+
+function buildProductCode(order: any, measures: Array<{ code: string; name: string }>): string | null {
+  const model = order.models;
+  const category = String(model?.ref_categories?.code ?? "").toUpperCase();
+  const refTec = order.fabric_ref_tec ?? null;
+  if (!model?.code || !refTec) return null;
+
+  if (category === "SOF") {
+    const width = Number(String(order.measure ?? "").match(/\d{2,3}/)?.[0]);
+    const text = String(order.product_description ?? "");
+    const variant: SofaVariant = /revers/i.test(text)
+      ? "R"
+      : /(odf|vdf).*(esq|esquer)/i.test(text) || /(esq|esquer).*(odf|vdf)/i.test(text)
+        ? "E"
+        : /(odf|vdf).*(drt|dir|direit)/i.test(text) || /(drt|dir|direit).*(odf|vdf)/i.test(text)
+          ? "D"
+          : /chaise/i.test(text)
+            ? "R"
+            : "N";
+    return buildSofaCode({
+      modelCode: model.code,
+      familyCode: model.sofa_family_code,
+      widthCm: width,
+      refTec,
+      variant,
+    }) || null;
+  }
+
+  const normalizedMeasure = String(order.measure ?? "").toLowerCase().replace(/[^0-9x]/g, "");
+  const measure = measures.find((m) => m.name.toLowerCase().replace(/[^0-9x]/g, "") === normalizedMeasure);
+  if (category === "SOM") {
+    const text = String(order.product_description ?? "");
+    return buildSommierCode({
+      modelCode: model.code,
+      elevatorio: /elevat/i.test(text),
+      fundos: /fundo/i.test(text),
+      measureCode: measure?.code,
+      refTec,
+    }) || null;
+  }
+  if (category === "CAM") {
+    return buildBedCode({
+      modelCode: model.code,
+      structureCode: model.structure_code,
+      measureCode: measure?.code,
+      refTec,
+      variant: order.finishing === "F" || /flutuante|mural/i.test(String(order.product_description ?? "")) ? "F" : "N",
+    }) || null;
+  }
+  return null;
+}
