@@ -30,6 +30,7 @@ import {
 import { useMySession } from "@/hooks/useMySession";
 import { useAuth } from "@/hooks/useAuth";
 import { PauseReasonsCard } from "@/components/app/PauseReasonsCard";
+import { LeadersCard } from "@/components/app/LeadersCard";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export const Route = createFileRoute("/_authenticated/configuracoes")({
@@ -157,6 +158,7 @@ function ConfigPage() {
         </div>
       </Card>
 
+      {(myRole === "admin" || myRole === "escritorio") && <LeadersCard />}
       {(myRole === "admin" || myRole === "escritorio") && <PauseReasonsCard />}
       {myRole === "admin" && <StaffAccessCard />}
     </div>

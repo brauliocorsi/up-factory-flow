@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useMySession } from "@/hooks/useMySession";
+import { FloorCalls } from "@/components/app/FloorCalls";
 
 /**
  * Estrutura agrupada da navegação.
@@ -243,6 +244,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </nav>
 
           <div className="ml-auto flex items-center gap-1">
+            <FloorCalls />
             {/* Modo escuro */}
             <Button
               variant="ghost"
