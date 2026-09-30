@@ -15,7 +15,7 @@
 - **Líder:** na sua tela aparece um botão "Pedidos" com contador e som/alerta ao chegar um novo. Lista: quem chamou, posto/etapa, encomenda em curso, motivo, há quanto tempo. Ações: "A caminho" (o operador vê "O líder vem a caminho") e "Resolvido".
 - **Líder chama operador:** botão "Chamar operador" — escolhe um ou vários operadores e:
   - "Pedir presença" → aparece no ecrã do operador um aviso grande "O líder pede a sua presença" com botão "Vou já".
-  - "Enviar recado" → texto escrito aparece como mensagem temporária no ecrã do operador (fecha sozinha após 30 s ou ao tocar "Visto").
+  - "Enviar recado" → texto escrito aparece como mensagem temporária no ecrã do operador (fica no ecrã até o operador tocar em "Visto").
 - Tudo em tempo real, sem recarregar.
 
 ## Detalhes técnicos
@@ -24,3 +24,5 @@
 - RPCs `create_floor_call`, `update_floor_call_status` com `assert_operator_is_session`; só líderes criam `presence/message`.
 - Realtime na tabela para notificações; componentes `LeaderCallButton`, `LeaderInbox`, `OperatorCallToast` montados no AppShell.
 - Pesquisa: filtro em `producao.index.tsx` também sobre `product_description`/modelo/tecido com normalização de acentos.
+
+Nota: apenas adicionar estas funcionalidades; nada do que já funciona é alterado.
