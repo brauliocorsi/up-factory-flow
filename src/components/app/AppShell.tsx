@@ -95,6 +95,20 @@ function groupActive(pathname: string, group: NavGroup) {
   return group.items.some((i) => isActive(pathname, i.to));
 }
 
+const THEME_KEY = "up-theme";
+
+function useDarkMode() {
+  const [dark, setDark] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(THEME_KEY) === "dark";
+  });
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", dark);
+    window.localStorage.setItem(THEME_KEY, dark ? "dark" : "light");
+  }, [dark]);
+  return { dark, toggle: () => setDark((d) => !d) };
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
