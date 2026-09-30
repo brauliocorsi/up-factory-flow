@@ -15,8 +15,8 @@ import { listReworkReasons, sendToRework } from "@/lib/rework.functions";
 const ORDER: Stage[] = ["estrutura","corte","costura","branco","estofagem","qualidade","embalagem","picagem"];
 
 export function ReworkDialog({
-  orderId, orderNumber, detectedStage, operatorCode,
-}: { orderId: string; orderNumber: string; detectedStage: Stage; operatorCode: string }) {
+  orderId, orderNumber, detectedStage, operatorCode, iconOnly = false,
+}: { orderId: string; orderNumber: string; detectedStage: Stage; operatorCode: string; iconOnly?: boolean }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [target, setTarget] = useState<Stage | "">("");
@@ -71,9 +71,16 @@ export function ReworkDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline" className="gap-1 text-orange-700 border-orange-300 hover:bg-orange-50">
-          <Wrench className="size-4" /> Enviar para retrabalho
-        </Button>
+        {iconOnly ? (
+          <Button size="icon" variant="outline" title="Enviar para retrabalho" aria-label="Enviar para retrabalho"
+            className="size-12 rounded-full text-orange-700 border-orange-300 hover:bg-orange-50">
+            <Wrench className="size-5" />
+          </Button>
+        ) : (
+          <Button size="sm" variant="outline" className="gap-1 text-orange-700 border-orange-300 hover:bg-orange-50">
+            <Wrench className="size-4" /> Enviar para retrabalho
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
