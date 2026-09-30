@@ -1,5 +1,4 @@
 import { createFileRoute, Link, useSearch } from "@tanstack/react-router";
-import type { ReactElement } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
@@ -10,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowLeft, Printer, Info, AlertTriangle } from "lucide-react";
 import { getLabelsForOrders, type LabelRow } from "@/lib/packages.functions";
-import { ProductionLabel, LabelPrintStyles } from "@/components/labels/ProductionLabel";
+import { LabelPrintStyles } from "@/components/labels/ProductionLabel";
+import { renderLabelsForOrder } from "@/components/labels/renderLabels";
 
 const searchSchema = z.object({
   ids: z.string().optional(), // comma-separated uuids
@@ -130,54 +130,4 @@ function ImprimirPage() {
       </div>
     </div>
   );
-}
-
-function renderLabelsForOrder(row: LabelRow, copies: number) {
-  const { order, packages, colis } = row;
-  // Total real de volumes da encomenda (não apenas os que estão a ser impressos).
-  const coliTotal = Math.max(row.coli_total ?? colis.length, colis.length);
-  // Preferir os volumes reais da encomenda: cada etiqueta leva o código do
-  // volume, que é o mesmo lido na picagem.
-  const list: ({ id: string; package_number: number; package_total: number; package_name: string; barcode?: string } | null)[] =
-    colis.length
-      ? colis.map((c) => ({
-          id: c.id,
-          package_number: c.coli_number,
-          package_total: coliTotal,
-          package_name: c.coli_name,
-          barcode: c.coli_barcode,
-        }))
-      : packages.length
-        ? packages.map((p) => ({
-            id: p.id,
-            package_number: p.package_number,
-            package_total: p.package_total,
-            package_name: p.package_name,
-          }))
-        : [null];
-  const out: ReactElement[] = [];
-  for (const pkg of list) {
-    for (let c = 0; c < copies; c++) {
-      const key = `${order.id}-${pkg?.id ?? "x"}-${c}`;
-      out.push(
-        <ProductionLabel
-          key={key}
-          orderNumber={order.order_number}
-          productCode={order.product_code}
-          coliBarcode={pkg?.barcode || order.order_number}
-          productDescription={order.product_description}
-          modelName={order.model_name}
-          measure={order.measure}
-          fabricType={order.fabric_type}
-          fabricRef={order.fabric_ref}
-          color={order.color}
-          packageNumber={pkg?.package_number ?? null}
-          packageTotal={pkg?.package_total ?? null}
-          packageName={pkg?.package_name ?? null}
-          observation={order.observation}
-        />,
-      );
-    }
-  }
-  return out;
 }
