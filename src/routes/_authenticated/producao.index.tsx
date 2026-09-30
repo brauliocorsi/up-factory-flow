@@ -413,7 +413,13 @@ function ProducaoPage() {
     };
     return allItems
       .filter((it) => {
-        if (searchQuery.trim() && !it.order_number.toLowerCase().includes(searchQuery.toLowerCase().trim())) return false;
+        if (searchQuery.trim()) {
+          const norm = (s: unknown) => String(s ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+          const q = norm(searchQuery.trim());
+          const anyIt = it as any;
+          const hay = [it.order_number, anyIt.product_description, anyIt.model_name, anyIt.fabric_ref, anyIt.color].map(norm).join(" ");
+          if (!q.split(/\s+/).every((w) => hay.includes(w))) return false;
+        }
         if (onlyMine && !canActOnStage(it.stage)) return false;
         if (it.status === "em_curso" && !showRunning) return false;
         if (it.status === "concluida" && !showDone) return false;
@@ -558,92 +564,94 @@ function ProducaoPage() {
 
 
       {/* Filtros e Pesquisa */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card p-3 rounded-lg border">
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={() => setOnlyReady((v) => !v)}
-            title="Mostrar só as que já podem ser iniciadas (e as que estão em curso)"
-            className={`text-xs font-medium px-2.5 py-1.5 rounded-md border transition ${
-              onlyReady ? "bg-emerald-700 text-white border-emerald-700" : "bg-card hover:bg-accent"
-            }`}
-          >
-            {onlyReady ? "✓ " : ""}Prontas para iniciar
-          </button>
-          <button
-            onClick={() => setShowPending((v) => !v)}
-            className={`text-xs font-medium px-2.5 py-1.5 rounded-md border transition ${
-              showPending ? "bg-slate-600 text-white border-slate-600" : "bg-card hover:bg-accent"
-            }`}
-          >
-            {showPending ? "✓ " : ""}Não iniciadas
-          </button>
-          <button
-            onClick={() => setShowRunning((v) => !v)}
-            className={`text-xs font-medium px-2.5 py-1.5 rounded-md border transition ${
-              showRunning ? "bg-emerald-600 text-white border-emerald-600" : "bg-card hover:bg-accent"
-            }`}
-          >
-            {showRunning ? "✓ " : ""}Em curso
-          </button>
-          <button
-            onClick={() => setShowDone((v) => !v)}
-            className={`text-xs font-medium px-2.5 py-1.5 rounded-md border transition ${
-              showDone ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-accent"
-            }`}
-          >
-            {showDone ? "✓ " : ""}Concluídas hoje
-          </button>
-          <button
-            onClick={() => {
-              const onlyDone = showDone && !showPending && !showRunning;
-              if (onlyDone) { setShowPending(true); setShowRunning(true); setShowDone(false); }
-              else { setShowPending(false); setShowRunning(false); setShowDone(true); }
-            }}
-            className={`text-xs font-medium px-2.5 py-1.5 rounded-md border transition ${
-              showDone && !showPending && !showRunning ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-accent"
-            }`}
-          >
-            {showDone && !showPending && !showRunning ? "✓ " : ""}Só concluídas
-          </button>
-          <button
-
-            hidden={isOperatorOnly}
-            onClick={() => setOnlyMine((v) => !v)}
-            className={`text-xs font-medium px-2.5 py-1.5 rounded-md border transition ${
-              onlyMine ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-accent"
-            }`}
-          >
-            {onlyMine ? "✓ " : ""}Só as minhas etapas
-          </button>
-          <Sheet>
-            <SheetTrigger asChild>
-              <button className="lg:hidden text-xs font-medium px-2.5 py-1.5 rounded-md border bg-card hover:bg-accent inline-flex items-center gap-1">
-                <ListTree className="size-3" /> Fila prioritária
-              </button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-80 overflow-y-auto">
-              <SheetHeader>
-                <SheetTitle>Fila prioritária</SheetTitle>
-              </SheetHeader>
-              <div className="mt-4">{sidebar}</div>
-            </SheetContent>
-          </Sheet>
-          {hiddenCount > 0 && (
-            <span className="text-[11px] text-muted-foreground">
-              {hiddenCount} ocultas pelos filtros
-            </span>
-          )}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-card p-3 rounded-xl border shadow-sm">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-1 px-1 pb-0.5">
+          {(() => {
+            const cPending = allItems.filter((i) => i.status === "pendente" || i.status === "bloqueada").length;
+            const cRunning = allItems.filter((i) => i.status === "em_curso").length;
+            const cDone = allItems.filter((i) => i.status === "concluida").length;
+            const cReady = allItems.filter((i) => i.status !== "concluida" && i.status !== "em_curso" && isReadyToStart(i)).length;
+            const onlyDone = showDone && !showPending && !showRunning;
+            const pill = (active: boolean, tone: string) =>
+              `shrink-0 inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition ${
+                active ? tone : "bg-background text-muted-foreground hover:bg-accent hover:text-foreground"
+              }`;
+            const count = (n: number, active: boolean) => (
+              <span className={`min-w-5 px-1.5 rounded-full text-[10px] leading-4 ${active ? "bg-background/25" : "bg-muted"}`}>{n}</span>
+            );
+            const filtersChanged = onlyReady || !showPending || !showRunning || !showDone || searchQuery.trim() !== "";
+            return (
+              <>
+                <button onClick={() => setOnlyReady((v) => !v)} title="Só as que já podem ser iniciadas (e as em curso)"
+                  className={pill(onlyReady, "bg-emerald-700 text-white border-emerald-700")}>
+                  <Play className="size-3.5" /> Prontas {count(cReady, onlyReady)}
+                </button>
+                <button onClick={() => setShowPending((v) => !v)} className={pill(showPending, "bg-slate-600 text-white border-slate-600")}>
+                  <Clock className="size-3.5" /> Não iniciadas {count(cPending, showPending)}
+                </button>
+                <button onClick={() => setShowRunning((v) => !v)} className={pill(showRunning, "bg-emerald-600 text-white border-emerald-600")}>
+                  <Pause className="size-3.5" /> Em curso {count(cRunning, showRunning)}
+                </button>
+                <button onClick={() => setShowDone((v) => !v)} className={pill(showDone, "bg-primary text-primary-foreground border-primary")}>
+                  <CheckCircle2 className="size-3.5" /> Concluídas hoje {count(cDone, showDone)}
+                </button>
+                <button
+                  onClick={() => {
+                    if (onlyDone) { setShowPending(true); setShowRunning(true); setShowDone(false); }
+                    else { setShowPending(false); setShowRunning(false); setShowDone(true); }
+                  }}
+                  className={pill(onlyDone, "bg-primary text-primary-foreground border-primary")}
+                >
+                  <Check className="size-3.5" /> Só concluídas
+                </button>
+                <button hidden={isOperatorOnly} onClick={() => setOnlyMine((v) => !v)}
+                  className={pill(onlyMine, "bg-primary text-primary-foreground border-primary")}>
+                  <UserCircle2 className="size-3.5" /> Só as minhas
+                </button>
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <button className={`lg:hidden ${pill(false, "")}`} title="Fila prioritária">
+                      <ListTree className="size-3.5" /> Fila
+                    </button>
+                  </SheetTrigger>
+                  <SheetContent side="right" className="w-80 overflow-y-auto">
+                    <SheetHeader>
+                      <SheetTitle>Fila prioritária</SheetTitle>
+                    </SheetHeader>
+                    <div className="mt-4">{sidebar}</div>
+                  </SheetContent>
+                </Sheet>
+                {filtersChanged && (
+                  <button
+                    onClick={() => { setOnlyReady(false); setShowPending(true); setShowRunning(true); setShowDone(true); setSearchQuery(""); }}
+                    className="shrink-0 inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-full text-muted-foreground hover:text-foreground"
+                  >
+                    <XCircle className="size-3.5" /> Limpar
+                  </button>
+                )}
+                {hiddenCount > 0 && (
+                  <span className="shrink-0 text-[11px] text-muted-foreground">{hiddenCount} ocultas</span>
+                )}
+              </>
+            );
+          })()}
         </div>
 
-        <div className="relative w-full sm:w-64">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        <div className="relative w-full lg:w-80 shrink-0">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            type="search"
-            placeholder="Procurar nº encomenda..."
+            type="text"
+            placeholder="Procurar nº encomenda ou produto…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-8 text-sm h-9"
+            className="pl-9 pr-8 text-sm h-9 rounded-full"
           />
+          {searchQuery && (
+            <button onClick={() => setSearchQuery("")} aria-label="Limpar pesquisa"
+              className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground">
+              <XCircle className="size-4" />
+            </button>
+          )}
         </div>
       </div>
 
