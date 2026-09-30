@@ -230,6 +230,39 @@ export type Database = {
         }
         Relationships: []
       }
+      erp_integration_settings: {
+        Row: {
+          id: number
+          last_ack_at: string | null
+          last_run_at: string | null
+          last_run_summary: string | null
+          updated_at: string
+          worker_enabled: boolean
+          worker_enabled_at: string | null
+          worker_enabled_by: string | null
+        }
+        Insert: {
+          id?: number
+          last_ack_at?: string | null
+          last_run_at?: string | null
+          last_run_summary?: string | null
+          updated_at?: string
+          worker_enabled?: boolean
+          worker_enabled_at?: string | null
+          worker_enabled_by?: string | null
+        }
+        Update: {
+          id?: number
+          last_ack_at?: string | null
+          last_run_at?: string | null
+          last_run_summary?: string | null
+          updated_at?: string
+          worker_enabled?: boolean
+          worker_enabled_at?: string | null
+          worker_enabled_by?: string | null
+        }
+        Relationships: []
+      }
       erp_order_links: {
         Row: {
           created_at: string
@@ -248,6 +281,8 @@ export type Database = {
           sale_number: string
           source_system: string
           unit_index: number
+          validated_at: string | null
+          validated_by: string | null
         }
         Insert: {
           created_at?: string
@@ -266,6 +301,8 @@ export type Database = {
           sale_number: string
           source_system: string
           unit_index: number
+          validated_at?: string | null
+          validated_by?: string | null
         }
         Update: {
           created_at?: string
@@ -284,6 +321,8 @@ export type Database = {
           sale_number?: string
           source_system?: string
           unit_index?: number
+          validated_at?: string | null
+          validated_by?: string | null
         }
         Relationships: [
           {
@@ -305,7 +344,10 @@ export type Database = {
           last_attempt_at: string | null
           last_error: string | null
           last_response_code: number | null
+          lease_expires_at: string | null
+          lease_owner: string | null
           link_id: string
+          next_attempt_at: string
           occurred_at: string
           order_id: string
           payload: Json
@@ -321,7 +363,10 @@ export type Database = {
           last_attempt_at?: string | null
           last_error?: string | null
           last_response_code?: number | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
           link_id: string
+          next_attempt_at?: string
           occurred_at: string
           order_id: string
           payload: Json
@@ -337,7 +382,10 @@ export type Database = {
           last_attempt_at?: string | null
           last_error?: string | null
           last_response_code?: number | null
+          lease_expires_at?: string | null
+          lease_owner?: string | null
           link_id?: string
+          next_attempt_at?: string
           occurred_at?: string
           order_id?: string
           payload?: Json
@@ -2745,6 +2793,44 @@ export type Database = {
       count_backlog_batches: { Args: never; Returns: Json }
       create_order_colis: { Args: { _order_id: string }; Returns: Json }
       erp_ingest_order: { Args: { _hash: string; _p: Json }; Returns: Json }
+      erp_outbox_claim: {
+        Args: { _lease_seconds: number; _limit: number; _owner: string }
+        Returns: {
+          acked_at: string | null
+          attempts: number
+          created_at: string
+          event_id: string
+          event_status: string
+          last_attempt_at: string | null
+          last_error: string | null
+          last_response_code: number | null
+          lease_expires_at: string | null
+          lease_owner: string | null
+          link_id: string
+          next_attempt_at: string
+          occurred_at: string
+          order_id: string
+          payload: Json
+          state: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "erp_outbox"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      erp_outbox_complete: {
+        Args: {
+          _code: number
+          _error: string
+          _event_id: string
+          _owner: string
+          _state: string
+        }
+        Returns: boolean
+      }
       erp_outbox_enqueue: {
         Args: {
           at: string
@@ -2752,6 +2838,20 @@ export type Database = {
           l: Database["public"]["Tables"]["erp_order_links"]["Row"]
         }
         Returns: undefined
+      }
+      erp_outbox_retry_now: { Args: { _event_id: string }; Returns: boolean }
+      erp_record_run: { Args: { _summary: string }; Returns: undefined }
+      erp_set_worker_enabled: { Args: { _enabled: boolean }; Returns: Json }
+      erp_validate_mapping: {
+        Args: {
+          _fabric_ref_tec: string
+          _measure: string
+          _model_id: string
+          _notes: string
+          _product_id: string
+          _structure_type: string
+        }
+        Returns: Json
       }
       finalize_shell_batch: {
         Args: { _batch_id: string; _operator_code: string }
