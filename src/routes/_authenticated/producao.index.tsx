@@ -565,7 +565,7 @@ function ProducaoPage() {
 
       {/* Filtros e Pesquisa */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-card p-3 rounded-xl border shadow-sm">
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-1 px-1 pb-0.5">
+        <div className="flex flex-wrap items-center gap-1.5 -mx-1 px-1">
           {(() => {
             const cPending = allItems.filter((i) => i.status === "pendente" || i.status === "bloqueada").length;
             const cRunning = allItems.filter((i) => i.status === "em_curso").length;
@@ -573,11 +573,11 @@ function ProducaoPage() {
             const cReady = allItems.filter((i) => i.status !== "concluida" && i.status !== "em_curso" && isReadyToStart(i)).length;
             const onlyDone = showDone && !showPending && !showRunning;
             const pill = (active: boolean, tone: string) =>
-              `shrink-0 inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition ${
+              `inline-flex items-center gap-1.5 whitespace-nowrap text-xs font-medium px-3 py-1.5 rounded-full border transition ${
                 active ? tone : "bg-background text-muted-foreground hover:bg-accent hover:text-foreground"
               }`;
             const count = (n: number, active: boolean) => (
-              <span className={`min-w-5 px-1.5 rounded-full text-[10px] leading-4 ${active ? "bg-background/25" : "bg-muted"}`}>{n}</span>
+              <span className={`min-w-5 px-1.5 rounded-full text-[10px] leading-4 text-center ${active ? "bg-background/25" : "bg-muted"}`}>{n}</span>
             );
             const filtersChanged = onlyReady || !showPending || !showRunning || !showDone || searchQuery.trim() !== "";
             return (
@@ -587,13 +587,13 @@ function ProducaoPage() {
                   <Play className="size-3.5" /> Prontas {count(cReady, onlyReady)}
                 </button>
                 <button onClick={() => setShowPending((v) => !v)} className={pill(showPending, "bg-slate-600 text-white border-slate-600")}>
-                  <Clock className="size-3.5" /> Não iniciadas {count(cPending, showPending)}
+                  <Clock className="size-3.5" /> Por iniciar {count(cPending, showPending)}
                 </button>
                 <button onClick={() => setShowRunning((v) => !v)} className={pill(showRunning, "bg-emerald-600 text-white border-emerald-600")}>
-                  <Pause className="size-3.5" /> Em curso {count(cRunning, showRunning)}
+                  <Activity className="size-3.5" /> Em curso {count(cRunning, showRunning)}
                 </button>
                 <button onClick={() => setShowDone((v) => !v)} className={pill(showDone, "bg-primary text-primary-foreground border-primary")}>
-                  <CheckCircle2 className="size-3.5" /> Concluídas hoje {count(cDone, showDone)}
+                  <CheckCircle2 className="size-3.5" /> Concluídas {count(cDone, showDone)}
                 </button>
                 <button
                   onClick={() => {
@@ -606,7 +606,7 @@ function ProducaoPage() {
                 </button>
                 <button hidden={isOperatorOnly} onClick={() => setOnlyMine((v) => !v)}
                   className={pill(onlyMine, "bg-primary text-primary-foreground border-primary")}>
-                  <UserCircle2 className="size-3.5" /> Só as minhas
+                  <UserCircle2 className="size-3.5" /> Minhas
                 </button>
                 <Sheet>
                   <SheetTrigger asChild>
@@ -624,13 +624,13 @@ function ProducaoPage() {
                 {filtersChanged && (
                   <button
                     onClick={() => { setOnlyReady(false); setShowPending(true); setShowRunning(true); setShowDone(true); setSearchQuery(""); }}
-                    className="shrink-0 inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-full text-muted-foreground hover:text-foreground"
+                    className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-1.5 rounded-full text-muted-foreground hover:text-foreground"
                   >
                     <XCircle className="size-3.5" /> Limpar
                   </button>
                 )}
                 {hiddenCount > 0 && (
-                  <span className="shrink-0 text-[11px] text-muted-foreground">{hiddenCount} ocultas</span>
+                  <span className="text-[11px] text-muted-foreground">{hiddenCount} ocultas</span>
                 )}
               </>
             );
