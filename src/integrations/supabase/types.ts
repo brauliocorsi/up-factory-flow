@@ -761,6 +761,60 @@ export type Database = {
           },
         ]
       }
+      floor_calls: {
+        Row: {
+          created_at: string
+          from_operator_id: string | null
+          id: string
+          kind: string
+          message: string | null
+          reason: string | null
+          stage: string | null
+          status: string
+          to_operator_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          from_operator_id?: string | null
+          id?: string
+          kind: string
+          message?: string | null
+          reason?: string | null
+          stage?: string | null
+          status?: string
+          to_operator_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          from_operator_id?: string | null
+          id?: string
+          kind?: string
+          message?: string | null
+          reason?: string | null
+          stage?: string | null
+          status?: string
+          to_operator_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "floor_calls_from_operator_id_fkey"
+            columns: ["from_operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "floor_calls_to_operator_id_fkey"
+            columns: ["to_operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       import_batches: {
         Row: {
           created_at: string
@@ -994,6 +1048,7 @@ export type Database = {
           code: string
           created_at: string
           id: string
+          is_leader: boolean
           name: string
           role: string | null
           user_id: string | null
@@ -1003,6 +1058,7 @@ export type Database = {
           code: string
           created_at?: string
           id?: string
+          is_leader?: boolean
           name: string
           role?: string | null
           user_id?: string | null
@@ -1012,6 +1068,7 @@ export type Database = {
           code?: string
           created_at?: string
           id?: string
+          is_leader?: boolean
           name?: string
           role?: string | null
           user_id?: string | null
@@ -2791,6 +2848,16 @@ export type Database = {
         Returns: Json
       }
       count_backlog_batches: { Args: never; Returns: Json }
+      create_floor_call: {
+        Args: {
+          _kind: string
+          _message: string
+          _reason: string
+          _stage: string
+          _to: string[]
+        }
+        Returns: number
+      }
       create_order_colis: { Args: { _order_id: string }; Returns: Json }
       erp_ingest_order: { Args: { _hash: string; _p: Json }; Returns: Json }
       erp_outbox_claim: {
@@ -2986,6 +3053,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      i_am_leader: { Args: never; Returns: boolean }
       idle_report_impl: { Args: { _from: string; _to: string }; Returns: Json }
       is_operator_only: { Args: { _user_id: string }; Returns: boolean }
       is_picker_only: { Args: { _user_id: string }; Returns: boolean }
@@ -3032,6 +3100,7 @@ export type Database = {
           structure_type: string
         }[]
       }
+      my_operator_id: { Args: never; Returns: string }
       prev_business_day: { Args: { _d: string }; Returns: string }
       preview_cancel_order: { Args: { _order_id: string }; Returns: Json }
       receive_fabric: {
@@ -3122,6 +3191,10 @@ export type Database = {
         Args: { _notes: string; _operator_code: string; _reason_id: string }
         Returns: number
       }
+      set_operator_leader: {
+        Args: { _operator_id: string; _value: boolean }
+        Returns: undefined
+      }
       set_orders_test_flag: {
         Args: { _is_test: boolean; _order_ids: string[] }
         Returns: number
@@ -3161,6 +3234,10 @@ export type Database = {
       }
       try_reserve_for_order: { Args: { _order_id: string }; Returns: Json }
       undo_fabric_consumption: { Args: { _order_id: string }; Returns: Json }
+      update_floor_call_status: {
+        Args: { _id: string; _status: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "operador" | "escritorio" | "picador"
