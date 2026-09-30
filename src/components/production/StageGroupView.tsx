@@ -302,56 +302,67 @@ function GroupCard({
             </div>
           )}
           {notStarted.length > 0 && (
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={!canAct || pending}
-              onClick={() => onEvent(notStarted.map((i) => i.order_stage_id), "iniciar")}
-              className="gap-1"
-            >
-              <Play className="size-4" /> Iniciar ({notStarted.length})
-            </Button>
+            <div className="inline-flex items-center gap-1">
+              <Button
+                size="icon"
+                variant="outline"
+                disabled={!canAct || pending}
+                onClick={() => onEvent(notStarted.map((i) => i.order_stage_id), "iniciar")}
+                className="size-9 rounded-full"
+                title={`Iniciar ${notStarted.length} peça(s)`}
+              >
+                <Play className="size-4" />
+              </Button>
+              <span className="text-xs tabular-nums text-muted-foreground">{notStarted.length}</span>
+            </div>
           )}
           {runningItems.length > 0 && (
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={!canAct || pending}
-              onClick={() => onEvent(runningItems.map((i) => i.order_stage_id), "pausar")}
-              className="gap-1"
-            >
-              <Pause className="size-4" /> Pausar ({runningItems.length})
-            </Button>
+            <div className="inline-flex items-center gap-1">
+              <Button
+                size="icon"
+                variant="outline"
+                disabled={!canAct || pending}
+                onClick={() => onEvent(runningItems.map((i) => i.order_stage_id), "pausar")}
+                className="size-9 rounded-full"
+                title={`Pausar ${runningItems.length} peça(s)`}
+              >
+                <Pause className="size-4" />
+              </Button>
+              <span className="text-xs tabular-nums text-muted-foreground">{runningItems.length}</span>
+            </div>
           )}
           {pausedItems.length > 0 && (
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={!canAct || pending}
-              onClick={() => onEvent(pausedItems.map((i) => i.order_stage_id), "retomar")}
-              className="gap-1"
-            >
-              <RotateCcw className="size-4" /> Retomar ({pausedItems.length})
-            </Button>
+            <div className="inline-flex items-center gap-1">
+              <Button
+                size="icon"
+                variant="outline"
+                disabled={!canAct || pending}
+                onClick={() => onEvent(pausedItems.map((i) => i.order_stage_id), "retomar")}
+                className="size-9 rounded-full"
+                title={`Retomar ${pausedItems.length} peça(s)`}
+              >
+                <RotateCcw className="size-4" />
+              </Button>
+              <span className="text-xs tabular-nums text-muted-foreground">{pausedItems.length}</span>
+            </div>
           )}
           <Button
-            size="sm"
+            size="icon"
             disabled={
               !canAct || pending || visibleCount === 0 ||
               notStarted.length === visibleCount || missingFabric.length > 0
             }
             onClick={handleFinalize}
-            className="gap-1"
+            className="size-9 rounded-full"
             title={
               missingFabric.length > 0
                 ? "Consome o tecido de todas as peças antes de concluir"
                 : notStarted.length === visibleCount
                 ? "Inicia o grupo antes de concluir"
-                : undefined
+                : "Concluir grupo"
             }
           >
             <Check className="size-4" />
-            Concluir grupo
           </Button>
         </div>
       </div>
