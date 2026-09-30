@@ -41,11 +41,13 @@ import { Route as AuthenticatedAdminRotasColisRouteImport } from './routes/_auth
 import { Route as AuthenticatedAdminRelatoriosRouteImport } from './routes/_authenticated/admin.relatorios'
 import { Route as AuthenticatedAdminQualidadeRouteImport } from './routes/_authenticated/admin.qualidade'
 import { Route as AuthenticatedAdminOciosoRouteImport } from './routes/_authenticated/admin.ocioso'
+import { Route as AuthenticatedAdminIntegracaoErpRouteImport } from './routes/_authenticated/admin.integracao-erp'
 import { Route as AuthenticatedAdminColisRouteImport } from './routes/_authenticated/admin.colis'
 import { Route as AuthenticatedAdminCatalogoRouteImport } from './routes/_authenticated/admin.catalogo'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as AuthenticatedAdminPlaneamentoIndexRouteImport } from './routes/_authenticated/admin.planeamento.index'
+import { Route as ApiIntegrationsErpOrdersRouteImport } from './routes/api/integrations/erp/orders'
 import { Route as AuthenticatedEncomendasIdEtiquetaRouteImport } from './routes/_authenticated/encomendas.$id.etiqueta'
 import { Route as AuthenticatedAdminPlaneamentoPainelRouteImport } from './routes/_authenticated/admin.planeamento.painel'
 import { Route as AuthenticatedAdminPlaneamentoCargaRouteImport } from './routes/_authenticated/admin.planeamento.carga'
@@ -230,6 +232,12 @@ const AuthenticatedAdminOciosoRoute =
     path: '/admin/ocioso',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedAdminIntegracaoErpRoute =
+  AuthenticatedAdminIntegracaoErpRouteImport.update({
+    id: '/admin/integracao-erp',
+    path: '/admin/integracao-erp',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAdminColisRoute = AuthenticatedAdminColisRouteImport.update({
   id: '/admin/colis',
   path: '/admin/colis',
@@ -257,6 +265,12 @@ const AuthenticatedAdminPlaneamentoIndexRoute =
     id: '/admin/planeamento/',
     path: '/admin/planeamento/',
     getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const ApiIntegrationsErpOrdersRoute =
+  ApiIntegrationsErpOrdersRouteImport.update({
+    id: '/api/integrations/erp/orders',
+    path: '/api/integrations/erp/orders',
+    getParentRoute: () => rootRouteImport,
   } as any)
 const AuthenticatedEncomendasIdEtiquetaRoute =
   AuthenticatedEncomendasIdEtiquetaRouteImport.update({
@@ -292,6 +306,7 @@ export interface FileRoutesByFullPath {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/admin/catalogo': typeof AuthenticatedAdminCatalogoRoute
   '/admin/colis': typeof AuthenticatedAdminColisRoute
+  '/admin/integracao-erp': typeof AuthenticatedAdminIntegracaoErpRoute
   '/admin/ocioso': typeof AuthenticatedAdminOciosoRoute
   '/admin/qualidade': typeof AuthenticatedAdminQualidadeRoute
   '/admin/relatorios': typeof AuthenticatedAdminRelatoriosRoute
@@ -316,6 +331,7 @@ export interface FileRoutesByFullPath {
   '/admin/planeamento/carga': typeof AuthenticatedAdminPlaneamentoCargaRoute
   '/admin/planeamento/painel': typeof AuthenticatedAdminPlaneamentoPainelRoute
   '/encomendas/$id/etiqueta': typeof AuthenticatedEncomendasIdEtiquetaRoute
+  '/api/integrations/erp/orders': typeof ApiIntegrationsErpOrdersRoute
   '/admin/planeamento/': typeof AuthenticatedAdminPlaneamentoIndexRoute
 }
 export interface FileRoutesByTo {
@@ -333,6 +349,7 @@ export interface FileRoutesByTo {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/admin/catalogo': typeof AuthenticatedAdminCatalogoRoute
   '/admin/colis': typeof AuthenticatedAdminColisRoute
+  '/admin/integracao-erp': typeof AuthenticatedAdminIntegracaoErpRoute
   '/admin/ocioso': typeof AuthenticatedAdminOciosoRoute
   '/admin/qualidade': typeof AuthenticatedAdminQualidadeRoute
   '/admin/relatorios': typeof AuthenticatedAdminRelatoriosRoute
@@ -357,6 +374,7 @@ export interface FileRoutesByTo {
   '/admin/planeamento/carga': typeof AuthenticatedAdminPlaneamentoCargaRoute
   '/admin/planeamento/painel': typeof AuthenticatedAdminPlaneamentoPainelRoute
   '/encomendas/$id/etiqueta': typeof AuthenticatedEncomendasIdEtiquetaRoute
+  '/api/integrations/erp/orders': typeof ApiIntegrationsErpOrdersRoute
   '/admin/planeamento': typeof AuthenticatedAdminPlaneamentoIndexRoute
 }
 export interface FileRoutesById {
@@ -376,6 +394,7 @@ export interface FileRoutesById {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/admin/catalogo': typeof AuthenticatedAdminCatalogoRoute
   '/_authenticated/admin/colis': typeof AuthenticatedAdminColisRoute
+  '/_authenticated/admin/integracao-erp': typeof AuthenticatedAdminIntegracaoErpRoute
   '/_authenticated/admin/ocioso': typeof AuthenticatedAdminOciosoRoute
   '/_authenticated/admin/qualidade': typeof AuthenticatedAdminQualidadeRoute
   '/_authenticated/admin/relatorios': typeof AuthenticatedAdminRelatoriosRoute
@@ -400,6 +419,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/planeamento/carga': typeof AuthenticatedAdminPlaneamentoCargaRoute
   '/_authenticated/admin/planeamento/painel': typeof AuthenticatedAdminPlaneamentoPainelRoute
   '/_authenticated/encomendas/$id/etiqueta': typeof AuthenticatedEncomendasIdEtiquetaRoute
+  '/api/integrations/erp/orders': typeof ApiIntegrationsErpOrdersRoute
   '/_authenticated/admin/planeamento/': typeof AuthenticatedAdminPlaneamentoIndexRoute
 }
 export interface FileRouteTypes {
@@ -419,6 +439,7 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/admin/catalogo'
     | '/admin/colis'
+    | '/admin/integracao-erp'
     | '/admin/ocioso'
     | '/admin/qualidade'
     | '/admin/relatorios'
@@ -443,6 +464,7 @@ export interface FileRouteTypes {
     | '/admin/planeamento/carga'
     | '/admin/planeamento/painel'
     | '/encomendas/$id/etiqueta'
+    | '/api/integrations/erp/orders'
     | '/admin/planeamento/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -460,6 +482,7 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/admin/catalogo'
     | '/admin/colis'
+    | '/admin/integracao-erp'
     | '/admin/ocioso'
     | '/admin/qualidade'
     | '/admin/relatorios'
@@ -484,6 +507,7 @@ export interface FileRouteTypes {
     | '/admin/planeamento/carga'
     | '/admin/planeamento/painel'
     | '/encomendas/$id/etiqueta'
+    | '/api/integrations/erp/orders'
     | '/admin/planeamento'
   id:
     | '__root__'
@@ -502,6 +526,7 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/_authenticated/admin/catalogo'
     | '/_authenticated/admin/colis'
+    | '/_authenticated/admin/integracao-erp'
     | '/_authenticated/admin/ocioso'
     | '/_authenticated/admin/qualidade'
     | '/_authenticated/admin/relatorios'
@@ -526,6 +551,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/planeamento/carga'
     | '/_authenticated/admin/planeamento/painel'
     | '/_authenticated/encomendas/$id/etiqueta'
+    | '/api/integrations/erp/orders'
     | '/_authenticated/admin/planeamento/'
   fileRoutesById: FileRoutesById
 }
@@ -538,6 +564,7 @@ export interface RootRouteChildren {
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
+  ApiIntegrationsErpOrdersRoute: typeof ApiIntegrationsErpOrdersRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -766,6 +793,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminOciosoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/admin/integracao-erp': {
+      id: '/_authenticated/admin/integracao-erp'
+      path: '/admin/integracao-erp'
+      fullPath: '/admin/integracao-erp'
+      preLoaderRoute: typeof AuthenticatedAdminIntegracaoErpRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/admin/colis': {
       id: '/_authenticated/admin/colis'
       path: '/admin/colis'
@@ -800,6 +834,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/planeamento/'
       preLoaderRoute: typeof AuthenticatedAdminPlaneamentoIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/integrations/erp/orders': {
+      id: '/api/integrations/erp/orders'
+      path: '/api/integrations/erp/orders'
+      fullPath: '/api/integrations/erp/orders'
+      preLoaderRoute: typeof ApiIntegrationsErpOrdersRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/encomendas/$id/etiqueta': {
       id: '/_authenticated/encomendas/$id/etiqueta'
@@ -846,6 +887,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedAdminCatalogoRoute: typeof AuthenticatedAdminCatalogoRoute
   AuthenticatedAdminColisRoute: typeof AuthenticatedAdminColisRoute
+  AuthenticatedAdminIntegracaoErpRoute: typeof AuthenticatedAdminIntegracaoErpRoute
   AuthenticatedAdminOciosoRoute: typeof AuthenticatedAdminOciosoRoute
   AuthenticatedAdminQualidadeRoute: typeof AuthenticatedAdminQualidadeRoute
   AuthenticatedAdminRelatoriosRoute: typeof AuthenticatedAdminRelatoriosRoute
@@ -879,6 +921,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedAdminCatalogoRoute: AuthenticatedAdminCatalogoRoute,
   AuthenticatedAdminColisRoute: AuthenticatedAdminColisRoute,
+  AuthenticatedAdminIntegracaoErpRoute: AuthenticatedAdminIntegracaoErpRoute,
   AuthenticatedAdminOciosoRoute: AuthenticatedAdminOciosoRoute,
   AuthenticatedAdminQualidadeRoute: AuthenticatedAdminQualidadeRoute,
   AuthenticatedAdminRelatoriosRoute: AuthenticatedAdminRelatoriosRoute,
@@ -923,6 +966,7 @@ const rootRouteChildren: RootRouteChildren = {
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
+  ApiIntegrationsErpOrdersRoute: ApiIntegrationsErpOrdersRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
