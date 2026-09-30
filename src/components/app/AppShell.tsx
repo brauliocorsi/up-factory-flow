@@ -3,11 +3,12 @@ import {
   LayoutGrid, ListOrdered, LogOut, Factory, Upload, Library, Boxes, HardHat,
   Settings, Wrench, PackageCheck, ClipboardCheck, Clock, Barcode, ChevronDown,
   Menu, Shield, Package, Truck, BarChart3, CalendarClock, Layers, Scissors,
+  Moon, Sun,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator,
