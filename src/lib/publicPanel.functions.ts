@@ -8,6 +8,7 @@ import { z } from "zod";
  */
 
 export type PanelOperator = {
+  operator_id?: string;
   operator_name: string;
   order_number: string;
   stage: string;
@@ -24,6 +25,7 @@ export type PanelOperator = {
     coli_total: number | null;
     is_paused: boolean;
     pause_reason: string | null;
+    pause_since?: string | null;
     last_resume_at: string | null;
     productive_seconds: number;
   }>;
@@ -40,6 +42,8 @@ export type PanelIdle = {
   current_pause_reason: string | null;
 };
 
+export type PanelActivity = { operator_id: string; operator_name: string; last_finished_at: string | null; done_today: number };
+
 export type PanelData = {
   server_time: string;
   productive_minutes_today: number;
@@ -52,6 +56,7 @@ export type PanelData = {
   blocks: Array<{ block: number; minutes: number }>;
   operators: PanelOperator[];
   idle_today?: PanelIdle[];
+  activity_today?: PanelActivity[];
 };
 
 export type PanelResult =
