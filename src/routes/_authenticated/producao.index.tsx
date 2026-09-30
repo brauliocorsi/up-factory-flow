@@ -956,81 +956,60 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
         </div>
       </div>
 
-      {/* Ações */}
-      <div className="flex gap-2 mt-3 flex-wrap">
-        {/* Bloqueio de propriedade: etapa iniciada por outro operador */}
+      {/* Ações — botões redondos só com símbolo */}
+      <div className="mt-3 pt-3 border-t flex items-center gap-2.5 flex-wrap">
         {!canAct ? (
           <div className="text-xs text-muted-foreground flex items-center gap-1">
             <Lock className="size-3" /> Não atribuído a esta etapa
           </div>
         ) : (
           <>
-            {!isQuality && !operateByColis && item.status !== "em_curso" && !blocked && !prereqBlocked && (!isUpholstery || convergenceReady) && (
-              <Button size="lg" disabled={pending} onClick={() => onAction("iniciar")} className="gap-2 h-12 flex-1 sm:flex-none">
-                <Play className="size-4" /> Iniciar
-              </Button>
-            )}
-            {prereqBlocked && (
-              <div className="text-xs text-destructive flex items-center gap-1">
-                <Lock className="size-3" /> Aguarda {missingPrereqs.map((s) => STAGE_LABELS[s]).join(" + ")}
-              </div>
-            )}
-            {!isQuality && !operateByColis && isUpholstery && !convergenceReady && !prereqBlocked && item.status !== "em_curso" && (
-              <div className="text-xs text-muted-foreground flex items-center gap-1">
-                <Lock className="size-3" /> Aguarda {!item.lines?.tecido?.ready ? "Costura" : ""}
-                {!item.lines?.tecido?.ready && !item.lines?.estrutura?.ready ? " + " : ""}
-                {!item.lines?.estrutura?.ready ? "Branco" : ""}
-              </div>
+            {!isQuality && !operateByColis && item.status !== "em_curso" && !done && !blocked && !prereqBlocked && (!isUpholstery || convergenceReady) && (
+              <IconAction label="Iniciar" tone="primary" disabled={pending} onClick={() => onAction("iniciar")}>
+                <Play className="size-5 fill-current" />
+              </IconAction>
             )}
             {!isQuality && !operateByColis && running && (
-              <Button size="lg" variant="outline" disabled={pending || ownedByOther} onClick={() => onAction("pausar")} className="gap-2 h-12 flex-1 sm:flex-none">
-                <Pause className="size-4" /> Pausar
-              </Button>
+              <IconAction label="Pausar" tone="warning" disabled={pending || ownedByOther} onClick={() => onAction("pausar")}>
+                <Pause className="size-5 fill-current" />
+              </IconAction>
             )}
             {!isQuality && !operateByColis && paused && (
-              <Button size="lg" variant="outline" disabled={pending || ownedByOther} onClick={() => onAction("retomar")} className="gap-2 h-12 flex-1 sm:flex-none">
-                <RotateCcw className="size-4" /> Retomar
-              </Button>
-            )}
-            {!isQuality && !operateByColis && canCancelStart && onCancelStart && (
-              <Button size="lg" variant="ghost" disabled={pending} onClick={onCancelStart} className="gap-2 h-12 text-destructive hover:text-destructive">
-                <Undo2 className="size-4" /> Cancelar início
-              </Button>
+              <IconAction label="Retomar" tone="primary" disabled={pending || ownedByOther} onClick={() => onAction("retomar")}>
+                <RotateCcw className="size-5" />
+              </IconAction>
             )}
             {!isQuality && !operateByColis && item.status === "em_curso" && (
-              <Button
-                size="lg"
-                variant="default"
+              <IconAction
+                label={fabricMissing ? "Consome o tecido antes de finalizar o Corte" : "Finalizar"}
+                tone="success"
                 disabled={pending || ownedByOther || fabricMissing}
                 onClick={() => onAction("finalizar")}
-                className="gap-2 h-12 flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700"
-                title={fabricMissing ? "Consome o tecido antes de finalizar o Corte" : undefined}
               >
-                <Check className="size-4" /> Finalizar
-              </Button>
+                <Check className="size-6" strokeWidth={3} />
+              </IconAction>
             )}
-            {fabricMissing && item.status === "em_curso" && (
-              <div className="text-xs text-destructive flex items-center gap-1">
-                <Lock className="size-3" /> Consumo de tecido obrigatório para finalizar o Corte
-              </div>
+            {!isQuality && !operateByColis && canCancelStart && onCancelStart && (
+              <IconAction label="Cancelar início (engano)" tone="danger" disabled={pending} onClick={onCancelStart}>
+                <Undo2 className="size-5" />
+              </IconAction>
             )}
-            {!isQuality && !operateByColis && ownedByOther && (
-              <div className="text-xs text-muted-foreground flex items-center gap-1">
-                <Lock className="size-3" /> Iniciada pelo operador {item.operator_code} — só ele pode pausar/finalizar
-              </div>
-            )}
-            {!isQuality && !operateByColis && blocked && (
-              <div className="text-xs text-destructive flex items-center gap-1">
-                <AlertTriangle className="size-3" /> Aguarda etapas anteriores
-              </div>
+            {item.stage === "corte" && (
+              <ConsumeFabricDialog
+                orderId={item.order_id}
+                orderNumber={item.order_number}
+                operatorCode={operatorCode}
+                canUndo={Boolean(canUndoFabric)}
+                iconOnly
+              />
             )}
             {item.stage !== "estrutura" && (
-
               <ReworkDialog
                 orderId={item.order_id}
                 orderNumber={item.order_number}
                 detectedStage={item.stage}
                 operatorCode={operatorCode}
+                iconOnly
               />
             )}
             {(isQuality || (isPacking && canQuality)) && !prereqBlocked && (
@@ -1042,30 +1021,54 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
                 operatorCode={operatorCode}
               />
             )}
-            {isPacking && (
-              <PrintLabelButton orderId={item.order_id} label="Imprimir etiqueta" />
-            )}
           </>
         )}
-        {item.stage === "corte" && (
-          <>
-            <PrintLabelButton orderId={item.order_id} label="Imprimir etiqueta" />
-            {fabricConsumption ? (
-              <Badge variant="secondary" className="h-12 px-3 flex items-center gap-1 text-xs">
-                Tecido consumido: {Number(fabricConsumption.meters).toFixed(1)} m
-                <span className="font-mono">
-                  ({fabricConsumption.fabric_ref_code ?? "—"} / {fabricConsumption.color_code ?? "—"})
-                </span>
-              </Badge>
-            ) : null}
-            <ConsumeFabricDialog
-              orderId={item.order_id}
-              orderNumber={item.order_number}
-              operatorCode={operatorCode}
-              canUndo={Boolean(canUndoFabric)}
-            />
-          </>
+        {(isPacking || item.stage === "corte" || item.stage === "costura") && (
+          <PrintLabelButton
+            orderId={item.order_id}
+            label="Imprimir etiqueta"
+            size="icon"
+            variant="outline"
+            showOpenLink={false}
+            className="size-12 rounded-full"
+          />
         )}
+
+        {/* Avisos (texto curto ao lado dos símbolos) */}
+        <div className="flex flex-col gap-0.5 ml-auto text-right">
+          {prereqBlocked && (
+            <span className="text-xs text-destructive inline-flex items-center gap-1 justify-end">
+              <Lock className="size-3" /> Aguarda {missingPrereqs.map((s) => STAGE_LABELS[s]).join(" + ")}
+            </span>
+          )}
+          {canAct && !isQuality && !operateByColis && isUpholstery && !convergenceReady && !prereqBlocked && item.status !== "em_curso" && (
+            <span className="text-xs text-muted-foreground inline-flex items-center gap-1 justify-end">
+              <Lock className="size-3" /> Aguarda {!item.lines?.tecido?.ready ? "Costura" : ""}
+              {!item.lines?.tecido?.ready && !item.lines?.estrutura?.ready ? " + " : ""}
+              {!item.lines?.estrutura?.ready ? "Branco" : ""}
+            </span>
+          )}
+          {fabricMissing && item.status === "em_curso" && (
+            <span className="text-xs text-destructive inline-flex items-center gap-1 justify-end">
+              <Lock className="size-3" /> Consumo de tecido obrigatório
+            </span>
+          )}
+          {fabricConsumption && (
+            <span className="text-xs text-muted-foreground inline-flex items-center gap-1 justify-end">
+              <Check className="size-3 text-emerald-600" /> Tecido {Number(fabricConsumption.meters).toFixed(1)} m
+            </span>
+          )}
+          {canAct && !isQuality && !operateByColis && ownedByOther && (
+            <span className="text-xs text-muted-foreground inline-flex items-center gap-1 justify-end">
+              <Lock className="size-3" /> Só o operador {item.operator_code} pode pausar/finalizar
+            </span>
+          )}
+          {canAct && !isQuality && !operateByColis && blocked && (
+            <span className="text-xs text-destructive inline-flex items-center gap-1 justify-end">
+              <AlertTriangle className="size-3" /> Aguarda etapas anteriores
+            </span>
+          )}
+        </div>
       </div>
 
 
@@ -1146,13 +1149,16 @@ function ColiRow({ coli, coliTotal, canAct, operatorCode, pending, onAction, sho
           </span>
         </div>
       </div>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1.5">
         {showLabel && (
           <PrintLabelButton
             orderId={coli.order_id}
             coliId={coli.order_coli_id}
             label="Imprimir etiqueta do volume"
-            className="h-8 gap-1"
+            size="icon"
+            variant="outline"
+            showOpenLink={false}
+            className="size-10 rounded-full"
           />
         )}
         {!canAct ? (
@@ -1161,31 +1167,30 @@ function ColiRow({ coli, coliTotal, canAct, operatorCode, pending, onAction, sho
           </span>
         ) : (
           <>
-            {coli.status !== "em_curso" && (
-              <Button size="sm" disabled={pending} onClick={() => onAction("iniciar")} className="h-8 gap-1">
-                <Play className="size-3" /> Iniciar
-              </Button>
+            {coli.status !== "em_curso" && coli.status !== "concluida" && (
+              <IconAction small label="Iniciar volume" tone="primary" disabled={pending} onClick={() => onAction("iniciar")}>
+                <Play className="size-4 fill-current" />
+              </IconAction>
             )}
             {running && (
-              <Button size="sm" variant="outline" disabled={pending || ownedByOther} onClick={() => onAction("pausar")} className="h-8 gap-1">
-                <Pause className="size-3" /> Pausar
-              </Button>
+              <IconAction small label="Pausar volume" tone="warning" disabled={pending || ownedByOther} onClick={() => onAction("pausar")}>
+                <Pause className="size-4 fill-current" />
+              </IconAction>
             )}
             {paused && (
-              <Button size="sm" variant="outline" disabled={pending || ownedByOther} onClick={() => onAction("retomar")} className="h-8 gap-1">
-                <RotateCcw className="size-3" /> Retomar
-              </Button>
+              <IconAction small label="Retomar volume" tone="primary" disabled={pending || ownedByOther} onClick={() => onAction("retomar")}>
+                <RotateCcw className="size-4" />
+              </IconAction>
             )}
             {coli.status === "em_curso" && (
-              <Button size="sm" disabled={pending || ownedByOther} onClick={() => onAction("finalizar")}
-                className="h-8 gap-1 bg-emerald-600 hover:bg-emerald-700">
-                <Check className="size-3" /> Finalizar
-              </Button>
+              <IconAction small label="Finalizar volume" tone="success" disabled={pending || ownedByOther} onClick={() => onAction("finalizar")}>
+                <Check className="size-5" strokeWidth={3} />
+              </IconAction>
             )}
             {canCancel && onCancel && (
-              <Button size="sm" variant="ghost" disabled={pending} onClick={onCancel} className="h-8 gap-1 text-destructive hover:text-destructive" title="Cancelar início (engano)">
-                <Undo2 className="size-3" /> Cancelar
-              </Button>
+              <IconAction small label="Cancelar início (engano)" tone="danger" disabled={pending} onClick={onCancel}>
+                <Undo2 className="size-4" />
+              </IconAction>
             )}
             {ownedByOther && (
               <span className="text-[11px] text-muted-foreground inline-flex items-center gap-1">
@@ -1196,6 +1201,42 @@ function ColiRow({ coli, coliTotal, canAct, operatorCode, pending, onAction, sho
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * Botão redondo só com símbolo, para os cartões dos operadores.
+ * O nome da ação aparece ao passar o rato e é lido por leitores de ecrã.
+ */
+function IconAction({
+  label, tone, disabled, onClick, children, small = false,
+}: {
+  label: string;
+  tone: "primary" | "success" | "warning" | "danger";
+  disabled?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+  small?: boolean;
+}) {
+  const tones: Record<typeof tone, string> = {
+    primary: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm",
+    success: "bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm",
+    warning: "bg-amber-100 text-amber-800 border border-amber-300 hover:bg-amber-200",
+    danger: "bg-transparent text-destructive border border-destructive/30 hover:bg-destructive/10",
+  };
+  return (
+    <button
+      type="button"
+      title={label}
+      aria-label={label}
+      disabled={disabled}
+      onClick={onClick}
+      className={`inline-flex items-center justify-center rounded-full transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40 disabled:pointer-events-none ${
+        small ? "size-10" : "size-12"
+      } ${tones[tone]}`}
+    >
+      {children}
+    </button>
   );
 }
 

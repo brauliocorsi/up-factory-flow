@@ -25,12 +25,14 @@ export function ConsumeFabricDialog({
   operatorCode,
   canUndo = false,
   compact = false,
+  iconOnly = false,
 }: {
   orderId: string;
   orderNumber: string;
   operatorCode?: string;
   canUndo?: boolean;
   compact?: boolean;
+  iconOnly?: boolean;
 }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
