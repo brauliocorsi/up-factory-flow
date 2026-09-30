@@ -443,7 +443,7 @@ function GroupCard({
                   {it.status}
                 </Badge>
                 {isCut && (
-                  <PrintLabelButton orderId={it.order_id} label="Etiqueta" className="h-8 gap-1 px-2" />
+                  <PrintLabelButton orderId={it.order_id} label="" size="icon" variant="ghost" className="size-8 rounded-full" />
                 )}
                 {isCut && it.status !== "concluida" && (
                   <ConsumeFabricDialog
@@ -454,17 +454,17 @@ function GroupCard({
                   />
                 )}
                 <Button
-                  size="sm"
+                  size="icon"
                   variant="ghost"
                   disabled={
                     !canAct || pending || it.status === "concluida" ||
                     (isCut && !fabricOf(it.order_id))
                   }
-                  title={isCut && !fabricOf(it.order_id) ? "Consome o tecido primeiro" : undefined}
+                  className="size-8 rounded-full text-emerald-700 hover:bg-emerald-500/10"
+                  title={isCut && !fabricOf(it.order_id) ? "Consome o tecido primeiro" : "Concluir peça"}
                   onClick={() => onFinalize([it.order_stage_id])}
                 >
-
-                  Concluir
+                  <Check className="size-4" />
                 </Button>
               </div>
             </div>
