@@ -3,11 +3,12 @@ import {
   LayoutGrid, ListOrdered, LogOut, Factory, Upload, Library, Boxes, HardHat,
   Settings, Wrench, PackageCheck, ClipboardCheck, Clock, Barcode, ChevronDown,
   Menu, Shield, Package, Truck, BarChart3, CalendarClock, Layers, Scissors,
+  Moon, Sun,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator,
@@ -94,6 +95,20 @@ function groupActive(pathname: string, group: NavGroup) {
   return group.items.some((i) => isActive(pathname, i.to));
 }
 
+const THEME_KEY = "up-theme";
+
+function useDarkMode() {
+  const [dark, setDark] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(THEME_KEY) === "dark";
+  });
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", dark);
+    window.localStorage.setItem(THEME_KEY, dark ? "dark" : "light");
+  }, [dark]);
+  return { dark, toggle: () => setDark((d) => !d) };
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -102,6 +117,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { role, operator } = useMySession();
   const isOperator = role === "operador";
   const isPicker = role === "picador";
+  const { dark, toggle } = useDarkMode();
 
   // Filtragem por role: operador só vê Produção/Picagem/Retrabalho; picador só vê Picagem.
   const visiblePrimary = (isOperator || isPicker) ? [] : primary;
@@ -227,6 +243,19 @@ export function AppShell({ children }: { children: ReactNode }) {
           </nav>
 
           <div className="ml-auto flex items-center gap-1">
+            {/* Modo escuro */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggle}
+              className="gap-2"
+              title={dark ? "Modo claro" : "Modo escuro"}
+              aria-label={dark ? "Mudar para modo claro" : "Mudar para modo escuro"}
+            >
+              {dark ? <Sun className="size-5" /> : <Moon className="size-5" />}
+              <span className="hidden md:inline">{dark ? "Claro" : "Escuro"}</span>
+            </Button>
+
             {/* Mobile: botão "Menu" abre sheet com tudo organizado */}
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild>
