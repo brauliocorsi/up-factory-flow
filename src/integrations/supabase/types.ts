@@ -200,6 +200,228 @@ export type Database = {
         }
         Relationships: []
       }
+      erp_inbound_events: {
+        Row: {
+          event_id: string
+          line_id: string
+          payload: Json
+          payload_hash: string
+          received_at: string
+          sale_id: string
+          source_system: string
+        }
+        Insert: {
+          event_id: string
+          line_id: string
+          payload: Json
+          payload_hash: string
+          received_at?: string
+          sale_id: string
+          source_system: string
+        }
+        Update: {
+          event_id?: string
+          line_id?: string
+          payload?: Json
+          payload_hash?: string
+          received_at?: string
+          sale_id?: string
+          source_system?: string
+        }
+        Relationships: []
+      }
+      erp_order_links: {
+        Row: {
+          created_at: string
+          customization: Json | null
+          description: string
+          first_event_id: string
+          id: string
+          line_id: string
+          line_quantity: number
+          mapping_status: string
+          order_id: string
+          payload_hash: string
+          product_code: string | null
+          product_id: string
+          sale_id: string
+          sale_number: string
+          source_system: string
+          unit_index: number
+        }
+        Insert: {
+          created_at?: string
+          customization?: Json | null
+          description: string
+          first_event_id: string
+          id?: string
+          line_id: string
+          line_quantity: number
+          mapping_status: string
+          order_id: string
+          payload_hash: string
+          product_code?: string | null
+          product_id: string
+          sale_id: string
+          sale_number: string
+          source_system: string
+          unit_index: number
+        }
+        Update: {
+          created_at?: string
+          customization?: Json | null
+          description?: string
+          first_event_id?: string
+          id?: string
+          line_id?: string
+          line_quantity?: number
+          mapping_status?: string
+          order_id?: string
+          payload_hash?: string
+          product_code?: string | null
+          product_id?: string
+          sale_id?: string
+          sale_number?: string
+          source_system?: string
+          unit_index?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "erp_order_links_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "production_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      erp_outbox: {
+        Row: {
+          acked_at: string | null
+          attempts: number
+          created_at: string
+          event_id: string
+          event_status: string
+          last_attempt_at: string | null
+          last_error: string | null
+          last_response_code: number | null
+          link_id: string
+          occurred_at: string
+          order_id: string
+          payload: Json
+          state: string
+          updated_at: string
+        }
+        Insert: {
+          acked_at?: string | null
+          attempts?: number
+          created_at?: string
+          event_id?: string
+          event_status: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          last_response_code?: number | null
+          link_id: string
+          occurred_at: string
+          order_id: string
+          payload: Json
+          state?: string
+          updated_at?: string
+        }
+        Update: {
+          acked_at?: string | null
+          attempts?: number
+          created_at?: string
+          event_id?: string
+          event_status?: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          last_response_code?: number | null
+          link_id?: string
+          occurred_at?: string
+          order_id?: string
+          payload?: Json
+          state?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "erp_outbox_link_id_fkey"
+            columns: ["link_id"]
+            isOneToOne: false
+            referencedRelation: "erp_order_links"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "erp_outbox_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "production_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      erp_product_map: {
+        Row: {
+          active: boolean
+          created_at: string
+          fabric_ref_tec: string | null
+          measure: string | null
+          model_id: string | null
+          notes: string | null
+          product_code: string | null
+          product_id: string
+          structure_type: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          fabric_ref_tec?: string | null
+          measure?: string | null
+          model_id?: string | null
+          notes?: string | null
+          product_code?: string | null
+          product_id: string
+          structure_type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          fabric_ref_tec?: string | null
+          measure?: string | null
+          model_id?: string | null
+          notes?: string | null
+          product_code?: string | null
+          product_id?: string
+          structure_type?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "erp_product_map_fabric_ref_tec_fkey"
+            columns: ["fabric_ref_tec"]
+            isOneToOne: false
+            referencedRelation: "fabric_availability"
+            referencedColumns: ["ref_tec"]
+          },
+          {
+            foreignKeyName: "erp_product_map_fabric_ref_tec_fkey"
+            columns: ["fabric_ref_tec"]
+            isOneToOne: false
+            referencedRelation: "fabric_catalog"
+            referencedColumns: ["ref_tec"]
+          },
+          {
+            foreignKeyName: "erp_product_map_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "models"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fabric_catalog: {
         Row: {
           active: boolean
@@ -2522,6 +2744,15 @@ export type Database = {
       }
       count_backlog_batches: { Args: never; Returns: Json }
       create_order_colis: { Args: { _order_id: string }; Returns: Json }
+      erp_ingest_order: { Args: { _hash: string; _p: Json }; Returns: Json }
+      erp_outbox_enqueue: {
+        Args: {
+          at: string
+          k: string
+          l: Database["public"]["Tables"]["erp_order_links"]["Row"]
+        }
+        Returns: undefined
+      }
       finalize_shell_batch: {
         Args: { _batch_id: string; _operator_code: string }
         Returns: Json
