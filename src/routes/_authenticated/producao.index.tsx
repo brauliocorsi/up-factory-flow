@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient, useMutation, useQueries } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -964,7 +964,7 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
           </div>
         ) : (
           <>
-            {!isQuality && !operateByColis && item.status !== "em_curso" && !done && !blocked && !prereqBlocked && (!isUpholstery || convergenceReady) && (
+            {!isQuality && !operateByColis && item.status !== "em_curso" && !blocked && !prereqBlocked && (!isUpholstery || convergenceReady) && (
               <IconAction label="Iniciar" tone="primary" disabled={pending} onClick={() => onAction("iniciar")}>
                 <Play className="size-5 fill-current" />
               </IconAction>
@@ -1084,7 +1084,7 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
               key={c.id}
               coli={c}
               coliTotal={coliTotal}
-              showLabel={isPacking || item.stage === "corte"}
+              showLabel={isPacking || item.stage === "corte" || item.stage === "costura"}
               canAct={canAct}
               operatorCode={operatorCode}
               pending={coliPending(c.id)}
@@ -1167,7 +1167,7 @@ function ColiRow({ coli, coliTotal, canAct, operatorCode, pending, onAction, sho
           </span>
         ) : (
           <>
-            {coli.status !== "em_curso" && coli.status !== "concluida" && (
+            {coli.status !== "em_curso" && (
               <IconAction small label="Iniciar volume" tone="primary" disabled={pending} onClick={() => onAction("iniciar")}>
                 <Play className="size-4 fill-current" />
               </IconAction>
@@ -1215,7 +1215,7 @@ function IconAction({
   tone: "primary" | "success" | "warning" | "danger";
   disabled?: boolean;
   onClick: () => void;
-  children: React.ReactNode;
+  children: ReactNode;
   small?: boolean;
 }) {
   const tones: Record<typeof tone, string> = {
