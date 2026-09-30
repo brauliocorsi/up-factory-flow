@@ -25,12 +25,14 @@ export function ConsumeFabricDialog({
   operatorCode,
   canUndo = false,
   compact = false,
+  iconOnly = false,
 }: {
   orderId: string;
   orderNumber: string;
   operatorCode?: string;
   canUndo?: boolean;
   compact?: boolean;
+  iconOnly?: boolean;
 }) {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -99,7 +101,12 @@ export function ConsumeFabricDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {compact ? (
+        {iconOnly ? (
+          <Button size="icon" variant="outline" title="Consumir tecido" aria-label="Consumir tecido"
+            className="size-12 rounded-full">
+            <Scissors className="size-5" />
+          </Button>
+        ) : compact ? (
           <Button size="sm" variant="outline" className="gap-1 shrink-0">
             <Scissors className="size-3.5" /> Tecido
           </Button>

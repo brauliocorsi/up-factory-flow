@@ -1,17 +1,22 @@
-import { useRef, useState } from "react";
-import { Printer, ExternalLink } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { Printer, ExternalLink, Loader2 } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { getLabelsForOrders, type LabelRow } from "@/lib/packages.functions";
+import { LabelPrintStyles } from "@/components/labels/ProductionLabel";
+import { renderLabelsForOrder } from "@/components/labels/renderLabels";
 
 /**
- * Botão que prepara a etiqueta de uma encomenda (ou de um volume) e abre o
- * diálogo de impressão do dispositivo. Usa um iframe oculto que aponta para
- * /etiquetas/imprimir?ids=<id>&autoprint=1 — essa página dispara
- * window.print() quando as etiquetas terminam de renderizar.
+ * Botão que imprime a etiqueta de uma encomenda (ou de um volume).
  *
- * Etapa 06: nunca afirmamos "impresso com sucesso" (não há confirmação do
- * dispositivo); o iframe só é removido depois do fim da impressão ou de uma
- * espera longa, para não cancelar o diálogo enquanto ainda carrega.
+ * Imprime na própria página: carrega os dados da etiqueta com a sessão atual,
+ * desenha-a numa área só visível na impressão e abre o diálogo de impressão.
+ * (Antes usava uma página escondida dentro de outra, que em alguns
+ * dispositivos não recebia a sessão e não imprimia nada.)
+ *
+ * Nunca afirmamos "impresso com sucesso": não há confirmação da impressora.
  */
 export function PrintLabelButton({
   orderId,
@@ -20,6 +25,7 @@ export function PrintLabelButton({
   size = "sm",
   variant = "outline",
   className,
+  showOpenLink = true,
 }: {
   orderId: string;
   /** Quando indicado, imprime apenas a etiqueta deste volume. */
@@ -28,83 +34,70 @@ export function PrintLabelButton({
   size?: "sm" | "lg" | "default" | "icon";
   variant?: "default" | "outline" | "ghost" | "secondary" | "destructive" | "link";
   className?: string;
+  showOpenLink?: boolean;
 }) {
+  const fetchLabels = useServerFn(getLabelsForOrders);
   const [printing, setPrinting] = useState(false);
+  const [rows, setRows] = useState<LabelRow[] | null>(null);
   const busy = useRef(false);
 
   const url =
     `/etiquetas/imprimir?ids=${encodeURIComponent(orderId)}` +
     (coliId ? `&colis=${encodeURIComponent(coliId)}` : "");
 
-  function handlePrint() {
+  const finish = () => {
+    document.documentElement.classList.remove("printing-labels");
+    setRows(null);
+    busy.current = false;
+    setPrinting(false);
+  };
+
+  async function handlePrint() {
     if (busy.current) return;
     busy.current = true;
     setPrinting(true);
     try {
-      const iframe = document.createElement("iframe");
-      iframe.setAttribute("aria-hidden", "true");
-      iframe.style.position = "fixed";
-      iframe.style.right = "0";
-      iframe.style.bottom = "0";
-      iframe.style.width = "0";
-      iframe.style.height = "0";
-      iframe.style.border = "0";
-      iframe.style.visibility = "hidden";
-      iframe.src = `${url}&autoprint=1`;
-
-      let done = false;
-      let printStarted = false;
-      let timer = 0;
-      const cleanup = () => {
-        if (done) return;
-        done = true;
-        window.clearTimeout(timer);
-        try { document.body.removeChild(iframe); } catch { /* já removido */ }
-        busy.current = false;
-        setPrinting(false);
-      };
-      // Se a impressão nunca começar (etiqueta sem dados ou erro a carregar),
-      // liberta o botão depressa e avisa, em vez de ficar preso.
-      const failFast = () => {
-        if (printStarted || done) return;
-        cleanup();
-        toast.error("Não foi possível preparar a etiqueta — tenta novamente.");
-      };
-      // Só vale enquanto a página da etiqueta não carregar: depois do load a
-      // espera passa a ser longa, para nunca cancelar uma impressão lenta.
-      timer = window.setTimeout(failFast, 30000);
-
-      iframe.addEventListener("load", () => {
-        window.clearTimeout(timer);
-        // Salvaguarda longa a partir do load: limpa o iframe sem dar erro.
-        timer = window.setTimeout(cleanup, 120000);
-        try {
-          const win = iframe.contentWindow;
-          if (win) {
-            win.addEventListener("beforeprint", () => {
-              printStarted = true;
-              window.clearTimeout(timer);
-              // Salvaguarda longa: só limpa se o dispositivo nunca responder.
-              timer = window.setTimeout(cleanup, 120000);
-              toast.success("Diálogo de impressão preparado — confirma na impressora.");
-            });
-            win.addEventListener("afterprint", () => window.setTimeout(cleanup, 500));
-          } else {
-            toast.success("Etiqueta preparada — confirma o diálogo de impressão.");
-          }
-        } catch {
-          /* sem acesso ao iframe — fica a salvaguarda longa */
-          toast.success("Etiqueta preparada — confirma o diálogo de impressão.");
-        }
+      const data = await fetchLabels({
+        data: { ids: [orderId], ...(coliId ? { coli_ids: [coliId] } : {}) },
       });
-
-      document.body.appendChild(iframe);
+      if (!data || data.length === 0) {
+        toast.error("Não há dados de etiqueta para esta encomenda.");
+        finish();
+        return;
+      }
+      setRows(data);
     } catch (e: any) {
-      busy.current = false;
-      setPrinting(false);
       toast.error(e?.message ?? "Não foi possível preparar a etiqueta");
+      finish();
     }
   }
+
+  // Quando as etiquetas estão desenhadas, abre o diálogo de impressão.
+  useEffect(() => {
+    if (!rows) return;
+    document.documentElement.classList.add("printing-labels");
+    const onAfter = () => window.setTimeout(finish, 300);
+    window.addEventListener("afterprint", onAfter);
+    // Pequeno atraso para os códigos de barras renderizarem.
+    const t = window.setTimeout(() => {
+      try {
+        window.print();
+      } catch {
+        toast.error("O dispositivo não abriu o diálogo de impressão.");
+        finish();
+      }
+    }, 350);
+    // Salvaguarda: se o browser não emitir afterprint, liberta o botão.
+    const safety = window.setTimeout(finish, 120000);
+    return () => {
+      window.clearTimeout(t);
+      window.clearTimeout(safety);
+      window.removeEventListener("afterprint", onAfter);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows]);
+
+  const iconOnly = size === "icon" || !label;
 
   return (
     <span className="inline-flex items-center gap-1">
@@ -115,19 +108,40 @@ export function PrintLabelButton({
         onClick={handlePrint}
         disabled={printing}
         className={className ?? "gap-1"}
+        title={label || "Imprimir etiqueta"}
+        aria-label={label || "Imprimir etiqueta"}
       >
-        <Printer className="size-4" />
-        {printing ? "A preparar…" : label}
+        {printing ? <Loader2 className="size-4 animate-spin" /> : <Printer className="size-4" />}
+        {!iconOnly && (printing ? "A preparar…" : label)}
       </Button>
-      <a
-        href={url}
-        target="_blank"
-        rel="noreferrer"
-        title="Abrir a página da etiqueta"
-        className="text-muted-foreground hover:text-foreground"
-      >
-        <ExternalLink className="size-3.5" />
-      </a>
+      {showOpenLink && (
+        <a
+          href={url}
+          target="_blank"
+          rel="noreferrer"
+          title="Abrir a página da etiqueta"
+          className="text-muted-foreground hover:text-foreground"
+        >
+          <ExternalLink className="size-3.5" />
+        </a>
+      )}
+      {rows && typeof document !== "undefined" &&
+        createPortal(
+          <div className="label-print-portal">
+            <LabelPrintStyles />
+            <style>{`
+              .label-print-portal { position: fixed; left: -10000px; top: 0; }
+              @media print {
+                html.printing-labels body > *:not(.label-print-portal) { display: none !important; }
+                html.printing-labels .label-print-portal { position: static; left: 0; }
+              }
+            `}</style>
+            <div className="print-area flex flex-wrap gap-0">
+              {rows.map((row) => renderLabelsForOrder(row, 1))}
+            </div>
+          </div>,
+          document.body,
+        )}
     </span>
   );
 }
