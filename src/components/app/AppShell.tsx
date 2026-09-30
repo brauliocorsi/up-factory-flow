@@ -117,6 +117,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { role, operator } = useMySession();
   const isOperator = role === "operador";
   const isPicker = role === "picador";
+  const { dark, toggle } = useDarkMode();
 
   // Filtragem por role: operador só vê Produção/Picagem/Retrabalho; picador só vê Picagem.
   const visiblePrimary = (isOperator || isPicker) ? [] : primary;
@@ -242,6 +243,19 @@ export function AppShell({ children }: { children: ReactNode }) {
           </nav>
 
           <div className="ml-auto flex items-center gap-1">
+            {/* Modo escuro */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggle}
+              className="gap-2"
+              title={dark ? "Modo claro" : "Modo escuro"}
+              aria-label={dark ? "Mudar para modo claro" : "Mudar para modo escuro"}
+            >
+              {dark ? <Sun className="size-5" /> : <Moon className="size-5" />}
+              <span className="hidden md:inline">{dark ? "Claro" : "Escuro"}</span>
+            </Button>
+
             {/* Mobile: botão "Menu" abre sheet com tudo organizado */}
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild>
