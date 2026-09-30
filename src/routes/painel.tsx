@@ -6,13 +6,10 @@ import { getPublicPanel, type PanelData } from "@/lib/publicPanel.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Factory, PackageCheck, Timer, Gauge } from "lucide-react";
+import { Factory, PackageCheck, Timer, Gauge, Play, Coffee, Hourglass, CheckCircle2 } from "lucide-react";
 import { ShiftClock } from "@/components/panel/ShiftClock";
-import { PerformanceGauge } from "@/components/panel/PerformanceGauge";
-import { ShiftBlocksChart } from "@/components/panel/ShiftBlocksChart";
-import { LiveOperatorsPanel } from "@/components/panel/LiveOperatorsPanel";
-import { IdlePausePanel } from "@/components/panel/IdlePausePanel";
-import { TONE_CLASSES, elapsedUsefulMinutes, toneFor } from "@/lib/shift";
+import { TONE_CLASSES, elapsedUsefulMinutes, toneFor, formatMinutes } from "@/lib/shift";
+import { TeamLivePanel, buildTeam } from "@/components/panel/TeamLivePanel";
 
 const STORAGE_KEY = "factory-panel-code";
 
@@ -128,6 +125,11 @@ function PanelView({ data, now }: { data: PanelData; now: Date }) {
     ? Math.round((data.sla_expected_minutes / data.sla_actual_minutes) * 100)
     : null;
 
+  const team = buildTeam(data.operators, data.idle_today ?? [], data.activity_today ?? []);
+  const counts = { trabalhar: 0, pausa: 0, entre: 0, parado: 0 };
+  const tot = { pause: 0, between: 0 };
+  for (const m of team) { counts[m.state]++; tot.pause += m.pause; tot.between += m.between; }
+
   return (
     <div className="min-h-screen bg-background p-4 md:p-6">
       <header className="flex items-center justify-between gap-4 mb-4 flex-wrap">
@@ -147,40 +149,49 @@ function PanelView({ data, now }: { data: PanelData; now: Date }) {
         </div>
       </header>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-        <div className="xl:col-span-2 space-y-4">
-          <ShiftClock now={now} />
-          <PerformanceGauge pct={rhythmPct} done={data.productive_minutes_today} expected={expected} />
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <MiniCard
-              icon={<Gauge className="size-4" />}
-              label="Ritmo do dia"
-              value={rhythmPct == null ? "—" : `${rhythmPct}%`}
-              sub={`${data.productive_minutes_today} / ${expected} min`}
-              pct={rhythmPct}
-            />
-            <MiniCard
-              icon={<PackageCheck className="size-4" />}
-              label="Encomendas de hoje"
-              value={`${data.orders_due_done}/${data.orders_due_today}`}
-              sub={ordersPct == null ? "sem saídas hoje" : `${ordersPct}% concluídas`}
-              pct={ordersPct}
-            />
-            <MiniCard
-              icon={<Timer className="size-4" />}
-              label="SLA das etapas"
-              value={slaPct == null ? "—" : `${slaPct}%`}
-              sub={`${data.sla_actual_minutes} min reais · ${data.sla_expected_minutes} esperados`}
-              pct={slaPct}
-            />
-          </div>
-          <ShiftBlocksChart blocks={data.blocks} operators={data.active_operators} now={now} />
-          <IdlePausePanel rows={data.idle_today ?? []} />
-        </div>
-        <div className="xl:h-[calc(100vh-7rem)] xl:sticky xl:top-6">
-          <LiveOperatorsPanel operators={data.operators} now={now} />
-        </div>
+      <ShiftClock now={now} />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+        <BigTile label="A trabalhar" value={counts.trabalhar} tone="text-emerald-600" icon={<Play className="size-5" />} />
+        <BigTile label="Em pausa" value={counts.pausa} tone="text-amber-600" icon={<Coffee className="size-5" />} sub={`${formatMinutes(tot.pause)} de pausas hoje`} />
+        <BigTile label="Sem encomenda" value={counts.entre} tone="text-red-600" icon={<Hourglass className="size-5" />} sub={`${formatMinutes(tot.between)} entre encomendas hoje`} />
+        <BigTile label="Etapas feitas hoje" value={data.stages_done_today} tone="" icon={<CheckCircle2 className="size-5" />} />
       </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
+        <MiniCard
+          icon={<Gauge className="size-4" />}
+          label="Ritmo do dia"
+          value={rhythmPct == null ? "—" : `${rhythmPct}%`}
+          sub={`${formatMinutes(data.productive_minutes_today)} produzidos de ${formatMinutes(expected)} possíveis`}
+          pct={rhythmPct}
+        />
+        <MiniCard
+          icon={<PackageCheck className="size-4" />}
+          label="Encomendas para hoje"
+          value={`${data.orders_due_done}/${data.orders_due_today}`}
+          sub={ordersPct == null ? "sem saídas hoje" : `${ordersPct}% prontas`}
+          pct={ordersPct}
+        />
+        <MiniCard
+          icon={<Timer className="size-4" />}
+          label="Dentro do tempo previsto"
+          value={slaPct == null ? "—" : `${slaPct}%`}
+          sub={slaPct == null ? "sem etapas terminadas" : slaPct >= 100 ? "mais rápido que o previsto" : "mais lento que o previsto"}
+          pct={slaPct}
+        />
+      </div>
+      <div className="mt-4">
+        <TeamLivePanel team={team} now={now} />
+      </div>
+    </div>
+  );
+}
+
+function BigTile({ label, value, tone, icon, sub }: { label: string; value: number; tone: string; icon: React.ReactNode; sub?: string }) {
+  return (
+    <div className="rounded-2xl border bg-card p-4">
+      <div className={`flex items-center gap-2 text-sm font-semibold ${tone}`}>{icon}{label}</div>
+      <div className={`text-5xl font-black tabular-nums mt-1 ${tone}`}>{value}</div>
+      {sub && <div className="text-xs text-muted-foreground mt-1">{sub}</div>}
     </div>
   );
 }
