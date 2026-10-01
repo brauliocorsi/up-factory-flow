@@ -52,7 +52,7 @@ export const Route = createFileRoute("/_authenticated/producao/")({
       <AlertTriangle className="size-8 text-orange-600 mx-auto" />
       <h2 className="text-lg font-semibold">Algo correu mal a atualizar</h2>
       <p className="text-sm text-muted-foreground">
-        {error?.message ?? "Erro inesperado a carregar a produção."}
+        {(error as Error | undefined)?.message ?? "Erro inesperado a carregar a produção."}
       </p>
       <Button onClick={() => reset()}>Recarregar</Button>
     </div>

@@ -9,59 +9,53 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as PainelRouteImport } from './routes/painel'
-import { Route as McpRouteImport } from './routes/mcp'
-import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
-import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
-import { Route as AuthenticatedRetrabalhoRouteImport } from './routes/_authenticated/retrabalho'
-import { Route as AuthenticatedPicagemRouteImport } from './routes/_authenticated/picagem'
-import { Route as AuthenticatedImportarRouteImport } from './routes/_authenticated/importar'
-import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
-import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as McpRouteImport } from './routes/mcp'
+import { Route as PainelRouteImport } from './routes/painel'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
-import { Route as AuthenticatedStockIndexRouteImport } from './routes/_authenticated/stock.index'
-import { Route as AuthenticatedProducaoIndexRouteImport } from './routes/_authenticated/producao.index'
-import { Route as AuthenticatedEncomendasIndexRouteImport } from './routes/_authenticated/encomendas.index'
-import { Route as AuthenticatedStockTecidosRouteImport } from './routes/_authenticated/stock.tecidos'
-import { Route as AuthenticatedStockProdutoFinalRouteImport } from './routes/_authenticated/stock.produto-final'
-import { Route as AuthenticatedStockProducaoRouteImport } from './routes/_authenticated/stock.producao'
-import { Route as AuthenticatedStockCascosRouteImport } from './routes/_authenticated/stock.cascos'
-import { Route as AuthenticatedStockCapasRouteImport } from './routes/_authenticated/stock.capas'
-import { Route as AuthenticatedProdutosReceitasRouteImport } from './routes/_authenticated/produtos.receitas'
-import { Route as AuthenticatedProducaoCascosRouteImport } from './routes/_authenticated/producao.cascos'
-import { Route as AuthenticatedPicagemHistoricoRouteImport } from './routes/_authenticated/picagem.historico'
-import { Route as AuthenticatedPicagemConsultaRouteImport } from './routes/_authenticated/picagem.consulta'
-import { Route as AuthenticatedEtiquetasImprimirRouteImport } from './routes/_authenticated/etiquetas.imprimir'
-import { Route as AuthenticatedEncomendasNovaRouteImport } from './routes/_authenticated/encomendas.nova'
-import { Route as AuthenticatedEncomendasImportarSimplesRouteImport } from './routes/_authenticated/encomendas.importar-simples'
-import { Route as AuthenticatedEncomendasImportarProdutosRouteImport } from './routes/_authenticated/encomendas.importar-produtos'
-import { Route as AuthenticatedAdminSlaRouteImport } from './routes/_authenticated/admin.sla'
-import { Route as AuthenticatedAdminRotasColisRouteImport } from './routes/_authenticated/admin.rotas-colis'
-import { Route as AuthenticatedAdminRelatoriosRouteImport } from './routes/_authenticated/admin.relatorios'
-import { Route as AuthenticatedAdminQualidadeRouteImport } from './routes/_authenticated/admin.qualidade'
-import { Route as AuthenticatedAdminOciosoRouteImport } from './routes/_authenticated/admin.ocioso'
-import { Route as AuthenticatedAdminIntegracaoErpRouteImport } from './routes/_authenticated/admin.integracao-erp'
-import { Route as AuthenticatedAdminColisRouteImport } from './routes/_authenticated/admin.colis'
-import { Route as AuthenticatedAdminCatalogoRouteImport } from './routes/_authenticated/admin.catalogo'
-import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
+import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
+import { Route as AuthenticatedImportarRouteImport } from './routes/_authenticated/importar'
+import { Route as AuthenticatedPicagemRouteImport } from './routes/_authenticated/picagem'
+import { Route as AuthenticatedRetrabalhoRouteImport } from './routes/_authenticated/retrabalho'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
+import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
+import { Route as AuthenticatedAdminCatalogoRouteImport } from './routes/_authenticated/admin.catalogo'
+import { Route as AuthenticatedAdminColisRouteImport } from './routes/_authenticated/admin.colis'
+import { Route as AuthenticatedAdminIntegracaoErpRouteImport } from './routes/_authenticated/admin.integracao-erp'
+import { Route as AuthenticatedAdminOciosoRouteImport } from './routes/_authenticated/admin.ocioso'
+import { Route as AuthenticatedAdminQualidadeRouteImport } from './routes/_authenticated/admin.qualidade'
+import { Route as AuthenticatedAdminRelatoriosRouteImport } from './routes/_authenticated/admin.relatorios'
+import { Route as AuthenticatedAdminRotasColisRouteImport } from './routes/_authenticated/admin.rotas-colis'
+import { Route as AuthenticatedAdminSlaRouteImport } from './routes/_authenticated/admin.sla'
+import { Route as AuthenticatedEncomendasIndexRouteImport } from './routes/_authenticated/encomendas.index'
+import { Route as AuthenticatedEncomendasImportarProdutosRouteImport } from './routes/_authenticated/encomendas.importar-produtos'
+import { Route as AuthenticatedEncomendasImportarSimplesRouteImport } from './routes/_authenticated/encomendas.importar-simples'
+import { Route as AuthenticatedEncomendasNovaRouteImport } from './routes/_authenticated/encomendas.nova'
+import { Route as AuthenticatedEtiquetasImprimirRouteImport } from './routes/_authenticated/etiquetas.imprimir'
+import { Route as AuthenticatedPicagemConsultaRouteImport } from './routes/_authenticated/picagem.consulta'
+import { Route as AuthenticatedPicagemHistoricoRouteImport } from './routes/_authenticated/picagem.historico'
+import { Route as AuthenticatedProducaoIndexRouteImport } from './routes/_authenticated/producao.index'
+import { Route as AuthenticatedProducaoCascosRouteImport } from './routes/_authenticated/producao.cascos'
+import { Route as AuthenticatedProdutosReceitasRouteImport } from './routes/_authenticated/produtos.receitas'
+import { Route as AuthenticatedStockIndexRouteImport } from './routes/_authenticated/stock.index'
+import { Route as AuthenticatedStockCapasRouteImport } from './routes/_authenticated/stock.capas'
+import { Route as AuthenticatedStockCascosRouteImport } from './routes/_authenticated/stock.cascos'
+import { Route as AuthenticatedStockProducaoRouteImport } from './routes/_authenticated/stock.producao'
+import { Route as AuthenticatedStockProdutoFinalRouteImport } from './routes/_authenticated/stock.produto-final'
+import { Route as AuthenticatedStockTecidosRouteImport } from './routes/_authenticated/stock.tecidos'
 import { Route as AuthenticatedAdminPlaneamentoIndexRouteImport } from './routes/_authenticated/admin.planeamento.index'
-import { Route as ApiIntegrationsErpOrdersRouteImport } from './routes/api/integrations/erp/orders'
-import { Route as AuthenticatedEncomendasIdEtiquetaRouteImport } from './routes/_authenticated/encomendas.$id.etiqueta'
-import { Route as AuthenticatedAdminPlaneamentoPainelRouteImport } from './routes/_authenticated/admin.planeamento.painel'
 import { Route as AuthenticatedAdminPlaneamentoCargaRouteImport } from './routes/_authenticated/admin.planeamento.carga'
-import { Route as ApiPublicIntegrationsErpOutboxWorkerRouteImport } from './routes/api/public/integrations/erp/outbox-worker'
+import { Route as AuthenticatedAdminPlaneamentoPainelRouteImport } from './routes/_authenticated/admin.planeamento.painel'
+import { Route as AuthenticatedEncomendasIdEtiquetaRouteImport } from './routes/_authenticated/encomendas.$id.etiqueta'
+import { Route as ApiIntegrationsErpOrdersRouteImport } from './routes/api/integrations/erp/orders'
 import { Route as ApiPublicIntegrationsErpOrdersRouteImport } from './routes/api/public/integrations/erp/orders'
+import { Route as ApiPublicIntegrationsErpOutboxWorkerRouteImport } from './routes/api/public/integrations/erp/outbox-worker'
 
-const PainelRoute = PainelRouteImport.update({
-  id: '/painel',
-  path: '/painel',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const McpRoute = McpRouteImport.update({
-  id: '/mcp',
-  path: '/mcp',
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -69,28 +63,31 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
-  id: '/_authenticated',
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PainelRoute = PainelRouteImport.update({
+  id: '/painel',
+  path: '/painel',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Char91DotmcpChar93ListToolsRoute =
+  Char91DotmcpChar93ListToolsRouteImport.update({
+    id: '/.mcp/list-tools',
+    path: '/.mcp/list-tools',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const Char91DotwellKnownChar93OauthProtectedResourceRoute =
+  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
+    id: '/.well-known/oauth-protected-resource',
+    path: '/.well-known/oauth-protected-resource',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedRetrabalhoRoute = AuthenticatedRetrabalhoRouteImport.update({
-  id: '/retrabalho',
-  path: '/retrabalho',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedPicagemRoute = AuthenticatedPicagemRouteImport.update({
-  id: '/picagem',
-  path: '/picagem',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedImportarRoute = AuthenticatedImportarRouteImport.update({
-  id: '/importar',
-  path: '/importar',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedConfiguracoesRoute =
@@ -99,133 +96,47 @@ const AuthenticatedConfiguracoesRoute =
     path: '/configuracoes',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const Char91DotwellKnownChar93OauthProtectedResourceRoute =
-  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
-    id: '/.well-known/oauth-protected-resource',
-    path: '/.well-known/oauth-protected-resource',
+const AuthenticatedImportarRoute = AuthenticatedImportarRouteImport.update({
+  id: '/importar',
+  path: '/importar',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedPicagemRoute = AuthenticatedPicagemRouteImport.update({
+  id: '/picagem',
+  path: '/picagem',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedRetrabalhoRoute = AuthenticatedRetrabalhoRouteImport.update({
+  id: '/retrabalho',
+  path: '/retrabalho',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Char91DotmcpChar93InvokeToolToolRoute =
+  Char91DotmcpChar93InvokeToolToolRouteImport.update({
+    id: '/.mcp/invoke-tool/$tool',
+    path: '/.mcp/invoke-tool/$tool',
     getParentRoute: () => rootRouteImport,
   } as any)
-const Char91DotmcpChar93ListToolsRoute =
-  Char91DotmcpChar93ListToolsRouteImport.update({
-    id: '/.mcp/list-tools',
-    path: '/.mcp/list-tools',
-    getParentRoute: () => rootRouteImport,
+const AuthenticatedAdminCatalogoRoute =
+  AuthenticatedAdminCatalogoRouteImport.update({
+    id: '/admin/catalogo',
+    path: '/admin/catalogo',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedStockIndexRoute = AuthenticatedStockIndexRouteImport.update({
-  id: '/stock/',
-  path: '/stock/',
+const AuthenticatedAdminColisRoute = AuthenticatedAdminColisRouteImport.update({
+  id: '/admin/colis',
+  path: '/admin/colis',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedProducaoIndexRoute =
-  AuthenticatedProducaoIndexRouteImport.update({
-    id: '/producao/',
-    path: '/producao/',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedEncomendasIndexRoute =
-  AuthenticatedEncomendasIndexRouteImport.update({
-    id: '/encomendas/',
-    path: '/encomendas/',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedStockTecidosRoute =
-  AuthenticatedStockTecidosRouteImport.update({
-    id: '/stock/tecidos',
-    path: '/stock/tecidos',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedStockProdutoFinalRoute =
-  AuthenticatedStockProdutoFinalRouteImport.update({
-    id: '/stock/produto-final',
-    path: '/stock/produto-final',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedStockProducaoRoute =
-  AuthenticatedStockProducaoRouteImport.update({
-    id: '/stock/producao',
-    path: '/stock/producao',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedStockCascosRoute =
-  AuthenticatedStockCascosRouteImport.update({
-    id: '/stock/cascos',
-    path: '/stock/cascos',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedStockCapasRoute = AuthenticatedStockCapasRouteImport.update({
-  id: '/stock/capas',
-  path: '/stock/capas',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedProdutosReceitasRoute =
-  AuthenticatedProdutosReceitasRouteImport.update({
-    id: '/produtos/receitas',
-    path: '/produtos/receitas',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedProducaoCascosRoute =
-  AuthenticatedProducaoCascosRouteImport.update({
-    id: '/producao/cascos',
-    path: '/producao/cascos',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedPicagemHistoricoRoute =
-  AuthenticatedPicagemHistoricoRouteImport.update({
-    id: '/historico',
-    path: '/historico',
-    getParentRoute: () => AuthenticatedPicagemRoute,
-  } as any)
-const AuthenticatedPicagemConsultaRoute =
-  AuthenticatedPicagemConsultaRouteImport.update({
-    id: '/consulta',
-    path: '/consulta',
-    getParentRoute: () => AuthenticatedPicagemRoute,
-  } as any)
-const AuthenticatedEtiquetasImprimirRoute =
-  AuthenticatedEtiquetasImprimirRouteImport.update({
-    id: '/etiquetas/imprimir',
-    path: '/etiquetas/imprimir',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedEncomendasNovaRoute =
-  AuthenticatedEncomendasNovaRouteImport.update({
-    id: '/encomendas/nova',
-    path: '/encomendas/nova',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedEncomendasImportarSimplesRoute =
-  AuthenticatedEncomendasImportarSimplesRouteImport.update({
-    id: '/encomendas/importar-simples',
-    path: '/encomendas/importar-simples',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedEncomendasImportarProdutosRoute =
-  AuthenticatedEncomendasImportarProdutosRouteImport.update({
-    id: '/encomendas/importar-produtos',
-    path: '/encomendas/importar-produtos',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedAdminSlaRoute = AuthenticatedAdminSlaRouteImport.update({
-  id: '/admin/sla',
-  path: '/admin/sla',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedAdminRotasColisRoute =
-  AuthenticatedAdminRotasColisRouteImport.update({
-    id: '/admin/rotas-colis',
-    path: '/admin/rotas-colis',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedAdminRelatoriosRoute =
-  AuthenticatedAdminRelatoriosRouteImport.update({
-    id: '/admin/relatorios',
-    path: '/admin/relatorios',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedAdminQualidadeRoute =
-  AuthenticatedAdminQualidadeRouteImport.update({
-    id: '/admin/qualidade',
-    path: '/admin/qualidade',
+const AuthenticatedAdminIntegracaoErpRoute =
+  AuthenticatedAdminIntegracaoErpRouteImport.update({
+    id: '/admin/integracao-erp',
+    path: '/admin/integracao-erp',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedAdminOciosoRoute =
@@ -234,56 +145,127 @@ const AuthenticatedAdminOciosoRoute =
     path: '/admin/ocioso',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedAdminIntegracaoErpRoute =
-  AuthenticatedAdminIntegracaoErpRouteImport.update({
-    id: '/admin/integracao-erp',
-    path: '/admin/integracao-erp',
+const AuthenticatedAdminQualidadeRoute =
+  AuthenticatedAdminQualidadeRouteImport.update({
+    id: '/admin/qualidade',
+    path: '/admin/qualidade',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedAdminColisRoute = AuthenticatedAdminColisRouteImport.update({
-  id: '/admin/colis',
-  path: '/admin/colis',
+const AuthenticatedAdminRelatoriosRoute =
+  AuthenticatedAdminRelatoriosRouteImport.update({
+    id: '/admin/relatorios',
+    path: '/admin/relatorios',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminRotasColisRoute =
+  AuthenticatedAdminRotasColisRouteImport.update({
+    id: '/admin/rotas-colis',
+    path: '/admin/rotas-colis',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAdminSlaRoute = AuthenticatedAdminSlaRouteImport.update({
+  id: '/admin/sla',
+  path: '/admin/sla',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedAdminCatalogoRoute =
-  AuthenticatedAdminCatalogoRouteImport.update({
-    id: '/admin/catalogo',
-    path: '/admin/catalogo',
+const AuthenticatedEncomendasIndexRoute =
+  AuthenticatedEncomendasIndexRouteImport.update({
+    id: '/encomendas/',
+    path: '/encomendas/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const Char91DotmcpChar93InvokeToolToolRoute =
-  Char91DotmcpChar93InvokeToolToolRouteImport.update({
-    id: '/.mcp/invoke-tool/$tool',
-    path: '/.mcp/invoke-tool/$tool',
-    getParentRoute: () => rootRouteImport,
+const AuthenticatedEncomendasImportarProdutosRoute =
+  AuthenticatedEncomendasImportarProdutosRouteImport.update({
+    id: '/encomendas/importar-produtos',
+    path: '/encomendas/importar-produtos',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
-  id: '/.lovable/oauth/consent',
-  path: '/.lovable/oauth/consent',
-  getParentRoute: () => rootRouteImport,
+const AuthenticatedEncomendasImportarSimplesRoute =
+  AuthenticatedEncomendasImportarSimplesRouteImport.update({
+    id: '/encomendas/importar-simples',
+    path: '/encomendas/importar-simples',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedEncomendasNovaRoute =
+  AuthenticatedEncomendasNovaRouteImport.update({
+    id: '/encomendas/nova',
+    path: '/encomendas/nova',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedEtiquetasImprimirRoute =
+  AuthenticatedEtiquetasImprimirRouteImport.update({
+    id: '/etiquetas/imprimir',
+    path: '/etiquetas/imprimir',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedPicagemConsultaRoute =
+  AuthenticatedPicagemConsultaRouteImport.update({
+    id: '/consulta',
+    path: '/consulta',
+    getParentRoute: () => AuthenticatedPicagemRoute,
+  } as any)
+const AuthenticatedPicagemHistoricoRoute =
+  AuthenticatedPicagemHistoricoRouteImport.update({
+    id: '/historico',
+    path: '/historico',
+    getParentRoute: () => AuthenticatedPicagemRoute,
+  } as any)
+const AuthenticatedProducaoIndexRoute =
+  AuthenticatedProducaoIndexRouteImport.update({
+    id: '/producao/',
+    path: '/producao/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedProducaoCascosRoute =
+  AuthenticatedProducaoCascosRouteImport.update({
+    id: '/producao/cascos',
+    path: '/producao/cascos',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedProdutosReceitasRoute =
+  AuthenticatedProdutosReceitasRouteImport.update({
+    id: '/produtos/receitas',
+    path: '/produtos/receitas',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedStockIndexRoute = AuthenticatedStockIndexRouteImport.update({
+  id: '/stock/',
+  path: '/stock/',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedStockCapasRoute = AuthenticatedStockCapasRouteImport.update({
+  id: '/stock/capas',
+  path: '/stock/capas',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedStockCascosRoute =
+  AuthenticatedStockCascosRouteImport.update({
+    id: '/stock/cascos',
+    path: '/stock/cascos',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedStockProducaoRoute =
+  AuthenticatedStockProducaoRouteImport.update({
+    id: '/stock/producao',
+    path: '/stock/producao',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedStockProdutoFinalRoute =
+  AuthenticatedStockProdutoFinalRouteImport.update({
+    id: '/stock/produto-final',
+    path: '/stock/produto-final',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedStockTecidosRoute =
+  AuthenticatedStockTecidosRouteImport.update({
+    id: '/stock/tecidos',
+    path: '/stock/tecidos',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAdminPlaneamentoIndexRoute =
   AuthenticatedAdminPlaneamentoIndexRouteImport.update({
     id: '/admin/planeamento/',
     path: '/admin/planeamento/',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const ApiIntegrationsErpOrdersRoute =
-  ApiIntegrationsErpOrdersRouteImport.update({
-    id: '/api/integrations/erp/orders',
-    path: '/api/integrations/erp/orders',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const AuthenticatedEncomendasIdEtiquetaRoute =
-  AuthenticatedEncomendasIdEtiquetaRouteImport.update({
-    id: '/encomendas/$id/etiqueta',
-    path: '/encomendas/$id/etiqueta',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
-const AuthenticatedAdminPlaneamentoPainelRoute =
-  AuthenticatedAdminPlaneamentoPainelRouteImport.update({
-    id: '/admin/planeamento/painel',
-    path: '/admin/planeamento/painel',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedAdminPlaneamentoCargaRoute =
@@ -292,16 +274,34 @@ const AuthenticatedAdminPlaneamentoCargaRoute =
     path: '/admin/planeamento/carga',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const ApiPublicIntegrationsErpOutboxWorkerRoute =
-  ApiPublicIntegrationsErpOutboxWorkerRouteImport.update({
-    id: '/api/public/integrations/erp/outbox-worker',
-    path: '/api/public/integrations/erp/outbox-worker',
+const AuthenticatedAdminPlaneamentoPainelRoute =
+  AuthenticatedAdminPlaneamentoPainelRouteImport.update({
+    id: '/admin/planeamento/painel',
+    path: '/admin/planeamento/painel',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedEncomendasIdEtiquetaRoute =
+  AuthenticatedEncomendasIdEtiquetaRouteImport.update({
+    id: '/encomendas/$id/etiqueta',
+    path: '/encomendas/$id/etiqueta',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const ApiIntegrationsErpOrdersRoute =
+  ApiIntegrationsErpOrdersRouteImport.update({
+    id: '/api/integrations/erp/orders',
+    path: '/api/integrations/erp/orders',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicIntegrationsErpOrdersRoute =
   ApiPublicIntegrationsErpOrdersRouteImport.update({
     id: '/api/public/integrations/erp/orders',
     path: '/api/public/integrations/erp/orders',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicIntegrationsErpOutboxWorkerRoute =
+  ApiPublicIntegrationsErpOutboxWorkerRouteImport.update({
+    id: '/api/public/integrations/erp/outbox-worker',
+    path: '/api/public/integrations/erp/outbox-worker',
     getParentRoute: () => rootRouteImport,
   } as any)
 
@@ -597,18 +597,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/painel': {
-      id: '/painel'
-      path: '/painel'
-      fullPath: '/painel'
-      preLoaderRoute: typeof PainelRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/mcp': {
-      id: '/mcp'
-      path: '/mcp'
-      fullPath: '/mcp'
-      preLoaderRoute: typeof McpRouteImport
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -618,53 +611,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated': {
-      id: '/_authenticated'
-      path: ''
-      fullPath: '/'
-      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/': {
-      id: '/_authenticated/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof AuthenticatedIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/retrabalho': {
-      id: '/_authenticated/retrabalho'
-      path: '/retrabalho'
-      fullPath: '/retrabalho'
-      preLoaderRoute: typeof AuthenticatedRetrabalhoRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/picagem': {
-      id: '/_authenticated/picagem'
-      path: '/picagem'
-      fullPath: '/picagem'
-      preLoaderRoute: typeof AuthenticatedPicagemRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/importar': {
-      id: '/_authenticated/importar'
-      path: '/importar'
-      fullPath: '/importar'
-      preLoaderRoute: typeof AuthenticatedImportarRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/configuracoes': {
-      id: '/_authenticated/configuracoes'
-      path: '/configuracoes'
-      fullPath: '/configuracoes'
-      preLoaderRoute: typeof AuthenticatedConfiguracoesRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/.well-known/oauth-protected-resource': {
-      id: '/.well-known/oauth-protected-resource'
-      path: '/.well-known/oauth-protected-resource'
-      fullPath: '/.well-known/oauth-protected-resource'
-      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
+    '/painel': {
+      id: '/painel'
+      path: '/painel'
+      fullPath: '/painel'
+      preLoaderRoute: typeof PainelRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/.mcp/list-tools': {
@@ -674,158 +632,67 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/stock/': {
-      id: '/_authenticated/stock/'
-      path: '/stock'
-      fullPath: '/stock/'
-      preLoaderRoute: typeof AuthenticatedStockIndexRouteImport
+    '/.well-known/oauth-protected-resource': {
+      id: '/.well-known/oauth-protected-resource'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/': {
+      id: '/_authenticated/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/producao/': {
-      id: '/_authenticated/producao/'
-      path: '/producao'
-      fullPath: '/producao/'
-      preLoaderRoute: typeof AuthenticatedProducaoIndexRouteImport
+    '/_authenticated/configuracoes': {
+      id: '/_authenticated/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/configuracoes'
+      preLoaderRoute: typeof AuthenticatedConfiguracoesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/encomendas/': {
-      id: '/_authenticated/encomendas/'
-      path: '/encomendas'
-      fullPath: '/encomendas/'
-      preLoaderRoute: typeof AuthenticatedEncomendasIndexRouteImport
+    '/_authenticated/importar': {
+      id: '/_authenticated/importar'
+      path: '/importar'
+      fullPath: '/importar'
+      preLoaderRoute: typeof AuthenticatedImportarRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/stock/tecidos': {
-      id: '/_authenticated/stock/tecidos'
-      path: '/stock/tecidos'
-      fullPath: '/stock/tecidos'
-      preLoaderRoute: typeof AuthenticatedStockTecidosRouteImport
+    '/_authenticated/picagem': {
+      id: '/_authenticated/picagem'
+      path: '/picagem'
+      fullPath: '/picagem'
+      preLoaderRoute: typeof AuthenticatedPicagemRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/stock/produto-final': {
-      id: '/_authenticated/stock/produto-final'
-      path: '/stock/produto-final'
-      fullPath: '/stock/produto-final'
-      preLoaderRoute: typeof AuthenticatedStockProdutoFinalRouteImport
+    '/_authenticated/retrabalho': {
+      id: '/_authenticated/retrabalho'
+      path: '/retrabalho'
+      fullPath: '/retrabalho'
+      preLoaderRoute: typeof AuthenticatedRetrabalhoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/stock/producao': {
-      id: '/_authenticated/stock/producao'
-      path: '/stock/producao'
-      fullPath: '/stock/producao'
-      preLoaderRoute: typeof AuthenticatedStockProducaoRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+    '/.lovable/oauth/consent': {
+      id: '/.lovable/oauth/consent'
+      path: '/.lovable/oauth/consent'
+      fullPath: '/.lovable/oauth/consent'
+      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/stock/cascos': {
-      id: '/_authenticated/stock/cascos'
-      path: '/stock/cascos'
-      fullPath: '/stock/cascos'
-      preLoaderRoute: typeof AuthenticatedStockCascosRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+    '/.mcp/invoke-tool/$tool': {
+      id: '/.mcp/invoke-tool/$tool'
+      path: '/.mcp/invoke-tool/$tool'
+      fullPath: '/.mcp/invoke-tool/$tool'
+      preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/stock/capas': {
-      id: '/_authenticated/stock/capas'
-      path: '/stock/capas'
-      fullPath: '/stock/capas'
-      preLoaderRoute: typeof AuthenticatedStockCapasRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/produtos/receitas': {
-      id: '/_authenticated/produtos/receitas'
-      path: '/produtos/receitas'
-      fullPath: '/produtos/receitas'
-      preLoaderRoute: typeof AuthenticatedProdutosReceitasRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/producao/cascos': {
-      id: '/_authenticated/producao/cascos'
-      path: '/producao/cascos'
-      fullPath: '/producao/cascos'
-      preLoaderRoute: typeof AuthenticatedProducaoCascosRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/picagem/historico': {
-      id: '/_authenticated/picagem/historico'
-      path: '/historico'
-      fullPath: '/picagem/historico'
-      preLoaderRoute: typeof AuthenticatedPicagemHistoricoRouteImport
-      parentRoute: typeof AuthenticatedPicagemRoute
-    }
-    '/_authenticated/picagem/consulta': {
-      id: '/_authenticated/picagem/consulta'
-      path: '/consulta'
-      fullPath: '/picagem/consulta'
-      preLoaderRoute: typeof AuthenticatedPicagemConsultaRouteImport
-      parentRoute: typeof AuthenticatedPicagemRoute
-    }
-    '/_authenticated/etiquetas/imprimir': {
-      id: '/_authenticated/etiquetas/imprimir'
-      path: '/etiquetas/imprimir'
-      fullPath: '/etiquetas/imprimir'
-      preLoaderRoute: typeof AuthenticatedEtiquetasImprimirRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/encomendas/nova': {
-      id: '/_authenticated/encomendas/nova'
-      path: '/encomendas/nova'
-      fullPath: '/encomendas/nova'
-      preLoaderRoute: typeof AuthenticatedEncomendasNovaRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/encomendas/importar-simples': {
-      id: '/_authenticated/encomendas/importar-simples'
-      path: '/encomendas/importar-simples'
-      fullPath: '/encomendas/importar-simples'
-      preLoaderRoute: typeof AuthenticatedEncomendasImportarSimplesRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/encomendas/importar-produtos': {
-      id: '/_authenticated/encomendas/importar-produtos'
-      path: '/encomendas/importar-produtos'
-      fullPath: '/encomendas/importar-produtos'
-      preLoaderRoute: typeof AuthenticatedEncomendasImportarProdutosRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/admin/sla': {
-      id: '/_authenticated/admin/sla'
-      path: '/admin/sla'
-      fullPath: '/admin/sla'
-      preLoaderRoute: typeof AuthenticatedAdminSlaRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/admin/rotas-colis': {
-      id: '/_authenticated/admin/rotas-colis'
-      path: '/admin/rotas-colis'
-      fullPath: '/admin/rotas-colis'
-      preLoaderRoute: typeof AuthenticatedAdminRotasColisRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/admin/relatorios': {
-      id: '/_authenticated/admin/relatorios'
-      path: '/admin/relatorios'
-      fullPath: '/admin/relatorios'
-      preLoaderRoute: typeof AuthenticatedAdminRelatoriosRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/admin/qualidade': {
-      id: '/_authenticated/admin/qualidade'
-      path: '/admin/qualidade'
-      fullPath: '/admin/qualidade'
-      preLoaderRoute: typeof AuthenticatedAdminQualidadeRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/admin/ocioso': {
-      id: '/_authenticated/admin/ocioso'
-      path: '/admin/ocioso'
-      fullPath: '/admin/ocioso'
-      preLoaderRoute: typeof AuthenticatedAdminOciosoRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/admin/integracao-erp': {
-      id: '/_authenticated/admin/integracao-erp'
-      path: '/admin/integracao-erp'
-      fullPath: '/admin/integracao-erp'
-      preLoaderRoute: typeof AuthenticatedAdminIntegracaoErpRouteImport
+    '/_authenticated/admin/catalogo': {
+      id: '/_authenticated/admin/catalogo'
+      path: '/admin/catalogo'
+      fullPath: '/admin/catalogo'
+      preLoaderRoute: typeof AuthenticatedAdminCatalogoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin/colis': {
@@ -835,53 +702,165 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminColisRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/admin/catalogo': {
-      id: '/_authenticated/admin/catalogo'
-      path: '/admin/catalogo'
-      fullPath: '/admin/catalogo'
-      preLoaderRoute: typeof AuthenticatedAdminCatalogoRouteImport
+    '/_authenticated/admin/integracao-erp': {
+      id: '/_authenticated/admin/integracao-erp'
+      path: '/admin/integracao-erp'
+      fullPath: '/admin/integracao-erp'
+      preLoaderRoute: typeof AuthenticatedAdminIntegracaoErpRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/.mcp/invoke-tool/$tool': {
-      id: '/.mcp/invoke-tool/$tool'
-      path: '/.mcp/invoke-tool/$tool'
-      fullPath: '/.mcp/invoke-tool/$tool'
-      preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
-      parentRoute: typeof rootRouteImport
+    '/_authenticated/admin/ocioso': {
+      id: '/_authenticated/admin/ocioso'
+      path: '/admin/ocioso'
+      fullPath: '/admin/ocioso'
+      preLoaderRoute: typeof AuthenticatedAdminOciosoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/.lovable/oauth/consent': {
-      id: '/.lovable/oauth/consent'
-      path: '/.lovable/oauth/consent'
-      fullPath: '/.lovable/oauth/consent'
-      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
-      parentRoute: typeof rootRouteImport
+    '/_authenticated/admin/qualidade': {
+      id: '/_authenticated/admin/qualidade'
+      path: '/admin/qualidade'
+      fullPath: '/admin/qualidade'
+      preLoaderRoute: typeof AuthenticatedAdminQualidadeRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/relatorios': {
+      id: '/_authenticated/admin/relatorios'
+      path: '/admin/relatorios'
+      fullPath: '/admin/relatorios'
+      preLoaderRoute: typeof AuthenticatedAdminRelatoriosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/rotas-colis': {
+      id: '/_authenticated/admin/rotas-colis'
+      path: '/admin/rotas-colis'
+      fullPath: '/admin/rotas-colis'
+      preLoaderRoute: typeof AuthenticatedAdminRotasColisRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/sla': {
+      id: '/_authenticated/admin/sla'
+      path: '/admin/sla'
+      fullPath: '/admin/sla'
+      preLoaderRoute: typeof AuthenticatedAdminSlaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/encomendas/': {
+      id: '/_authenticated/encomendas/'
+      path: '/encomendas'
+      fullPath: '/encomendas/'
+      preLoaderRoute: typeof AuthenticatedEncomendasIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/encomendas/importar-produtos': {
+      id: '/_authenticated/encomendas/importar-produtos'
+      path: '/encomendas/importar-produtos'
+      fullPath: '/encomendas/importar-produtos'
+      preLoaderRoute: typeof AuthenticatedEncomendasImportarProdutosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/encomendas/importar-simples': {
+      id: '/_authenticated/encomendas/importar-simples'
+      path: '/encomendas/importar-simples'
+      fullPath: '/encomendas/importar-simples'
+      preLoaderRoute: typeof AuthenticatedEncomendasImportarSimplesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/encomendas/nova': {
+      id: '/_authenticated/encomendas/nova'
+      path: '/encomendas/nova'
+      fullPath: '/encomendas/nova'
+      preLoaderRoute: typeof AuthenticatedEncomendasNovaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/etiquetas/imprimir': {
+      id: '/_authenticated/etiquetas/imprimir'
+      path: '/etiquetas/imprimir'
+      fullPath: '/etiquetas/imprimir'
+      preLoaderRoute: typeof AuthenticatedEtiquetasImprimirRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/picagem/consulta': {
+      id: '/_authenticated/picagem/consulta'
+      path: '/consulta'
+      fullPath: '/picagem/consulta'
+      preLoaderRoute: typeof AuthenticatedPicagemConsultaRouteImport
+      parentRoute: typeof AuthenticatedPicagemRoute
+    }
+    '/_authenticated/picagem/historico': {
+      id: '/_authenticated/picagem/historico'
+      path: '/historico'
+      fullPath: '/picagem/historico'
+      preLoaderRoute: typeof AuthenticatedPicagemHistoricoRouteImport
+      parentRoute: typeof AuthenticatedPicagemRoute
+    }
+    '/_authenticated/producao/': {
+      id: '/_authenticated/producao/'
+      path: '/producao'
+      fullPath: '/producao/'
+      preLoaderRoute: typeof AuthenticatedProducaoIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/producao/cascos': {
+      id: '/_authenticated/producao/cascos'
+      path: '/producao/cascos'
+      fullPath: '/producao/cascos'
+      preLoaderRoute: typeof AuthenticatedProducaoCascosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/produtos/receitas': {
+      id: '/_authenticated/produtos/receitas'
+      path: '/produtos/receitas'
+      fullPath: '/produtos/receitas'
+      preLoaderRoute: typeof AuthenticatedProdutosReceitasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/stock/': {
+      id: '/_authenticated/stock/'
+      path: '/stock'
+      fullPath: '/stock/'
+      preLoaderRoute: typeof AuthenticatedStockIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/stock/capas': {
+      id: '/_authenticated/stock/capas'
+      path: '/stock/capas'
+      fullPath: '/stock/capas'
+      preLoaderRoute: typeof AuthenticatedStockCapasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/stock/cascos': {
+      id: '/_authenticated/stock/cascos'
+      path: '/stock/cascos'
+      fullPath: '/stock/cascos'
+      preLoaderRoute: typeof AuthenticatedStockCascosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/stock/producao': {
+      id: '/_authenticated/stock/producao'
+      path: '/stock/producao'
+      fullPath: '/stock/producao'
+      preLoaderRoute: typeof AuthenticatedStockProducaoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/stock/produto-final': {
+      id: '/_authenticated/stock/produto-final'
+      path: '/stock/produto-final'
+      fullPath: '/stock/produto-final'
+      preLoaderRoute: typeof AuthenticatedStockProdutoFinalRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/stock/tecidos': {
+      id: '/_authenticated/stock/tecidos'
+      path: '/stock/tecidos'
+      fullPath: '/stock/tecidos'
+      preLoaderRoute: typeof AuthenticatedStockTecidosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin/planeamento/': {
       id: '/_authenticated/admin/planeamento/'
       path: '/admin/planeamento'
       fullPath: '/admin/planeamento/'
       preLoaderRoute: typeof AuthenticatedAdminPlaneamentoIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/api/integrations/erp/orders': {
-      id: '/api/integrations/erp/orders'
-      path: '/api/integrations/erp/orders'
-      fullPath: '/api/integrations/erp/orders'
-      preLoaderRoute: typeof ApiIntegrationsErpOrdersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated/encomendas/$id/etiqueta': {
-      id: '/_authenticated/encomendas/$id/etiqueta'
-      path: '/encomendas/$id/etiqueta'
-      fullPath: '/encomendas/$id/etiqueta'
-      preLoaderRoute: typeof AuthenticatedEncomendasIdEtiquetaRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/admin/planeamento/painel': {
-      id: '/_authenticated/admin/planeamento/painel'
-      path: '/admin/planeamento/painel'
-      fullPath: '/admin/planeamento/painel'
-      preLoaderRoute: typeof AuthenticatedAdminPlaneamentoPainelRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin/planeamento/carga': {
@@ -891,11 +870,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminPlaneamentoCargaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/api/public/integrations/erp/outbox-worker': {
-      id: '/api/public/integrations/erp/outbox-worker'
-      path: '/api/public/integrations/erp/outbox-worker'
-      fullPath: '/api/public/integrations/erp/outbox-worker'
-      preLoaderRoute: typeof ApiPublicIntegrationsErpOutboxWorkerRouteImport
+    '/_authenticated/admin/planeamento/painel': {
+      id: '/_authenticated/admin/planeamento/painel'
+      path: '/admin/planeamento/painel'
+      fullPath: '/admin/planeamento/painel'
+      preLoaderRoute: typeof AuthenticatedAdminPlaneamentoPainelRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/encomendas/$id/etiqueta': {
+      id: '/_authenticated/encomendas/$id/etiqueta'
+      path: '/encomendas/$id/etiqueta'
+      fullPath: '/encomendas/$id/etiqueta'
+      preLoaderRoute: typeof AuthenticatedEncomendasIdEtiquetaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/api/integrations/erp/orders': {
+      id: '/api/integrations/erp/orders'
+      path: '/api/integrations/erp/orders'
+      fullPath: '/api/integrations/erp/orders'
+      preLoaderRoute: typeof ApiIntegrationsErpOrdersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/integrations/erp/orders': {
@@ -903,6 +896,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/integrations/erp/orders'
       fullPath: '/api/public/integrations/erp/orders'
       preLoaderRoute: typeof ApiPublicIntegrationsErpOrdersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/integrations/erp/outbox-worker': {
+      id: '/api/public/integrations/erp/outbox-worker'
+      path: '/api/public/integrations/erp/outbox-worker'
+      fullPath: '/api/public/integrations/erp/outbox-worker'
+      preLoaderRoute: typeof ApiPublicIntegrationsErpOutboxWorkerRouteImport
       parentRoute: typeof rootRouteImport
     }
   }

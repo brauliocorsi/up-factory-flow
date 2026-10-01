@@ -31,7 +31,7 @@ export const Route = createFileRoute("/_authenticated/admin/planeamento/carga")(
   errorComponent: ({ error, reset }) => (
     <div className="max-w-xl mx-auto p-6 text-center space-y-3">
       <AlertTriangle className="size-8 text-orange-600 mx-auto" />
-      <p className="text-sm text-muted-foreground">{error?.message}</p>
+      <p className="text-sm text-muted-foreground">{(error as Error | undefined)?.message}</p>
       <Button onClick={() => reset()}>Tentar novamente</Button>
     </div>
   ),

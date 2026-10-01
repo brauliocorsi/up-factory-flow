@@ -21,7 +21,7 @@ const dashboardQuery = queryOptions({
 
 export const Route = createFileRoute("/_authenticated/")({
   component: DashboardPage,
-  errorComponent: ({ error }) => <div className="p-6 text-sm text-destructive">{error.message}</div>,
+  errorComponent: ({ error }) => <div className="p-6 text-sm text-destructive">{(error as Error).message}</div>,
 });
 
 function DashboardPage() {
