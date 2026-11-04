@@ -87,6 +87,8 @@ export type LabelRow = {
     barcode: string | null;
     /** Código comercial completo, sem o sufixo do número da encomenda. */
     product_code: string | null;
+    /** Código GestãoClick da encomenda (null = "sem código GC"). */
+    gc_code: string | null;
     product_description: string;
     measure: string | null;
     fabric_type: string | null;
@@ -118,7 +120,7 @@ export const getLabelsForOrders = createServerFn({ method: "POST" })
     const { data: orders, error } = await (supabase as any)
       .from("production_orders")
       .select(
-        "id, order_number, barcode, product_description, measure, fabric_type, fabric_ref, fabric_ref_tec, color, structure_type, model_id, observation, finishing, models(name, code, structure_code, sofa_family_code, ref_categories(code))",
+        "id, order_number, barcode, gc_code, product_description, measure, fabric_type, fabric_ref, fabric_ref_tec, color, structure_type, model_id, observation, finishing, models(name, code, structure_code, sofa_family_code, ref_categories(code))",
       )
       .in("id", data.ids);
     if (error) throw new Error(error.message);
@@ -180,7 +182,10 @@ export const getLabelsForOrders = createServerFn({ method: "POST" })
         const chosen = matched.length ? matched : generic.length ? generic : candidates;
         const rawBarcode = String(o.barcode ?? "").trim();
         const orderSuffix = `-${o.order_number}`;
-        const productCode = rawBarcode.endsWith(orderSuffix)
+        const gc = String(o.gc_code ?? "").trim().toUpperCase() || null;
+        const productCode = gc
+          ? gc
+          : rawBarcode.endsWith(orderSuffix)
           ? rawBarcode.slice(0, -orderSuffix.length)
           : /^(CAM|SOF|SOM)[A-Z0-9]+$/i.test(rawBarcode)
             ? rawBarcode
@@ -191,6 +196,7 @@ export const getLabelsForOrders = createServerFn({ method: "POST" })
             order_number: o.order_number,
             barcode: o.barcode,
             product_code: productCode,
+            gc_code: gc,
             product_description: o.product_description,
             measure: o.measure,
             fabric_type: o.fabric_type,

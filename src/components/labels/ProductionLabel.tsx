@@ -15,6 +15,8 @@ export type LabelProps = {
   packageTotal?: number | null;
   packageName?: string | null;
   observation?: string | null;
+  /** Encomenda sem código GestãoClick: mostra aviso na etiqueta. */
+  gcMissing?: boolean;
 };
 
 /**
@@ -78,7 +80,10 @@ export function ProductionLabel(props: LabelProps) {
             <div className="label-observation">⚠ {props.observation}</div>
           )}
           {coli && <div className="label-coli">{coli}</div>}
-          <div className="label-order">Nº {props.orderNumber}</div>
+          <div className="label-order">
+            Nº {props.orderNumber}
+            {props.gcMissing && <span className="label-gc-missing"> · sem código GC</span>}
+          </div>
         </div>
         <div className="label-right">
           {props.productCode ? (
@@ -214,6 +219,7 @@ export function LabelPrintStyles() {
         line-height: 1;
         overflow-wrap: anywhere;
       }
+      .label-gc-missing { font-weight: 800; color: #000; }
       .label-code-missing { font-size: 6pt; font-weight: 700; }
 
       @media print {

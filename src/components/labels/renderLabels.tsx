@@ -44,6 +44,7 @@ export function renderLabelsForOrder(row: LabelRow, copies: number) {
           packageTotal={pkg?.package_total ?? null}
           packageName={pkg?.package_name ?? null}
           observation={order.observation}
+          gcMissing={!order.gc_code}
         />,
       );
     }
