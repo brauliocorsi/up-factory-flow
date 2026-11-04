@@ -17,6 +17,9 @@ export type PickingState = "por_picar" | "parcial" | "picada" | "enviada";
 export type PickingOrder = {
   id: string;
   order_number: string;
+  /** Código GestãoClick (o mesmo em várias encomendas do mesmo produto). */
+  gc_code?: string | null;
+  barcode?: string | null;
   product_description: string;
   structure_type: string | null;
   measure: string | null;
@@ -149,25 +152,75 @@ export const getOrderProgress = createServerFn({ method: "POST" })
     };
   });
 
-// Resolve an order from scanner reading (order_number)
+/** Encomenda candidata quando o mesmo código GC existe em várias encomendas. */
+export type PickingCandidate = {
+  id: string;
+  order_number: string;
+  customer_order: string | null;
+  product_description: string;
+  due_date: string | null;
+};
+
+// Resolve an order from scanner reading (order_number, GC code, coli code…).
+// Se o código existir em várias encomendas, devolve a lista para o operador escolher.
 export const resolveOrderForPicking = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ code: z.string().trim() }).parse(d))
-  .handler(async ({ data, context }): Promise<PickingOrder> => {
+  .inputValidator((d: unknown) =>
+    z.object({ code: z.string().trim(), order_id: z.string().uuid().optional() }).parse(d),
+  )
+  .handler(async ({ data, context }): Promise<PickingOrder | { choose: PickingCandidate[]; code: string }> => {
     const { supabase } = context;
     // Strip a coli suffix (e.g. "16566-01-C2" -> "16566-01") if present.
-    const cleanCode = data.code.trim().replace(/-C\d+$/i, "");
+    const cleanCode = data.code.trim().replace(/-C\d+$/i, "").replace(/[(),]/g, "");
     const SELECT_COLS =
-      "id, order_number, customer_order, barcode, product_description, structure_type, measure, fabric_type, fabric_ref, color, observation, model_id, status";
+      "id, order_number, customer_order, barcode, gc_code, product_description, structure_type, measure, fabric_type, fabric_ref, color, observation, model_id, status, due_date";
 
-    // 1. Exact match by order_number, barcode or customer_order (nota do cliente).
-    const { data: exact, error: orderErr } = await supabase
-      .from("production_orders")
-      .select(SELECT_COLS)
-      .or(`order_number.eq.${cleanCode},barcode.eq.${cleanCode},customer_order.eq.${cleanCode}`);
-    if (orderErr) throw new Error(orderErr.message);
+    let matches: any[] = [];
+    if (data.order_id) {
+      // Encomenda escolhida pelo operador na lista de candidatas.
+      const { data: one, error } = await (supabase as any)
+        .from("production_orders").select(SELECT_COLS).eq("id", data.order_id);
+      if (error) throw new Error(error.message);
+      matches = one ?? [];
+    } else {
+      // 1. Exact match by order_number, barcode, GC code or customer_order.
+      const up = cleanCode.toUpperCase();
+      const { data: exact, error: orderErr } = await (supabase as any)
+        .from("production_orders")
+        .select(SELECT_COLS)
+        .or(`order_number.eq.${cleanCode},barcode.eq.${cleanCode},barcode.eq.${up},gc_code.eq.${up},customer_order.eq.${cleanCode}`);
+      if (orderErr) throw new Error(orderErr.message);
+      matches = exact ?? [];
+    }
 
-    let matches = exact ?? [];
+    // Mesmo código em várias encomendas: só interessam as que já foram embaladas.
+    if (matches.length > 1) {
+      const ids = matches.filter((m) => m.status !== "cancelada").map((m) => m.id);
+      const { data: st } = await supabase
+        .from("order_stages")
+        .select("order_id, stage, status")
+        .in("order_id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"])
+        .in("stage", ["embalagem", "picagem"]);
+      const ready = new Set(
+        ((st ?? []) as any[])
+          .filter((s) => s.stage === "embalagem" && s.status === "concluida")
+          .map((s) => s.order_id)
+          .filter((id) => !((st ?? []) as any[]).some((p) => p.order_id === id && p.stage === "picagem" && p.status === "concluida")),
+      );
+      const ok = matches.filter((m) => ready.has(m.id));
+      if (ok.length === 1) matches = ok;
+      else if (ok.length > 1) {
+        return {
+          code: data.code,
+          choose: ok
+            .sort((a, b) => String(a.due_date ?? "9999").localeCompare(String(b.due_date ?? "9999")))
+            .map((m) => ({
+              id: m.id, order_number: m.order_number, customer_order: m.customer_order ?? null,
+              product_description: m.product_description, due_date: m.due_date ?? null,
+            })),
+        };
+      }
+    }
 
     // 1b. Fallback: partial reading (scanner cut the code). Only accept if unique.
     if (matches.length === 0 && cleanCode.length >= 3) {
