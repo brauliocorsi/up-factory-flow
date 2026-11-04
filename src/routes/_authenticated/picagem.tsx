@@ -18,7 +18,9 @@ import {
   listUncertainDispatches,
   reconcileDispatchBatch,
   type PickingOrder,
+  type PickingCandidate,
 } from "@/lib/picking.functions";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 import { useMySession } from "@/hooks/useMySession";
 
@@ -65,6 +67,8 @@ function PicagemPage() {
   const [barcodeInput, setBarcodeInput] = useState("");
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [loaded, setLoaded] = useState<Record<string, LoadedOrder>>({});
+  // Mesmo código GC em várias encomendas: o operador escolhe qual está a picar.
+  const [choices, setChoices] = useState<{ code: string; list: PickingCandidate[] } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
@@ -139,8 +143,17 @@ function PicagemPage() {
   // Try resolving by order_number first (when operator scans the order barcode).
   // Otherwise treat as coli scan and dispatch to whichever loaded order matches.
   const resolveMutation = useMutation({
-    mutationFn: (code: string) => resolveOrderForPicking({ data: { code } }),
-    onSuccess: (order, code) => {
+    mutationFn: (vars: { code: string; order_id?: string }) =>
+      resolveOrderForPicking({ data: vars }),
+    onSuccess: (res, { code }) => {
+      if ("choose" in res) {
+        if (soundEnabled) playSound("success");
+        setChoices({ code, list: res.choose });
+        setBarcodeInput("");
+        return;
+      }
+      setChoices(null);
+      const order = res;
       const existing = loaded[order.id];
       if (existing && !existing.completed) {
         // Re-scanning the order label picks the next pending coli.
@@ -249,24 +262,30 @@ function PicagemPage() {
     if (!code) return;
 
     const upper = code.toUpperCase();
-    // First, try to match against any LOADED order's expected coli barcodes.
-    for (const entry of Object.values(loaded)) {
-      const match = entry.order.packages.find((p) => (p.expected_code ?? "").toUpperCase() === upper);
+    const base = upper.replace(/-C\d+$/, "");
+    // O mesmo código pode existir em várias encomendas carregadas: escolhe a
+    // primeira onde esse volume ainda não foi lido (nunca uma já completa).
+    const open = Object.values(loaded).filter((e) => !e.completed);
+    for (const entry of open) {
+      const match = entry.order.packages.find(
+        (p) => (p.expected_code ?? "").toUpperCase() === upper && !entry.pickedColis.has(p.package_number),
+      );
       if (match) {
         scanMutation.mutate({ order_id: entry.order.id, code });
         return;
       }
     }
-    // Then, if the code is the ORDER label of an already loaded order, pick the next pending coli.
-    for (const entry of Object.values(loaded)) {
-      if (entry.completed) continue;
-      if (entry.order.order_number.toUpperCase() === upper) {
-        scanMutation.mutate({ order_id: entry.order.id, code });
+    // Código da encomenda ou código GC (com/sem -C<n>) de uma encomenda carregada.
+    for (const entry of open) {
+      const o = entry.order;
+      const keys = [o.order_number, o.gc_code, o.barcode].filter(Boolean).map((k) => String(k).toUpperCase());
+      if (keys.includes(upper) || keys.includes(base)) {
+        scanMutation.mutate({ order_id: o.id, code });
         return;
       }
     }
     // Otherwise resolve as an order_number/barcode (load it).
-    resolveMutation.mutate(code);
+    resolveMutation.mutate({ code });
 
   };
 
@@ -303,6 +322,34 @@ function PicagemPage() {
           Som: {soundEnabled ? "Ativo" : "Mudo"}
         </Button>
       </div>
+
+      <Dialog open={!!choices} onOpenChange={(o) => { if (!o) setChoices(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Qual encomenda está a picar?</DialogTitle>
+            <DialogDescription>
+              O código <span className="font-mono font-semibold">{choices?.code}</span> existe em {choices?.list.length} encomendas embaladas. Escolha a encomenda certa.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+            {choices?.list.map((c) => (
+              <Button
+                key={c.id}
+                variant="outline"
+                className="w-full h-auto justify-between py-3 text-left"
+                disabled={resolveMutation.isPending}
+                onClick={() => resolveMutation.mutate({ code: choices.code, order_id: c.id })}
+              >
+                <span className="min-w-0">
+                  <span className="block font-semibold">{c.customer_order ? `${c.customer_order} · ${c.order_number}` : c.order_number}</span>
+                  <span className="block text-xs text-muted-foreground truncate">{c.product_description}</span>
+                </span>
+                {c.due_date && <span className="text-xs text-muted-foreground shrink-0 ml-2">{c.due_date.split("-").reverse().join("/")}</span>}
+              </Button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-5 space-y-6">

@@ -1421,6 +1421,8 @@ export type Database = {
           fabric_ref_tec: string | null
           fabric_type: string | null
           finishing: string | null
+          gc_code: string | null
+          gc_code_missing: boolean | null
           id: string
           is_stock_production: boolean
           is_test: boolean
@@ -1458,6 +1460,8 @@ export type Database = {
           fabric_ref_tec?: string | null
           fabric_type?: string | null
           finishing?: string | null
+          gc_code?: string | null
+          gc_code_missing?: boolean | null
           id?: string
           is_stock_production?: boolean
           is_test?: boolean
@@ -1497,6 +1501,8 @@ export type Database = {
           fabric_ref_tec?: string | null
           fabric_type?: string | null
           finishing?: string | null
+          gc_code?: string | null
+          gc_code_missing?: boolean | null
           id?: string
           is_stock_production?: boolean
           is_test?: boolean
@@ -3142,6 +3148,10 @@ export type Database = {
           _order_stage_id: string
         }
         Returns: Json
+      }
+      refresh_order_coli_barcodes: {
+        Args: { _order_id: string }
+        Returns: undefined
       }
       repair_missing_coli_stages: { Args: never; Returns: Json }
       resolve_order_recipe: {

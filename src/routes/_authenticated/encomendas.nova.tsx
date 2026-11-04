@@ -108,6 +108,7 @@ function NovaEncomendaPage() {
     bed_variant: "N" as BedVariant,
     sofa_variant: "N" as SofaVariant,
     customization: "",
+    gc_code: "",
     entry_date: today,
     due_date: "",
     priority: 0,
@@ -225,7 +226,8 @@ function NovaEncomendaPage() {
       if (!silent) toast.error(`Categoria "${prefix}" não existe no catálogo`);
       return;
     }
-    const next = { ...form, category_id: catRow.id };
+    // O código lido é o código GestãoClick do produto (vem da base, não é gerado).
+    const next = { ...form, category_id: catRow.id, gc_code: code };
     const modelCode = code.slice(3, 6);
     const m = (cat.models ?? []).find((x: any) => x.code === modelCode && x.category_id === catRow.id);
     if (m) next.model_id = m.id;
@@ -270,7 +272,7 @@ function NovaEncomendaPage() {
         toast.success(`Encomenda ${res.order_number} criada`);
       }
       setScanValue("");
-      setForm((s) => ({ ...s, order_number: "", quantity: 1, observation: "", notes: "", due_date: "", priority: 0, customization: "" }));
+      setForm((s) => ({ ...s, gc_code: "", order_number: "", quantity: 1, observation: "", notes: "", due_date: "", priority: 0, customization: "" }));
       setFree((s) => ({ ...s, order_number: "", quantity: 1, description: "", observation: "", notes: "", due_date: "" }));
       setTimeout(() => scanRef.current?.focus(), 50);
     },
@@ -301,6 +303,7 @@ function NovaEncomendaPage() {
       fabric_ref_tec: form.ref_tec || null,
       customization: form.customization.trim() || null,
       barcode: generatedCode,
+      gc_code: form.gc_code.trim() || null,
       observation: form.observation || null,
       notes: form.notes || null,
       entry_date: form.entry_date,
@@ -385,6 +388,19 @@ function NovaEncomendaPage() {
                   {generatedName || <span className="text-muted-foreground">Nome do produto aparece aqui</span>}
                 </div>
               </div>
+              <Field label="Código GestãoClick (código de barras da encomenda)">
+                <Input
+                  value={form.gc_code}
+                  onChange={(e) => set("gc_code", e.target.value.replace(/\s+/g, "").toUpperCase())}
+                  className="h-11 font-mono"
+                  placeholder="ex: CAM00201140020602N ou 2048996022703"
+                  maxLength={64}
+                />
+                {!form.gc_code.trim() && (
+                  <p className="text-xs text-muted-foreground mt-1">Sem código GC: a encomenda fica assinalada para validação.</p>
+                )}
+              </Field>
+
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <Field label="Nº Encomenda (vazio = automático)">

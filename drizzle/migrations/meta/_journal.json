@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1793831111982,
+      "tag": "0000_gc_code_production_orders",
+      "breakpoints": true
+    }
+  ]
+}

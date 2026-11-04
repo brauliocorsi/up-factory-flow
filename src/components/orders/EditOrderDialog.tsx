@@ -30,6 +30,7 @@ type Draft = {
   priority: number;
   notes: string;
   observation: string;
+  gc_code: string;
 };
 
 function toDraft(o: EditableOrder): Draft {
@@ -48,6 +49,7 @@ function toDraft(o: EditableOrder): Draft {
     priority: [1, 2, 3].includes(Number(o.priority)) ? Number(o.priority) : 1,
     notes: o.notes ?? "",
     observation: o.observation ?? "",
+    gc_code: o.gc_code ?? "",
   };
 }
 
@@ -104,6 +106,7 @@ export function EditOrderDialog({
           priority: draft.priority,
           notes: draft.notes,
           observation: draft.observation,
+          gc_code: draft.gc_code,
         },
       });
     },
@@ -258,6 +261,18 @@ export function EditOrderDialog({
             <div className="space-y-1">
               <Label>Prioridade</Label>
               <div><PrioritySelect value={draft.priority} onChange={(p) => set("priority", p)} /></div>
+            </div>
+
+            <div className="md:col-span-2 space-y-1">
+              <Label>Código GestãoClick</Label>
+              <Input
+                className="font-mono"
+                value={draft.gc_code}
+                maxLength={64}
+                placeholder="ex: CAM00201140020602N ou 2048996022703"
+                onChange={(e) => set("gc_code", e.target.value.replace(/\s+/g, "").toUpperCase())}
+              />
+              {!draft.gc_code.trim() && <p className="text-xs text-muted-foreground">Sem código GC — a etiqueta usa o código interno.</p>}
             </div>
 
             <div className="md:col-span-2 space-y-1">

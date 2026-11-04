@@ -136,6 +136,8 @@ const listOrdersSchema = z.object({
 
 export type OrderListItem = {
   id: string;
+  /** Código GestãoClick (null = encomenda "sem código GC"). */
+  gc_code?: string | null;
   order_number: string;
   customer_order: string | null;
   product_description: string;
@@ -164,7 +166,7 @@ export const listOrders = createServerFn({ method: "POST" })
     const { supabase } = context;
     let q = supabase
       .from("production_orders")
-      .select("id, order_number, customer_order, product_description, measure, fabric_type, entry_date, due_date, status, line_kind, service_type, models(name), order_stages(stage, status, finished_at)")
+      .select("id, order_number, customer_order, gc_code, product_description, measure, fabric_type, entry_date, due_date, status, line_kind, service_type, models(name), order_stages(stage, status, finished_at)")
       .order("entry_date", { ascending: false, nullsFirst: false });
     if (data.search) {
       const s = data.search.replace(/[%,]/g, "");
@@ -208,6 +210,7 @@ export const listOrders = createServerFn({ method: "POST" })
         picking_state: pickingState,
         line_kind: o.line_kind ?? "catalogo",
         service_type: o.service_type ?? null,
+        gc_code: o.gc_code ?? null,
       };
     });
   });
@@ -240,6 +243,8 @@ const orderInputSchema = z.object({
   observation: z.string().trim().max(500).nullable().optional(),
   finishing: z.enum(["F", "N"]).nullable().optional(),
   barcode: z.string().trim().max(64).nullable().optional(),
+  /** Código interno do produto no GestãoClick (vem da base; não é gerado). */
+  gc_code: z.string().trim().max(64).nullable().optional(),
   /** Referência do tecido (TECnnnnnn) da tabela de tecidos. */
   ref_tec: z.string().trim().max(12).nullable().optional(),
   /** Tecido completo do stock (fabric_catalog.ref_tec). */
@@ -255,6 +260,12 @@ const orderInputSchema = z.object({
 });
 
 export type OrderInput = z.infer<typeof orderInputSchema>;
+
+/** Normaliza o código GestãoClick (sem espaços, maiúsculas); vazio = null. */
+export function normGc(v: string | null | undefined): string | null {
+  const c = String(v ?? "").replace(/\s+/g, "").toUpperCase();
+  return c ? c : null;
+}
 
 function genBarcode(orderNumber: string) {
   const clean = orderNumber.replace(/[^A-Za-z0-9]/g, "").toUpperCase();
@@ -338,10 +349,13 @@ export const createOrder = createServerFn({ method: "POST" })
             ? base
             : `${base}-${String(seq + 1 + i).padStart(2, "0")}`;
       const bc = (data.barcode && data.barcode.trim()) || "";
+      const gc = normGc(data.gc_code);
       rows.push({
         ...baseRow,
         order_number: orderNumber,
-        barcode: bc ? `${bc}-${orderNumber}` : genBarcode(orderNumber),
+        gc_code: gc,
+        // Com código GestãoClick: barcode = código GC (igual em todas as unidades).
+        barcode: gc ?? (bc ? `${bc}-${orderNumber}` : genBarcode(orderNumber)),
       });
     }
 
@@ -389,7 +403,8 @@ export const bulkCreateOrders = createServerFn({ method: "POST" })
         notes: r.notes ?? null,
         observation: r.observation ?? null,
         finishing: r.finishing ?? null,
-        barcode: (r.barcode && r.barcode.trim()) || genBarcode(r.order_number),
+        gc_code: normGc(r.gc_code),
+        barcode: normGc(r.gc_code) ?? ((r.barcode && r.barcode.trim()) || genBarcode(r.order_number)),
         created_by: userId,
       } as any);
     }
@@ -575,7 +590,7 @@ export const previewSimpleImport = createServerFn({ method: "POST" })
     const cos = Array.from(new Set(data.rows.map((r) => r.customer_order)));
     const { data: existing, error } = await (context.supabase as any)
       .from("production_orders")
-      .select("customer_order, barcode, status")
+      .select("customer_order, gc_code, barcode, status")
       .in("customer_order", cos);
     if (error) throw new Error(error.message);
 
@@ -585,8 +600,8 @@ export const previewSimpleImport = createServerFn({ method: "POST" })
       if (e.status === "cancelada") continue;
       existingByCO.set(e.customer_order, (existingByCO.get(e.customer_order) ?? 0) + 1);
       const set = sigByCO.get(e.customer_order) ?? new Set<string>();
-      // barcode = `${barcode_base}-${order_number}` — extraímos o código do produto
-      const base = String(e.barcode ?? "").split("-")[0];
+      // Código do produto = gc_code (encomendas antigas: parte antes do 1.º "-").
+      const base = normGc(e.gc_code) ?? String(e.barcode ?? "").split("-")[0].toUpperCase();
       if (base) set.add(base);
       sigByCO.set(e.customer_order, set);
     }
@@ -595,7 +610,7 @@ export const previewSimpleImport = createServerFn({ method: "POST" })
       const rows = data.rows.filter((r) => r.customer_order === co);
       const to_create = rows.reduce((a, r) => a + r.quantity, 0);
       const sigs = sigByCO.get(co) ?? new Set<string>();
-      const duplicate_signature = rows.filter((r) => sigs.has(r.barcode_base)).length;
+      const duplicate_signature = rows.filter((r) => sigs.has(normGc(r.barcode_base) ?? "")).length;
       return { customer_order: co, existing: existingByCO.get(co) ?? 0, to_create, duplicate_signature };
     });
 
@@ -732,7 +747,8 @@ export const bulkImportSimpleOrders = createServerFn({ method: "POST" })
             priority: 0,
             status: "pendente",
             is_stock_production: false,
-            barcode: `${r.barcode_base}-${orderNumber}`,
+            gc_code: normGc(r.barcode_base),
+            barcode: normGc(r.barcode_base),
             created_by: userId,
           });
         }
@@ -988,6 +1004,7 @@ export const listUrgentActive = createServerFn({ method: "GET" })
 // ============================================================
 
 export type EditableOrder = {
+  gc_code?: string | null;
   fabric_ref_tec?: string | null;
   id: string;
   order_number: string;
@@ -1038,7 +1055,7 @@ export const getOrderForEdit = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<EditableOrder> => {
     const { data: o, error } = await (context.supabase as any)
       .from("production_orders")
-      .select("id, order_number, customer_order, product_description, model_id, measure, fabric_type, fabric_ref, fabric_ref_tec, color, structure_type, finishing, entry_date, due_date, priority, notes, observation, status")
+      .select("id, order_number, customer_order, product_description, model_id, measure, fabric_type, fabric_ref, fabric_ref_tec, color, structure_type, finishing, entry_date, due_date, priority, notes, observation, status, gc_code")
       .eq("id", data.id)
       .maybeSingle();
     if (error) throw new Error(error.message);
@@ -1070,6 +1087,7 @@ const updateOrderSchema = z.object({
     .optional(),
   notes: textOrNull,
   observation: textOrNull,
+  gc_code: z.union([z.string().max(64), z.null()]).optional(),
 });
 
 /** Atualiza campos de uma encomenda (admin/escritório). Só grava os campos enviados. */
@@ -1096,6 +1114,8 @@ export const updateOrder = createServerFn({ method: "POST" })
       if (v === undefined) continue;
       patch[k] = v === "" ? null : v;
     }
+    // O código GC atualiza o barcode e os códigos dos volumes (trigger na base).
+    if ("gc_code" in patch) patch.gc_code = normGc(patch.gc_code as string | null);
 
     // Fase 4: a identidade do produto só muda antes do primeiro início.
     const identityChanged = IDENTITY_FIELDS.filter(
