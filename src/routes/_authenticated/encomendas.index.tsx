@@ -222,7 +222,7 @@ function EncomendasPage() {
                       {o.line_kind === "livre" && (
                         <Badge variant="outline" className="border-dashed text-[10px]">Linha livre</Badge>
                       )}
-                      <span>{o.product_description}</span>
+                      {o.line_kind !== "livre" && !o.gc_code && (<Badge variant="outline" className="border-warning text-[10px] whitespace-nowrap">Sem código GC</Badge>)}<span>{o.product_description}</span>
                     </div>
                   </TableCell>
                   <TableCell>{o.model_name ?? "—"}</TableCell>
@@ -282,7 +282,7 @@ function EncomendasPage() {
                   {o.line_kind === "livre" && (
                     <Badge variant="outline" className="border-dashed text-[10px]">Linha livre</Badge>
                   )}
-                  <span>{o.product_description}</span>
+                  {o.line_kind !== "livre" && !o.gc_code && (<Badge variant="outline" className="border-warning text-[10px] whitespace-nowrap">Sem código GC</Badge>)}<span>{o.product_description}</span>
                 </div>
                 <div className="flex flex-wrap gap-1 text-xs text-muted-foreground">
                   {o.model_name && <span>{o.model_name}</span>}
