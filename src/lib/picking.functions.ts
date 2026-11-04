@@ -318,6 +318,8 @@ export const resolveOrderForPicking = createServerFn({ method: "POST" })
     return {
       id: order.id,
       order_number: order.order_number,
+      gc_code: (order as any).gc_code ?? null,
+      barcode: (order as any).barcode ?? null,
       product_description: order.product_description,
       structure_type: order.structure_type,
       measure: order.measure,
