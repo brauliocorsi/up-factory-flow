@@ -278,6 +278,12 @@ function PicagemPage() {
     // Código da encomenda ou código GC (com/sem -C<n>) de uma encomenda carregada.
     for (const entry of open) {
       const o = entry.order;
+      // Volume exato (ex. CODE-C1) já lido nesta encomenda: pertence a outra
+      // encomenda com o mesmo código GC — não enviar para aqui.
+      const exactPicked = o.packages.some(
+        (p) => (p.expected_code ?? "").toUpperCase() === upper && entry.pickedColis.has(p.package_number),
+      );
+      if (exactPicked) continue;
       const keys = [o.order_number, o.gc_code, o.barcode].filter(Boolean).map((k) => String(k).toUpperCase());
       if (keys.includes(upper) || keys.includes(base)) {
         scanMutation.mutate({ order_id: o.id, code });
