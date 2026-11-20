@@ -13,6 +13,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as PainelRouteImport } from './routes/painel'
+import { Route as TemposRouteImport } from './routes/tempos'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
@@ -30,6 +31,7 @@ import { Route as AuthenticatedAdminQualidadeRouteImport } from './routes/_authe
 import { Route as AuthenticatedAdminRelatoriosRouteImport } from './routes/_authenticated/admin.relatorios'
 import { Route as AuthenticatedAdminRotasColisRouteImport } from './routes/_authenticated/admin.rotas-colis'
 import { Route as AuthenticatedAdminSlaRouteImport } from './routes/_authenticated/admin.sla'
+import { Route as AuthenticatedAdminTemposRouteImport } from './routes/_authenticated/admin.tempos'
 import { Route as AuthenticatedEncomendasIndexRouteImport } from './routes/_authenticated/encomendas.index'
 import { Route as AuthenticatedEncomendasImportarProdutosRouteImport } from './routes/_authenticated/encomendas.importar-produtos'
 import { Route as AuthenticatedEncomendasImportarSimplesRouteImport } from './routes/_authenticated/encomendas.importar-simples'
@@ -71,6 +73,11 @@ const McpRoute = McpRouteImport.update({
 const PainelRoute = PainelRouteImport.update({
   id: '/painel',
   path: '/painel',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TemposRoute = TemposRouteImport.update({
+  id: '/tempos',
+  path: '/tempos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const Char91DotmcpChar93ListToolsRoute =
@@ -168,6 +175,12 @@ const AuthenticatedAdminSlaRoute = AuthenticatedAdminSlaRouteImport.update({
   path: '/admin/sla',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAdminTemposRoute =
+  AuthenticatedAdminTemposRouteImport.update({
+    id: '/admin/tempos',
+    path: '/admin/tempos',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedEncomendasIndexRoute =
   AuthenticatedEncomendasIndexRouteImport.update({
     id: '/encomendas/',
@@ -310,6 +323,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/mcp': typeof McpRoute
   '/painel': typeof PainelRoute
+  '/tempos': typeof TemposRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
@@ -326,6 +340,7 @@ export interface FileRoutesByFullPath {
   '/admin/relatorios': typeof AuthenticatedAdminRelatoriosRoute
   '/admin/rotas-colis': typeof AuthenticatedAdminRotasColisRoute
   '/admin/sla': typeof AuthenticatedAdminSlaRoute
+  '/admin/tempos': typeof AuthenticatedAdminTemposRoute
   '/encomendas/importar-produtos': typeof AuthenticatedEncomendasImportarProdutosRoute
   '/encomendas/importar-simples': typeof AuthenticatedEncomendasImportarSimplesRoute
   '/encomendas/nova': typeof AuthenticatedEncomendasNovaRoute
@@ -354,6 +369,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/mcp': typeof McpRoute
   '/painel': typeof PainelRoute
+  '/tempos': typeof TemposRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
@@ -371,6 +387,7 @@ export interface FileRoutesByTo {
   '/admin/relatorios': typeof AuthenticatedAdminRelatoriosRoute
   '/admin/rotas-colis': typeof AuthenticatedAdminRotasColisRoute
   '/admin/sla': typeof AuthenticatedAdminSlaRoute
+  '/admin/tempos': typeof AuthenticatedAdminTemposRoute
   '/encomendas/importar-produtos': typeof AuthenticatedEncomendasImportarProdutosRoute
   '/encomendas/importar-simples': typeof AuthenticatedEncomendasImportarSimplesRoute
   '/encomendas/nova': typeof AuthenticatedEncomendasNovaRoute
@@ -401,6 +418,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/mcp': typeof McpRoute
   '/painel': typeof PainelRoute
+  '/tempos': typeof TemposRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
@@ -418,6 +436,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/relatorios': typeof AuthenticatedAdminRelatoriosRoute
   '/_authenticated/admin/rotas-colis': typeof AuthenticatedAdminRotasColisRoute
   '/_authenticated/admin/sla': typeof AuthenticatedAdminSlaRoute
+  '/_authenticated/admin/tempos': typeof AuthenticatedAdminTemposRoute
   '/_authenticated/encomendas/importar-produtos': typeof AuthenticatedEncomendasImportarProdutosRoute
   '/_authenticated/encomendas/importar-simples': typeof AuthenticatedEncomendasImportarSimplesRoute
   '/_authenticated/encomendas/nova': typeof AuthenticatedEncomendasNovaRoute
@@ -449,6 +468,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/mcp'
     | '/painel'
+    | '/tempos'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/configuracoes'
@@ -465,6 +485,7 @@ export interface FileRouteTypes {
     | '/admin/relatorios'
     | '/admin/rotas-colis'
     | '/admin/sla'
+    | '/admin/tempos'
     | '/encomendas/importar-produtos'
     | '/encomendas/importar-simples'
     | '/encomendas/nova'
@@ -493,6 +514,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/mcp'
     | '/painel'
+    | '/tempos'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/configuracoes'
@@ -510,6 +532,7 @@ export interface FileRouteTypes {
     | '/admin/relatorios'
     | '/admin/rotas-colis'
     | '/admin/sla'
+    | '/admin/tempos'
     | '/encomendas/importar-produtos'
     | '/encomendas/importar-simples'
     | '/encomendas/nova'
@@ -539,6 +562,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/mcp'
     | '/painel'
+    | '/tempos'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/_authenticated/configuracoes'
@@ -556,6 +580,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/relatorios'
     | '/_authenticated/admin/rotas-colis'
     | '/_authenticated/admin/sla'
+    | '/_authenticated/admin/tempos'
     | '/_authenticated/encomendas/importar-produtos'
     | '/_authenticated/encomendas/importar-simples'
     | '/_authenticated/encomendas/nova'
@@ -586,6 +611,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   McpRoute: typeof McpRoute
   PainelRoute: typeof PainelRoute
+  TemposRoute: typeof TemposRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
@@ -623,6 +649,13 @@ declare module '@tanstack/react-router' {
       path: '/painel'
       fullPath: '/painel'
       preLoaderRoute: typeof PainelRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tempos': {
+      id: '/tempos'
+      path: '/tempos'
+      fullPath: '/tempos'
+      preLoaderRoute: typeof TemposRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/.mcp/list-tools': {
@@ -742,6 +775,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/sla'
       fullPath: '/admin/sla'
       preLoaderRoute: typeof AuthenticatedAdminSlaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/tempos': {
+      id: '/_authenticated/admin/tempos'
+      path: '/admin/tempos'
+      fullPath: '/admin/tempos'
+      preLoaderRoute: typeof AuthenticatedAdminTemposRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/encomendas/': {
@@ -935,6 +975,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRelatoriosRoute: typeof AuthenticatedAdminRelatoriosRoute
   AuthenticatedAdminRotasColisRoute: typeof AuthenticatedAdminRotasColisRoute
   AuthenticatedAdminSlaRoute: typeof AuthenticatedAdminSlaRoute
+  AuthenticatedAdminTemposRoute: typeof AuthenticatedAdminTemposRoute
   AuthenticatedEncomendasImportarProdutosRoute: typeof AuthenticatedEncomendasImportarProdutosRoute
   AuthenticatedEncomendasImportarSimplesRoute: typeof AuthenticatedEncomendasImportarSimplesRoute
   AuthenticatedEncomendasNovaRoute: typeof AuthenticatedEncomendasNovaRoute
@@ -969,6 +1010,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRelatoriosRoute: AuthenticatedAdminRelatoriosRoute,
   AuthenticatedAdminRotasColisRoute: AuthenticatedAdminRotasColisRoute,
   AuthenticatedAdminSlaRoute: AuthenticatedAdminSlaRoute,
+  AuthenticatedAdminTemposRoute: AuthenticatedAdminTemposRoute,
   AuthenticatedEncomendasImportarProdutosRoute:
     AuthenticatedEncomendasImportarProdutosRoute,
   AuthenticatedEncomendasImportarSimplesRoute:
@@ -1003,6 +1045,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   McpRoute: McpRoute,
   PainelRoute: PainelRoute,
+  TemposRoute: TemposRoute,
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,

@@ -71,6 +71,7 @@ const groups: NavGroup[] = [
       { to: "/admin/integracao-erp", label: "Integração ERP", icon: Truck },
       { to: "/admin/qualidade", label: "Qualidade", icon: ClipboardCheck },
       { to: "/admin/sla", label: "SLA", icon: Clock },
+      { to: "/admin/tempos", label: "Tempos por etapa", icon: Clock },
       { to: "/admin/planeamento", label: "Planeamento", icon: CalendarClock },
       { to: "/configuracoes", label: "Configurações", icon: Settings },
     ],
