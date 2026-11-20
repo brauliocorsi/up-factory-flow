@@ -8,6 +8,13 @@
       "when": 1793831111982,
       "tag": "0000_gc_code_production_orders",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1795186609838,
+      "tag": "0001_scope_open_read_policies_to_staff",
+      "breakpoints": true
     }
   ]
 }
