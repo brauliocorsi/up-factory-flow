@@ -468,6 +468,13 @@ export type Database = {
             referencedRelation: "models"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "erp_product_map_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "v_stage_time_summary"
+            referencedColumns: ["model_id"]
+          },
         ]
       }
       fabric_catalog: {
@@ -917,6 +924,13 @@ export type Database = {
             referencedRelation: "models"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "model_packages_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "v_stage_time_summary"
+            referencedColumns: ["model_id"]
+          },
         ]
       }
       model_structures: {
@@ -942,6 +956,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "models"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "model_structures_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "v_stage_time_summary"
+            referencedColumns: ["model_id"]
           },
           {
             foreignKeyName: "model_structures_structure_id_fkey"
@@ -1552,6 +1573,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "production_orders_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "v_stage_time_summary"
+            referencedColumns: ["model_id"]
+          },
+          {
             foreignKeyName: "production_orders_ref_tec_fkey"
             columns: ["ref_tec"]
             isOneToOne: false
@@ -2076,6 +2104,13 @@ export type Database = {
             referencedRelation: "models"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "semi_finished_stock_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "v_stage_time_summary"
+            referencedColumns: ["model_id"]
+          },
         ]
       }
       shell_batch_logs: {
@@ -2496,6 +2531,85 @@ export type Database = {
         }
         Relationships: []
       }
+      stage_time_campaign: {
+        Row: {
+          category_code: string
+          created_at: string
+          id: string
+          open: boolean
+          stage: Database["public"]["Enums"]["production_stage"]
+        }
+        Insert: {
+          category_code: string
+          created_at?: string
+          id?: string
+          open?: boolean
+          stage: Database["public"]["Enums"]["production_stage"]
+        }
+        Update: {
+          category_code?: string
+          created_at?: string
+          id?: string
+          open?: boolean
+          stage?: Database["public"]["Enums"]["production_stage"]
+        }
+        Relationships: []
+      }
+      stage_time_declarations: {
+        Row: {
+          created_at: string
+          id: string
+          minutes: number
+          model_id: string
+          note: string | null
+          operator_id: string
+          stage: Database["public"]["Enums"]["production_stage"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          minutes: number
+          model_id: string
+          note?: string | null
+          operator_id: string
+          stage: Database["public"]["Enums"]["production_stage"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          minutes?: number
+          model_id?: string
+          note?: string | null
+          operator_id?: string
+          stage?: Database["public"]["Enums"]["production_stage"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stage_time_declarations_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "models"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stage_time_declarations_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "v_stage_time_summary"
+            referencedColumns: ["model_id"]
+          },
+          {
+            foreignKeyName: "stage_time_declarations_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stage_time_logs: {
         Row: {
           created_at: string
@@ -2752,6 +2866,23 @@ export type Database = {
           status?: never
           supplier_number?: string | null
           supplier_ref?: string | null
+        }
+        Relationships: []
+      }
+      v_stage_time_summary: {
+        Row: {
+          category_code: string | null
+          divergencia_pct: number | null
+          maximo: number | null
+          media: number | null
+          mediana: number | null
+          minimo: number | null
+          model_code: string | null
+          model_id: string | null
+          model_name: string | null
+          n_declaracoes: number | null
+          sla_atual: number | null
+          stage: Database["public"]["Enums"]["production_stage"] | null
         }
         Relationships: []
       }
@@ -3109,6 +3240,14 @@ export type Database = {
       my_operator_id: { Args: never; Returns: string }
       prev_business_day: { Args: { _d: string }; Returns: string }
       preview_cancel_order: { Args: { _order_id: string }; Returns: Json }
+      promote_stage_times: {
+        Args: {
+          p_category?: string
+          p_model_id?: string
+          p_stage?: Database["public"]["Enums"]["production_stage"]
+        }
+        Returns: number
+      }
       receive_fabric: {
         Args: {
           p_meters: number
