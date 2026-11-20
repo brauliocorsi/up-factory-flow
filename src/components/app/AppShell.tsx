@@ -72,6 +72,7 @@ const groups: NavGroup[] = [
       { to: "/admin/qualidade", label: "Qualidade", icon: ClipboardCheck },
       { to: "/admin/sla", label: "SLA", icon: Clock },
       { to: "/admin/tempos", label: "Tempos por etapa", icon: Clock },
+      { to: "/admin/colis-respostas", label: "Volumes indicados", icon: Clock },
       { to: "/admin/planeamento", label: "Planeamento", icon: CalendarClock },
       { to: "/configuracoes", label: "Configurações", icon: Settings },
     ],

@@ -29,6 +29,13 @@
       "when": 1795187189610,
       "tag": "0003_scope_catalog_reads_to_staff",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1795188787754,
+      "tag": "0004_coli_count_declarations",
+      "breakpoints": true
     }
   ]
 }

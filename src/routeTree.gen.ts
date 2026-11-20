@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as ColisRouteImport } from './routes/colis'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as PainelRouteImport } from './routes/painel'
 import { Route as TemposRouteImport } from './routes/tempos'
@@ -25,6 +26,7 @@ import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as AuthenticatedAdminCatalogoRouteImport } from './routes/_authenticated/admin.catalogo'
 import { Route as AuthenticatedAdminColisRouteImport } from './routes/_authenticated/admin.colis'
+import { Route as AuthenticatedAdminColisRespostasRouteImport } from './routes/_authenticated/admin.colis-respostas'
 import { Route as AuthenticatedAdminIntegracaoErpRouteImport } from './routes/_authenticated/admin.integracao-erp'
 import { Route as AuthenticatedAdminOciosoRouteImport } from './routes/_authenticated/admin.ocioso'
 import { Route as AuthenticatedAdminQualidadeRouteImport } from './routes/_authenticated/admin.qualidade'
@@ -63,6 +65,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ColisRoute = ColisRouteImport.update({
+  id: '/colis',
+  path: '/colis',
   getParentRoute: () => rootRouteImport,
 } as any)
 const McpRoute = McpRouteImport.update({
@@ -140,6 +147,12 @@ const AuthenticatedAdminColisRoute = AuthenticatedAdminColisRouteImport.update({
   path: '/admin/colis',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAdminColisRespostasRoute =
+  AuthenticatedAdminColisRespostasRouteImport.update({
+    id: '/admin/colis-respostas',
+    path: '/admin/colis-respostas',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedAdminIntegracaoErpRoute =
   AuthenticatedAdminIntegracaoErpRouteImport.update({
     id: '/admin/integracao-erp',
@@ -321,6 +334,7 @@ const ApiPublicIntegrationsErpOutboxWorkerRoute =
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthRoute
+  '/colis': typeof ColisRoute
   '/mcp': typeof McpRoute
   '/painel': typeof PainelRoute
   '/tempos': typeof TemposRoute
@@ -334,6 +348,7 @@ export interface FileRoutesByFullPath {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/admin/catalogo': typeof AuthenticatedAdminCatalogoRoute
   '/admin/colis': typeof AuthenticatedAdminColisRoute
+  '/admin/colis-respostas': typeof AuthenticatedAdminColisRespostasRoute
   '/admin/integracao-erp': typeof AuthenticatedAdminIntegracaoErpRoute
   '/admin/ocioso': typeof AuthenticatedAdminOciosoRoute
   '/admin/qualidade': typeof AuthenticatedAdminQualidadeRoute
@@ -367,6 +382,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
+  '/colis': typeof ColisRoute
   '/mcp': typeof McpRoute
   '/painel': typeof PainelRoute
   '/tempos': typeof TemposRoute
@@ -381,6 +397,7 @@ export interface FileRoutesByTo {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/admin/catalogo': typeof AuthenticatedAdminCatalogoRoute
   '/admin/colis': typeof AuthenticatedAdminColisRoute
+  '/admin/colis-respostas': typeof AuthenticatedAdminColisRespostasRoute
   '/admin/integracao-erp': typeof AuthenticatedAdminIntegracaoErpRoute
   '/admin/ocioso': typeof AuthenticatedAdminOciosoRoute
   '/admin/qualidade': typeof AuthenticatedAdminQualidadeRoute
@@ -416,6 +433,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/colis': typeof ColisRoute
   '/mcp': typeof McpRoute
   '/painel': typeof PainelRoute
   '/tempos': typeof TemposRoute
@@ -430,6 +448,7 @@ export interface FileRoutesById {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/admin/catalogo': typeof AuthenticatedAdminCatalogoRoute
   '/_authenticated/admin/colis': typeof AuthenticatedAdminColisRoute
+  '/_authenticated/admin/colis-respostas': typeof AuthenticatedAdminColisRespostasRoute
   '/_authenticated/admin/integracao-erp': typeof AuthenticatedAdminIntegracaoErpRoute
   '/_authenticated/admin/ocioso': typeof AuthenticatedAdminOciosoRoute
   '/_authenticated/admin/qualidade': typeof AuthenticatedAdminQualidadeRoute
@@ -466,6 +485,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/colis'
     | '/mcp'
     | '/painel'
     | '/tempos'
@@ -479,6 +499,7 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/admin/catalogo'
     | '/admin/colis'
+    | '/admin/colis-respostas'
     | '/admin/integracao-erp'
     | '/admin/ocioso'
     | '/admin/qualidade'
@@ -512,6 +533,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
+    | '/colis'
     | '/mcp'
     | '/painel'
     | '/tempos'
@@ -526,6 +548,7 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/admin/catalogo'
     | '/admin/colis'
+    | '/admin/colis-respostas'
     | '/admin/integracao-erp'
     | '/admin/ocioso'
     | '/admin/qualidade'
@@ -560,6 +583,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_authenticated'
     | '/auth'
+    | '/colis'
     | '/mcp'
     | '/painel'
     | '/tempos'
@@ -574,6 +598,7 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/_authenticated/admin/catalogo'
     | '/_authenticated/admin/colis'
+    | '/_authenticated/admin/colis-respostas'
     | '/_authenticated/admin/integracao-erp'
     | '/_authenticated/admin/ocioso'
     | '/_authenticated/admin/qualidade'
@@ -609,6 +634,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ColisRoute: typeof ColisRoute
   McpRoute: typeof McpRoute
   PainelRoute: typeof PainelRoute
   TemposRoute: typeof TemposRoute
@@ -635,6 +661,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/colis': {
+      id: '/colis'
+      path: '/colis'
+      fullPath: '/colis'
+      preLoaderRoute: typeof ColisRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/mcp': {
@@ -733,6 +766,13 @@ declare module '@tanstack/react-router' {
       path: '/admin/colis'
       fullPath: '/admin/colis'
       preLoaderRoute: typeof AuthenticatedAdminColisRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/admin/colis-respostas': {
+      id: '/_authenticated/admin/colis-respostas'
+      path: '/admin/colis-respostas'
+      fullPath: '/admin/colis-respostas'
+      preLoaderRoute: typeof AuthenticatedAdminColisRespostasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/admin/integracao-erp': {
@@ -969,6 +1009,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedAdminCatalogoRoute: typeof AuthenticatedAdminCatalogoRoute
   AuthenticatedAdminColisRoute: typeof AuthenticatedAdminColisRoute
+  AuthenticatedAdminColisRespostasRoute: typeof AuthenticatedAdminColisRespostasRoute
   AuthenticatedAdminIntegracaoErpRoute: typeof AuthenticatedAdminIntegracaoErpRoute
   AuthenticatedAdminOciosoRoute: typeof AuthenticatedAdminOciosoRoute
   AuthenticatedAdminQualidadeRoute: typeof AuthenticatedAdminQualidadeRoute
@@ -1004,6 +1045,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedAdminCatalogoRoute: AuthenticatedAdminCatalogoRoute,
   AuthenticatedAdminColisRoute: AuthenticatedAdminColisRoute,
+  AuthenticatedAdminColisRespostasRoute: AuthenticatedAdminColisRespostasRoute,
   AuthenticatedAdminIntegracaoErpRoute: AuthenticatedAdminIntegracaoErpRoute,
   AuthenticatedAdminOciosoRoute: AuthenticatedAdminOciosoRoute,
   AuthenticatedAdminQualidadeRoute: AuthenticatedAdminQualidadeRoute,
@@ -1043,6 +1085,7 @@ const AuthenticatedRouteRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ColisRoute: ColisRoute,
   McpRoute: McpRoute,
   PainelRoute: PainelRoute,
   TemposRoute: TemposRoute,

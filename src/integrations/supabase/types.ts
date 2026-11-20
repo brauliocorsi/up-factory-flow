@@ -35,6 +35,57 @@ export type Database = {
         }
         Relationships: []
       }
+      coli_count_declarations: {
+        Row: {
+          colis: number
+          created_at: string
+          id: string
+          model_id: string
+          names: string | null
+          note: string | null
+          operator_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          colis: number
+          created_at?: string
+          id?: string
+          model_id: string
+          names?: string | null
+          note?: string | null
+          operator_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          colis?: number
+          created_at?: string
+          id?: string
+          model_id?: string
+          names?: string | null
+          note?: string | null
+          operator_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coli_count_declarations_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "models"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coli_count_declarations_model_id_fkey"
+            columns: ["model_id"]
+            isOneToOne: false
+            referencedRelation: "v_stage_time_summary"
+            referencedColumns: ["model_id"]
+          },
+        ]
+      }
       coli_stage_time_logs: {
         Row: {
           created_at: string
