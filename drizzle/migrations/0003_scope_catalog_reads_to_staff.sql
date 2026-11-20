@@ -1,0 +1,14 @@
+ALTER POLICY "read fabric_types" ON public.ref_fabric_types USING (public.has_any_app_role(auth.uid()));
+ALTER POLICY "rework_reasons_read" ON public.rework_reasons USING (public.has_any_app_role(auth.uid()));
+ALTER POLICY "model_structures_select_auth" ON public.model_structures USING (public.has_any_app_role(auth.uid()));
+ALTER POLICY "read fabrics" ON public.fabrics USING (public.has_any_app_role(auth.uid()));
+ALTER POLICY "read fabric_refs" ON public.ref_fabric_refs USING (public.has_any_app_role(auth.uid()));
+ALTER POLICY "read sofa families" ON public.ref_sofa_families USING (public.has_any_app_role(auth.uid()));
+ALTER POLICY "authenticated read models" ON public.models USING (public.has_any_app_role(auth.uid()));
+ALTER POLICY "read measures" ON public.ref_measures USING (public.has_any_app_role(auth.uid()));
+ALTER POLICY "read structures" ON public.ref_structures USING (public.has_any_app_role(auth.uid()));
+ALTER POLICY "Authenticated read model_packages" ON public.model_packages USING (public.has_any_app_role(auth.uid()));
+ALTER POLICY "read colors" ON public.ref_colors USING (public.has_any_app_role(auth.uid()));
+ALTER POLICY "authenticated read app_settings" ON public.app_settings USING (public.has_any_app_role(auth.uid()));
+ALTER POLICY "authenticated insert stage_time_logs" ON public.stage_time_logs WITH CHECK (public.has_any_app_role(auth.uid()));
+ALTER POLICY "auth upload quality-photos" ON storage.objects WITH CHECK (bucket_id = 'quality-photos' AND owner = auth.uid() AND public.has_any_app_role(auth.uid()));
