@@ -15,6 +15,13 @@
       "when": 1795186609838,
       "tag": "0001_scope_open_read_policies_to_staff",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795186679015,
+      "tag": "0002_scope_rework_campaign_photos_to_staff",
+      "breakpoints": true
     }
   ]
 }
