@@ -40,6 +40,7 @@ export type StageQueueItem = {
   expected_minutes: number | null;
   stage_status: string;
   status: "ok" | "atrasada_folga" | "risco_saida";
+  priority?: number;
 };
 
 export type CapacityLoadDay = {
@@ -212,6 +213,22 @@ export const getStageQueue = createServerFn({ method: "POST" })
     const { data: res, error } = await (context.supabase as any).rpc("get_stage_queue", { _stage: data.stage });
     if (error) throw new Error(error.message);
     const all = (res ?? []) as StageQueueItem[];
+    // Prioridade definida no planeamento: urgente primeiro, depois data-alvo.
+    const ids = [...new Set(all.map((i) => i.order_id))];
+    const prio = new Map<string, number>();
+    for (let i = 0; i < ids.length; i += 200) {
+      const { data: rows } = await (context.supabase as any)
+        .from("production_orders").select("id, priority").in("id", ids.slice(i, i + 200));
+      for (const r of rows ?? []) prio.set(r.id, Number(r.priority ?? 0));
+    }
+    const rk = (p: number) => (p >= 3 ? 3 : p <= 1 ? 1 : 2);
+    for (const it of all) it.priority = rk(prio.get(it.order_id) ?? 0);
+    const sev = { risco_saida: 0, atrasada_folga: 1, ok: 2 } as const;
+    all.sort((a, b) =>
+      (b.priority ?? 1) - (a.priority ?? 1)
+      || sev[a.status] - sev[b.status]
+      || (a.target_date ?? "9999").localeCompare(b.target_date ?? "9999")
+      || (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999"));
     const offset = data.offset ?? 0;
     const limit = data.limit ?? all.length;
     return { items: all.slice(offset, offset + limit), total: all.length };
