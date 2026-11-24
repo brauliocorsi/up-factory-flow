@@ -43,6 +43,13 @@
       "when": 1795489507378,
       "tag": "0005_restrict_quality_template_reads",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1795529999752,
+      "tag": "0006_colis_per_model",
+      "breakpoints": true
     }
   ]
 }
