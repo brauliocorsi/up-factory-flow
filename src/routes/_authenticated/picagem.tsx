@@ -55,6 +55,34 @@ function playSound(type: "success" | "error" | "complete") {
   } catch {}
 }
 
+
+type ReadyRow = { order_number: string; product_description: string; colis: number };
+
+function escapeHtml(v: string) {
+  return v.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
+}
+
+/** Guia de prontos enviados para a conferência do Contagem (A4, para imprimir e acompanhar a carga). */
+function printReadyList(rows: ReadyRow[], operator: string) {
+  const w = window.open("", "_blank", "width=900,height=700");
+  if (!w) { toast.error("O navegador bloqueou a janela de impressão. Permita pop-ups."); return; }
+  const now = new Date().toLocaleString("pt-PT");
+  const totalColis = rows.reduce((a, r) => a + r.colis, 0);
+  const body = rows.map((r, i) => `<tr><td>${i + 1}</td><td class="m">${escapeHtml(r.order_number)}</td><td>${escapeHtml(r.product_description)}</td><td class="c">${r.colis}</td><td class="c">&#9744;</td></tr>`).join("");
+  w.document.write(`<!doctype html><html lang="pt"><head><meta charset="utf-8"><title>Lista de prontos ${now}</title>
+<style>body{font-family:Arial,sans-serif;margin:24px;color:#000}h1{font-size:20px;margin:0}p{margin:4px 0;font-size:12px}
+table{width:100%;border-collapse:collapse;margin-top:16px;font-size:12px}th,td{border:1px solid #000;padding:6px;text-align:left}
+th{background:#eee}.c{text-align:center}.m{font-family:monospace;font-weight:bold}.s{display:flex;gap:40px;margin-top:40px;font-size:12px}
+.s div{flex:1;border-top:1px solid #000;padding-top:4px}@page{size:A4;margin:12mm}</style></head><body>
+<h1>UP Fábrica — Lista de prontos enviados para o stock</h1>
+<p>Data: ${now} · Picador: ${escapeHtml(operator)}</p>
+<p>Encomendas: <b>${rows.length}</b> · Volumes: <b>${totalColis}</b> · Destino: conferência (Contagem)</p>
+<table><thead><tr><th>#</th><th>Encomenda</th><th>Produto</th><th class="c">Volumes</th><th class="c">Conferido</th></tr></thead><tbody>${body}</tbody></table>
+<div class="s"><div>Entregue por (fábrica)</div><div>Recebido por (armazém)</div></div>
+<script>window.onload=()=>{window.print();}</script></body></html>`);
+  w.document.close();
+}
+
 type LoadedOrder = {
   order: PickingOrder;
   pickedColis: Set<number>; // coli_number marked as picked
@@ -68,6 +96,7 @@ function PicagemPage() {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [loaded, setLoaded] = useState<Record<string, LoadedOrder>>({});
   // Mesmo código GC em várias encomendas: o operador escolhe qual está a picar.
+  const [lastPrinted, setLastPrinted] = useState<ReadyRow[] | null>(null);
   const [choices, setChoices] = useState<{ code: string; list: PickingCandidate[] } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
@@ -237,11 +266,23 @@ function PicagemPage() {
             ...pendingDispatch.map((p) => p.order_id),
           ]));
       if (completedIds.length === 0) throw new Error("Não há encomendas picadas para enviar.");
-      return sendPickingBatchToStock({ data: { operator_code: operatorCode, order_ids: completedIds } });
+      // Guarda os dados para a lista de prontos antes de enviar.
+      const rows: ReadyRow[] = completedIds.map((id) => {
+        const l = loaded[id];
+        if (l) return { order_number: l.order.order_number, product_description: l.order.product_description, colis: l.order.package_total };
+        const p = pendingDispatch.find((x) => x.order_id === id);
+        return { order_number: p?.order_number ?? "—", product_description: p?.product_description ?? "", colis: p?.coli_total ?? 0 };
+      });
+      const res = await sendPickingBatchToStock({ data: { operator_code: operatorCode, order_ids: completedIds } });
+      return { res, rows };
     },
-    onSuccess: (res) => {
+    onSuccess: ({ res, rows }) => {
       if (res.success) {
         toast.success(res.message);
+        if (soundEnabled) playSound("complete");
+        const opName = operators.find((o) => o.code === operatorCode)?.name ?? operatorCode;
+        setLastPrinted(rows);
+        printReadyList(rows, opName);
         setLoaded((prev) => {
           const next = { ...prev };
           Object.keys(next).forEach((id) => { if (next[id].completed) delete next[id]; });
@@ -320,7 +361,7 @@ function PicagemPage() {
     <div className="container mx-auto p-4 max-w-7xl space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-4">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight">Picar — Posto de Picagem</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight">Picagem — Prontos para o stock</h1>
           <p className="text-sm text-muted-foreground">Lê o código de cada coli. Quando todos os volumes forem lidos, a encomenda fica picada e pronta a enviar para o stock.</p>
         </div>
         <Button variant="outline" size="sm" onClick={() => setSoundEnabled(!soundEnabled)} className="gap-2">
@@ -529,9 +570,17 @@ function PicagemPage() {
         <div className="lg:col-span-7 space-y-6">
           <Card className="min-h-[400px]">
             <CardHeader className="flex flex-row items-center justify-between border-b pb-4">
-              <CardTitle className="text-lg flex items-center gap-2"><Box className="size-5 text-primary" /> Em curso ({loadedList.length})</CardTitle>
+              <div>
+                <CardTitle className="text-lg flex items-center gap-2"><Box className="size-5 text-primary" /> Lote em curso ({loadedList.length})</CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">Lê os volumes prontos. Ao finalizar, entram na conferência do Contagem e sai a lista para imprimir.</p>
+                {lastPrinted && (
+                  <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => printReadyList(lastPrinted, operators.find((o) => o.code === operatorCode)?.name ?? operatorCode)}>
+                    Reimprimir última lista ({lastPrinted.length})
+                  </Button>
+                )}
+              </div>
               <Button disabled={(completedCount === 0 && pendingDispatch.length === 0) || sendBatchMutation.isPending} onClick={() => sendBatchMutation.mutate(undefined)} className="gap-2 bg-green-600 hover:bg-green-700">
-                {sendBatchMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />} Enviar lote ({Math.max(completedCount, pendingDispatch.length)})
+                {sendBatchMutation.isPending ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />} Finalizar e enviar ({new Set([...loadedList.filter((l) => l.completed).map((l) => l.order.id), ...pendingDispatch.map((p) => p.order_id)]).size})
               </Button>
             </CardHeader>
             <CardContent className="pt-6">
