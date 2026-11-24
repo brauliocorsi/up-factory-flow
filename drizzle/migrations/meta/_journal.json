@@ -36,6 +36,13 @@
       "when": 1795188787754,
       "tag": "0004_coli_count_declarations",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1795489507378,
+      "tag": "0005_restrict_quality_template_reads",
+      "breakpoints": true
     }
   ]
 }
