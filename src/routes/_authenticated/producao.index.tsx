@@ -849,123 +849,126 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
   );
 
   return (
-    <Card id={`stage-card-${item.id}`} className={`p-4 border-l-4 scroll-mt-24 transition-shadow ${
-      item.is_rework ? "border-l-orange-500 bg-orange-50/40" :
-      blocked ? "border-l-destructive bg-destructive/5"
-      : paused ? "border-l-warning bg-warning/5"
-      : running ? "border-l-emerald-500 bg-emerald-50/30"
-      : done ? "border-l-emerald-700 bg-emerald-50/50 opacity-80"
-      : "border-l-slate-400"
+    <Card id={`stage-card-${item.id}`} className={`overflow-hidden p-0 border-l-4 scroll-mt-24 transition-shadow ${
+      item.is_rework ? "border-l-orange-500"
+      : blocked ? "border-l-destructive"
+      : paused ? "border-l-warning"
+      : running ? "border-l-emerald-500"
+      : done ? "border-l-emerald-700 opacity-80"
+      : "border-l-border"
     }`}>
-      {/* Faixa de estado bem visível */}
-      <div className={`-m-4 mb-3 px-4 py-1.5 text-xs font-bold uppercase tracking-wider rounded-t ${
+      {/* Cabeçalho: estado + nº encomenda + operador */}
+      <div className={`flex items-center justify-between gap-2 px-4 py-2 ${
         done ? "bg-emerald-700 text-white"
         : running ? "bg-emerald-600 text-white"
         : paused ? "bg-amber-500 text-white"
         : blocked ? "bg-destructive text-destructive-foreground"
-        : "bg-slate-200 text-slate-700"
+        : "bg-muted text-muted-foreground"
       }`}>
-        {done ? "✓ Concluída"
-          : running ? "● A produzir"
-          : paused ? "❚❚ Em pausa"
-          : blocked ? "⚠ Bloqueada"
-          : "○ Não iniciada"}
-      </div>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-mono text-sm font-bold">{item.order_number}</span>
-            {item.is_rework && (
-              <Badge className="bg-orange-600 text-white gap-1">
-                <Wrench className="size-3" /> RETRABALHO
-              </Badge>
-            )}
-            {paused && <Badge className="bg-warning text-warning-foreground">EM PAUSA</Badge>}
-            {running && <Badge className="bg-emerald-600 text-white">A PRODUZIR</Badge>}
-            {blocked && <Badge variant="destructive">BLOQUEADA</Badge>}
-            {item.operator_code && <Badge variant="secondary">Op {item.operator_code}</Badge>}
-            {slaExceeded && (
-              <Badge variant="destructive" className="gap-1">
-                <AlertTriangle className="size-3" /> Tempo excedido
-              </Badge>
-            )}
-            {slaWarn && (
-              <Badge className="bg-amber-500 text-white gap-1">
-                <AlertTriangle className="size-3" /> Perto do limite
-              </Badge>
-            )}
-            {(item.rework_count ?? 0) > 0 && (
-              <span className="text-[10px] text-orange-700 font-medium">×{item.rework_count} retrabalhos</span>
-            )}
-          </div>
-          <div className="text-sm font-medium mt-1">{item.product_description}</div>
-          <DeadlineRow target={item.target_date ?? null} due={item.due_date ?? null} done={item.status === "concluida"} />
-          {(item.stage_states?.length ?? 0) > 0 && (
-            <div className="flex flex-wrap items-center gap-1 mt-2">
-              {item.stage_states!.map((st) => {
-                const isDone = st.status === "concluida";
-                const isRunning = st.status === "em_curso";
-                const isBlocked = st.status === "bloqueada";
-                return (
-                  <span
-                    key={st.stage}
-                    className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
-                      isDone
-                        ? "bg-emerald-600 text-white border-emerald-600"
-                        : isRunning
-                        ? "bg-emerald-100 text-emerald-800 border-emerald-400"
-                        : isBlocked
-                        ? "bg-destructive/10 text-destructive border-destructive/40"
-                        : "bg-muted text-muted-foreground border-border"
-                    } ${st.stage === item.stage ? "ring-2 ring-primary/50" : ""}`}
-                    title={`${STAGE_LABELS[st.stage]}: ${st.status}`}
-                  >
-                    {isDone && <Check className="size-3" />}
-                    {STAGE_LABELS[st.stage]}
-                  </span>
-                );
-              })}
-            </div>
-          )}
-          {item.observation && (
-            <div className="mt-1 text-xs font-semibold bg-warning/15 text-warning-foreground border border-warning/40 rounded px-2 py-1 inline-flex items-center gap-1">
-              <AlertTriangle className="size-3 text-warning" />
-              {item.observation}
-            </div>
-          )}
-          {showConvergence && item.lines && (
-            <div className="mt-2">
-              <ConvergenceStatus
-                lines={item.lines}
-                variant={isUpholstery ? "full" : "compact"}
-                highlightWhenReady={isUpholstery}
-              />
-            </div>
-          )}
-          <div className="flex items-center gap-3 text-xs text-muted-foreground mt-2">
-            {isQuality ? (
-              <span className="inline-flex items-center gap-1">
-                <ClipboardCheck className="size-3" /> Conferência sem cronómetro
-              </span>
-            ) : (
-              <>
-                <span className="inline-flex items-center gap-1"><Clock className="size-3" />Produtivo: <strong className="text-foreground">{fmtTime(liveSeconds)}</strong></span>
-                {item.paused_seconds > 0 && <span>Pausa: {fmtTime(item.paused_seconds)}</span>}
-                {(item.rework_seconds ?? 0) > 0 && <span className="text-orange-700">Retrabalho: {fmtTime(item.rework_seconds ?? 0)}</span>}
-              </>
-            )}
-          </div>
-          {!isQuality && expectedMinutes != null && expectedMinutes > 0 && (
-            <SlaBar productiveSeconds={liveSeconds} expectedMinutes={expectedMinutes} />
-          )}
-          {isPacking && (
-            <LastQualityCheckSummary orderId={item.order_id} />
-          )}
+        <span className="text-[11px] font-bold uppercase tracking-wider">
+          {done ? "✓ Concluída" : running ? "● A produzir" : paused ? "❚❚ Em pausa" : blocked ? "⚠ Bloqueada" : "○ Por iniciar"}
+        </span>
+        <div className="flex items-center gap-2">
+          {item.operator_code && <span className="text-[11px] font-semibold opacity-90">Op {item.operator_code}</span>}
+          <span className="font-mono text-sm font-bold">{item.order_number}</span>
         </div>
       </div>
 
+      <div className="px-4 pt-3">
+        {/* Produto */}
+        <div className="text-base font-semibold leading-snug">{item.product_description}</div>
+
+        {/* Alertas numa só linha */}
+        {(item.is_rework || slaExceeded || slaWarn || (item.rework_count ?? 0) > 0) && (
+          <div className="flex flex-wrap items-center gap-1.5 mt-2">
+            {item.is_rework && <Badge className="bg-orange-600 text-white gap-1"><Wrench className="size-3" /> Retrabalho</Badge>}
+            {slaExceeded && <Badge variant="destructive" className="gap-1"><AlertTriangle className="size-3" /> Tempo excedido</Badge>}
+            {slaWarn && <Badge className="bg-amber-500 text-white gap-1"><AlertTriangle className="size-3" /> Perto do limite</Badge>}
+            {(item.rework_count ?? 0) > 0 && <span className="text-[11px] text-orange-700 font-medium">×{item.rework_count} retrabalhos</span>}
+          </div>
+        )}
+
+        <DeadlineRow target={item.target_date ?? null} due={item.due_date ?? null} done={item.status === "concluida"} />
+
+        {item.observation && (
+          <div className="mt-2 text-xs font-semibold bg-warning/15 border border-warning/40 rounded-lg px-2 py-1.5 flex items-start gap-1.5">
+            <AlertTriangle className="size-3.5 text-warning shrink-0 mt-0.5" />
+            <span>{item.observation}</span>
+          </div>
+        )}
+
+        {/* Progresso das etapas */}
+        {(item.stage_states?.length ?? 0) > 0 && (() => {
+          const states = item.stage_states!;
+          const doneCount = states.filter((s) => s.status === "concluida").length;
+          return (
+            <div className="mt-3">
+              <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-1">
+                <span className="font-medium">Etapas</span>
+                <span><strong className="text-foreground">{doneCount}</strong>/{states.length} concluídas</span>
+              </div>
+              <div className="flex gap-1">
+                {states.map((st) => {
+                  const isDone = st.status === "concluida";
+                  const isRunning = st.status === "em_curso";
+                  const isBlocked = st.status === "bloqueada";
+                  const current = st.stage === item.stage;
+                  return (
+                    <div key={st.stage} className="flex-1 min-w-0" title={`${STAGE_LABELS[st.stage]}: ${st.status}`}>
+                      <div className={`h-1.5 rounded-full ${
+                        isDone ? "bg-emerald-600" : isRunning ? "bg-emerald-300" : isBlocked ? "bg-destructive/60" : "bg-muted"
+                      } ${current ? "ring-2 ring-primary/50 ring-offset-1 ring-offset-card" : ""}`} />
+                      <div className={`mt-1 truncate text-center text-[9px] uppercase tracking-wide ${
+                        current ? "font-bold text-foreground" : isDone ? "text-emerald-700 dark:text-emerald-400" : "text-muted-foreground"
+                      }`}>
+                        {isDone && <Check className="inline size-2.5 mr-0.5" />}{STAGE_LABELS[st.stage]}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
+
+        {showConvergence && item.lines && (
+          <div className="mt-3">
+            <ConvergenceStatus lines={item.lines} variant={isUpholstery ? "full" : "compact"} highlightWhenReady={isUpholstery} />
+          </div>
+        )}
+
+        {/* Tempos */}
+        {isQuality ? (
+          <div className="mt-3 text-xs text-muted-foreground inline-flex items-center gap-1">
+            <ClipboardCheck className="size-3" /> Conferência sem cronómetro
+          </div>
+        ) : (
+          <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+            <div className="rounded-lg bg-muted/50 px-2 py-1.5">
+              <div className="text-[10px] uppercase text-muted-foreground flex items-center justify-center gap-1"><Clock className="size-3" />Tempo</div>
+              <div className="font-mono text-sm font-bold">{fmtTime(liveSeconds)}</div>
+            </div>
+            <div className="rounded-lg bg-muted/50 px-2 py-1.5">
+              <div className="text-[10px] uppercase text-muted-foreground">Previsto</div>
+              <div className="font-mono text-sm font-bold">{expectedMinutes ? `${expectedMinutes}m` : "—"}</div>
+            </div>
+            <div className="rounded-lg bg-muted/50 px-2 py-1.5">
+              <div className="text-[10px] uppercase text-muted-foreground">Pausa</div>
+              <div className="font-mono text-sm font-bold">{item.paused_seconds > 0 ? fmtTime(item.paused_seconds) : "—"}</div>
+            </div>
+          </div>
+        )}
+        {(item.rework_seconds ?? 0) > 0 && (
+          <div className="mt-1 text-[11px] text-orange-700">Retrabalho: {fmtTime(item.rework_seconds ?? 0)}</div>
+        )}
+        {!isQuality && expectedMinutes != null && expectedMinutes > 0 && (
+          <SlaBar productiveSeconds={liveSeconds} expectedMinutes={expectedMinutes} />
+        )}
+        {isPacking && <LastQualityCheckSummary orderId={item.order_id} />}
+      </div>
+
       {/* Ações — botões redondos só com símbolo */}
-      <div className="mt-3 pt-3 border-t flex items-center gap-2.5 flex-wrap">
+      <div className="mt-3 px-4 py-3 border-t flex items-center gap-2.5 flex-wrap">
         {!canAct ? (
           <div className="text-xs text-muted-foreground flex items-center gap-1">
             <Lock className="size-3" /> Não atribuído a esta etapa
@@ -1082,7 +1085,7 @@ function StageCard({ item, canAct, onAction, pending, operatorCode, expectedMinu
 
       {/* Lista de colis (quando há mais do que um) */}
       {operateByColis && (
-        <div className="mt-3 border-t pt-3 space-y-2">
+        <div className="border-t px-4 py-3 space-y-2">
           <div className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
             <Boxes className="size-3" /> Volumes nesta etapa ({colis.length}
             {coliTotal > 0 ? ` de ${coliTotal}` : ""})
