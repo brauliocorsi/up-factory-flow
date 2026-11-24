@@ -2,10 +2,13 @@
  * Geração e validação dos códigos e nomes de produto.
  * Nenhum utilizador escreve código à mão: tudo passa por aqui.
  *
- * CAMA:     CAM + Modelo(3) + Estrutura(2) + Medida(3) + Tecido(6) + Variante(1)
+ * CAMA:     CAM + Modelo(3) + Estrutura(2) + Medida(3) + Tecido(6) + Variante(1) [+ Laminado L01–L06]
+ *           Personalizada: PERCAM em vez de CAM. Tecido = fabric_catalog.fabric_code6.
  * SOFÁ:     SOF + Modelo(3) + Família(2)   + Largura(3) + Tecido(6) + Variante(1)
  * SOMMIER:  SOM + Modelo(3) + Elevatório(1) + Fundos(1) + Medida(3) + Tecido(6)
  */
+
+import { isLaminateCode, isRetiredBedModel, laminateLabel, type LaminateCode } from "./laminates";
 
 export type BedVariant = "N" | "F";
 /** Lado da chaise, sempre Olhando De Frente (ODF). */
@@ -48,18 +51,33 @@ export type BedCodeInput = {
   measureCode?: string | null;
   refTec?: string | null;
   variant?: BedVariant | null;
+  /** 6 dígitos do tecido (fabric_catalog.fabric_code6). Sem valor = sem código. */
+  fabricCode6?: string | null;
+  laminateCode?: LaminateCode | null;
+  personalized?: boolean;
 };
 
+/**
+ * CAM 18 (liso), CAM 21 (com Lxx), PERCAM 21/24. Devolve "" quando falta algo,
+ * quando o modelo está retirado ou o tecido não tem os 6 dígitos validados.
+ * (refTec já não é usado nas camas: os 6 dígitos da ref TEC interna não são os do CAM.)
+ */
 export function buildBedCode(i: BedCodeInput): string {
+  if (isRetiredBedModel(pad(i.modelCode, 3))) return "";
+  const f6 = String(i.fabricCode6 ?? "").trim();
+  const structure = pad(i.structureCode, 2);
+  if (!["01", "02", "03"].includes(structure)) return "";
   const parts = [
-    "CAM",
+    i.personalized ? "PERCAM" : "CAM",
     pad(i.modelCode, 3),
-    pad(i.structureCode, 2),
+    structure,
     pad(i.measureCode, 3),
-    fabricBlock(i.refTec),
+    /^\d{6}$/.test(f6) ? f6 : "",
     i.variant ?? "",
   ];
-  return parts.every(Boolean) ? parts.join("") : "";
+  if (!parts.every(Boolean)) return "";
+  const lam = isLaminateCode(i.laminateCode) ? i.laminateCode : "";
+  return parts.join("") + lam;
 }
 
 export type SofaCodeInput = {
@@ -135,8 +153,15 @@ export function bedProductName(i: {
   variant?: BedVariant | null;
   measureName?: string | null;
   fabricLabel?: string | null;
+  laminateCode?: LaminateCode | null;
+  /** Restante texto (ex.: personalização), sempre no fim. */
+  rest?: string | null;
+  personalization?: string | null;
 }): string {
   const measure = (i.measureName ?? "").trim();
+  const lam = laminateLabel(i.laminateCode);
+  const rest = (i.rest ?? "").trim();
+  const pers = (i.personalization ?? "").trim();
   const head = clean([
     "Cama",
     i.modelName,
@@ -144,7 +169,13 @@ export function bedProductName(i: {
     i.variant === "F" ? "Flutuante" : null,
     measure ? `${measure.replace(/\s*cm$/i, "")}cm` : null,
   ]);
-  return head + fabricSuffix(i.fabricLabel);
+  return (
+    head +
+    fabricSuffix(i.fabricLabel) +
+    (lam ? ` - ${lam}` : "") +
+    (rest ? ` - ${rest}` : "") +
+    (pers ? ` [PERS: ${pers}]` : "")
+  );
 }
 
 export function sofaProductName(i: {

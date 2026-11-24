@@ -1,3 +1,4 @@
+import { LAMINATES, DEFAULT_LAMINATE, isLaminateCode, type LaminateCode } from "@/lib/laminates";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useMemo, useRef, useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -106,6 +107,7 @@ function NovaEncomendaPage() {
     elevatorio: false,
     fundos: false,
     bed_variant: "N" as BedVariant,
+    laminate_code: "" as LaminateCode | "",
     sofa_variant: "N" as SofaVariant,
     customization: "",
     gc_code: "",
@@ -181,8 +183,9 @@ function NovaEncomendaPage() {
           modelCode: model?.code,
           structureCode: model?.structure_code,
           measureCode: measure?.code,
-          refTec: form.ref_tec,
+          fabricCode6: fabric?.fabric_code6 ?? null,
           variant: form.bed_variant,
+          laminateCode: form.laminate_code || null,
         });
 
   const generatedName = isSofa
@@ -208,9 +211,17 @@ function NovaEncomendaPage() {
           variant: form.bed_variant,
           measureName: measure?.name,
           fabricLabel: fabLabel,
+          laminateCode: form.laminate_code || null,
         });
 
   useEffect(() => { scanRef.current?.focus(); }, []);
+
+  // Modelos de laminado de série: sem cor escolhida, assume Laminado Prata (L02).
+  const laminateStandard = !isSofa && !isSommier && !!model?.laminate_standard;
+  useEffect(() => {
+    if (laminateStandard && !form.laminate_code) set("laminate_code", DEFAULT_LAMINATE);
+  }, [laminateStandard, form.model_id]);
+  const fabricNotValidated = !isSofa && !isSommier && !!fabric && !fabric.fabric_code6;
 
   /** Descodifica um código gerado (CAM/SOF/SOM) de volta para os campos. */
   function decode(raw: string, silent = false) {
@@ -248,9 +259,11 @@ function NovaEncomendaPage() {
       const meas = (cat.measures ?? []).find((x: any) => x.code === code.slice(8, 11));
       if (meas) next.measure_id = meas.id;
       const tec = code.slice(11, 17);
-      next.ref_tec = tec ? `TEC${tec}` : "";
+      next.ref_tec = fabrics.find((f) => f.fabric_code6 === tec)?.ref_tec ?? "";
       const v = code.slice(17, 18) as BedVariant;
       if (["N", "F"].includes(v)) next.bed_variant = v;
+      const lam = code.slice(18, 21);
+      next.laminate_code = isLaminateCode(lam) ? lam : "";
     }
     const fab = fabrics.find((f) => f.ref_tec === next.ref_tec);
     if (!fab) next.ref_tec = "";
@@ -299,6 +312,7 @@ function NovaEncomendaPage() {
       color: fabric?.color ?? null,
       structure_type: isSofa ? sofaFamily?.name ?? null : structure?.name ?? null,
       finishing: isSofa || isSommier ? null : form.bed_variant,
+      laminate_code: isSofa || isSommier ? null : form.laminate_code || null,
       ref_tec: legacyFabric ? form.ref_tec : null,
       fabric_ref_tec: form.ref_tec || null,
       customization: form.customization.trim() || null,
@@ -495,6 +509,7 @@ function NovaEncomendaPage() {
                     </div>
                   </Field>
                 ) : (
+                  <>
                   <Field label="Variante">
                     <Select value={form.bed_variant} onValueChange={(v) => set("bed_variant", v as BedVariant)}>
                       <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
@@ -505,9 +520,29 @@ function NovaEncomendaPage() {
                       </SelectContent>
                     </Select>
                   </Field>
+                  <Field label="Laminado">
+                    <Select
+                      value={form.laminate_code || "none"}
+                      onValueChange={(v) => set("laminate_code", v === "none" ? "" : (v as LaminateCode))}
+                    >
+                      <SelectTrigger className="h-11"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {!laminateStandard && <SelectItem value="none">Sem laminado (lisa)</SelectItem>}
+                        {LAMINATES.map((l) => (
+                          <SelectItem key={l.code} value={l.code}>{l.code} — {l.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  </>
                 )}
               </div>
 
+              {fabricNotValidated && (
+                <Badge variant="warning" className="text-xs">
+                  Tecido sem os 6 dígitos do código CAM — tecido por validar, o código não é gerado.
+                </Badge>
+              )}
               {!isSofa && isCustomMeasure(measure?.code) && (
                 <Badge variant="outline" className="border-warning text-warning">Medida sob-medida (gama 5xx)</Badge>
               )}

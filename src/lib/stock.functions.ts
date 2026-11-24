@@ -325,6 +325,8 @@ export type FabricAvailability = {
   min_meters: number;
   location: string | null;
   needs_review: string | null;
+  /** 6 dígitos do tecido para o código CAM; null = por validar. */
+  fabric_code6: string | null;
   status: "DISPONIVEL" | "POUCO" | "SEM STOCK";
 };
 

@@ -15,6 +15,7 @@ import {
   type BedVariant,
   type SofaVariant,
 } from "./productCodes";
+import { detectLaminate, mentionsLaminate, isRetiredBedModel, DEFAULT_LAMINATE, type LaminateCode } from "./laminates";
 
 export type ParseCatalog = {
   models: Array<{
@@ -24,6 +25,7 @@ export type ParseCatalog = {
     category_code: string; // CAM | SOF | SOM …
     structure_code?: string | null;
     sofa_family_code?: string | null;
+    laminate_standard?: boolean | null;
   }>;
   structures: Array<{ code: string; name: string }>;
   sofa_families: Array<{ code: string; name: string }>;
@@ -35,6 +37,8 @@ export type ParseCatalog = {
     fabric_type_code: string;
     supplier_ref: string;
     color_code?: string | null;
+    /** 6 dígitos do tecido para o código CAM (fabric_catalog.fabric_code6). */
+    fabric_code6?: string | null;
   }>;
   colors: Array<{ code: string; name: string }>;
 };
@@ -63,6 +67,8 @@ export type ParsedRow = {
   elevatorio: boolean;
   fundos: boolean;
   customizations: string[];
+  /** Fita de laminado (L01–L06) ou null para cama lisa. */
+  laminate_code: LaminateCode | null;
   product_code: string | null;
   product_name: string | null;
   status: RowStatus;
@@ -153,7 +159,6 @@ function detectCustomizations(text: string): string[] {
   if (cab) out.push(`cab:${fixDimension(Number(cab[1]))}`);
   if (/ilharg/.test(text)) out.push("ilhargueiro");
   if (/furo|tomada/.test(text)) out.push("furos tomadas");
-  if (/laminad/.test(text)) out.push("laminado");
   if (/espelh/.test(text)) out.push("espelhos");
   if (/listra|listras/.test(text)) out.push("listras");
   if (/peseira/.test(text)) out.push("peseira");
@@ -228,6 +233,7 @@ export function parseProductRow(raw: string, catalog: ParseCatalog): ParsedRow {
     elevatorio: /elevatorio/.test(text),
     fundos: /fundo/.test(text),
     customizations: detectCustomizations(text),
+    laminate_code: null,
     product_code: null,
     product_name: null,
     status: "nao_reconhecida",
@@ -346,12 +352,20 @@ export function parseProductRow(raw: string, catalog: ParseCatalog): ParsedRow {
       fabricLabel: row.fabric_label,
     });
   } else {
+    const m = catalog.models.find((x) => x.id === row.model_id);
+    row.laminate_code = detectLaminate(text);
+    if (!row.laminate_code && m?.laminate_standard) row.laminate_code = DEFAULT_LAMINATE;
+    if (!row.laminate_code && mentionsLaminate(text)) issues.push("Laminado sem cor reconhecida — escolher L01–L06.");
+    if (isRetiredBedModel(row.model_code)) issues.push(`Modelo ${row.model_code} retirado — não usar.`);
+    const f6 = row.ref_tec ? catalog.fabrics.find((f) => f.ref_tec === row.ref_tec)?.fabric_code6 ?? null : null;
+    if (row.ref_tec && !f6) issues.push("Tecido sem os 6 dígitos validados — código por validar.");
     row.product_code = buildBedCode({
       modelCode: row.model_code,
       structureCode: row.structure_code,
       measureCode: row.measure_code,
-      refTec: row.ref_tec,
+      fabricCode6: f6,
       variant: (row.variant as BedVariant) ?? "N",
+      laminateCode: row.laminate_code,
     });
     row.product_name = bedProductName({
       modelName: row.model_name,
@@ -359,6 +373,7 @@ export function parseProductRow(raw: string, catalog: ParseCatalog): ParsedRow {
       variant: (row.variant as BedVariant) ?? "N",
       measureName: row.measure_label,
       fabricLabel: row.fabric_label,
+      laminateCode: row.laminate_code,
     });
   }
   if (!row.product_code) row.product_code = null;

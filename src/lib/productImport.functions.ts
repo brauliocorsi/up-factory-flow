@@ -12,7 +12,7 @@ export const getParseCatalog = createServerFn({ method: "GET" })
       s.from("ref_categories").select("id, code, name").eq("active", true),
       s
         .from("models")
-        .select("id, code, name, active, category_id, structure_code, sofa_family_code")
+        .select("id, code, name, active, category_id, structure_code, sofa_family_code, laminate_standard, retired")
         .eq("active", true),
       s.from("ref_structures").select("code, name").eq("active", true),
       s.from("ref_sofa_families").select("code, name").eq("active", true),
@@ -24,21 +24,24 @@ export const getParseCatalog = createServerFn({ method: "GET" })
         .eq("active", true),
       s.from("ref_colors").select("code, name").eq("active", true),
     ]);
+    const { data: f6rows } = await s.from("fabric_catalog").select("ref_tec, fabric_code6").not("fabric_code6", "is", null);
+    const f6 = new Map<string, string>((f6rows ?? []).map((r: any) => [r.ref_tec, r.fabric_code6]));
     const catById = new Map<string, string>((cats.data ?? []).map((c: any) => [c.id, c.code]));
     return {
-      models: (models.data ?? []).map((m: any) => ({
+      models: (models.data ?? []).filter((m: any) => !m.retired).map((m: any) => ({
         id: m.id,
         code: m.code,
         name: m.name,
         category_code: catById.get(m.category_id) ?? "",
         structure_code: m.structure_code,
         sofa_family_code: m.sofa_family_code,
+        laminate_standard: !!m.laminate_standard,
       })),
       structures: structures.data ?? [],
       sofa_families: families.data ?? [],
       measures: measures.data ?? [],
       collections: collections.data ?? [],
-      fabrics: fabrics.data ?? [],
+      fabrics: (fabrics.data ?? []).map((f: any) => ({ ...f, fabric_code6: f6.get(f.ref_tec) ?? null })),
       colors: colors.data ?? [],
     };
   });
@@ -58,6 +61,7 @@ const importRowSchema = z.object({
   fabric_ref: z.string().trim().max(120).nullable().optional(),
   color: z.string().trim().max(60).nullable().optional(),
   finishing: z.enum(["F", "N"]).nullable().optional(),
+  laminate_code: z.enum(["L01","L02","L03","L04","L05","L06"]).nullable().optional(),
   customization: z.string().trim().max(500).nullable().optional(),
   quantity: z.coerce.number().int().min(1).max(200).default(1),
   due_date: z.string().trim().max(20).nullable().optional(),
@@ -201,6 +205,7 @@ export const confirmProductImport = createServerFn({ method: "POST" })
           fabric_ref: r.fabric_ref ?? null,
           color: r.color ?? null,
           finishing: r.finishing ?? null,
+          laminate_code: r.laminate_code ?? null,
           ref_tec: r.ref_tec ?? null,
           customization: r.customization ?? null,
           observation: r.observation ?? null,

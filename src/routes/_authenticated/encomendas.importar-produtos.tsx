@@ -193,8 +193,9 @@ function ImportarProdutosPage() {
         modelCode: next.model_code,
         structureCode: next.structure_code,
         measureCode: next.measure_code,
-        refTec: next.ref_tec,
+        fabricCode6: cat.fabrics.find((f) => f.ref_tec === next.ref_tec)?.fabric_code6 ?? null,
         variant: (next.variant as BedVariant) ?? "N",
+        laminateCode: next.laminate_code,
       });
       next.product_name = bedProductName({
         modelName: next.model_name,
@@ -202,11 +203,14 @@ function ImportarProdutosPage() {
         variant: (next.variant as BedVariant) ?? "N",
         measureName: next.measure_label,
         fabricLabel: next.fabric_label,
+        laminateCode: next.laminate_code,
       });
     }
     const missing: string[] = [];
     if (!next.model_id) missing.push("Modelo não reconhecido.");
     if (!next.ref_tec) missing.push("Tecido sem referência TEC.");
+    if (next.category_code === "CAM" && next.ref_tec && !cat.fabrics.find((f) => f.ref_tec === next.ref_tec)?.fabric_code6)
+      missing.push("Tecido sem os 6 dígitos validados — código por validar.");
     if (next.category_code === "SOF" && !next.width_cm) missing.push("Largura do sofá não reconhecida.");
     if (next.category_code !== "SOF" && !next.measure_code && !next.measure_new) missing.push("Medida não reconhecida.");
     if (next.measure_new) missing.push(`Medida atípica ${next.measure_new} — será criada na gama 5xx.`);
@@ -247,6 +251,7 @@ function ImportarProdutosPage() {
             fabric_ref: catalog?.collections.find((c) => c.code === d.collection_code)?.name ?? null,
             color: d.fabric_label,
             finishing: d.category_code === "CAM" ? ((d.variant as BedVariant) ?? "N") : null,
+            laminate_code: d.category_code === "CAM" ? d.laminate_code : null,
             customization: d.customizations.join(", ") || null,
             quantity: d.quantity,
             due_date: d.due_date || null,

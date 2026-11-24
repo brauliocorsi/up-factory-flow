@@ -166,7 +166,7 @@ export const listOrders = createServerFn({ method: "POST" })
     const { supabase } = context;
     let q = supabase
       .from("production_orders")
-      .select("id, order_number, customer_order, gc_code, product_description, measure, fabric_type, entry_date, due_date, status, line_kind, service_type, models(name), order_stages(stage, status, finished_at)")
+      .select("id, order_number, customer_order, gc_code, code_status, laminate_code, product_description, measure, fabric_type, entry_date, due_date, status, line_kind, service_type, models(name), order_stages(stage, status, finished_at)")
       .order("entry_date", { ascending: false, nullsFirst: false });
     if (data.search) {
       const s = data.search.replace(/[%,]/g, "");
@@ -242,6 +242,8 @@ const orderInputSchema = z.object({
   notes: z.string().trim().max(2000).nullable().optional(),
   observation: z.string().trim().max(500).nullable().optional(),
   finishing: z.enum(["F", "N"]).nullable().optional(),
+  /** Fita de laminado das camas (separada da variante N/F). */
+  laminate_code: z.enum(["L01","L02","L03","L04","L05","L06"]).nullable().optional(),
   barcode: z.string().trim().max(64).nullable().optional(),
   /** Código interno do produto no GestãoClick (vem da base; não é gerado). */
   gc_code: z.string().trim().max(64).nullable().optional(),
@@ -331,6 +333,7 @@ export const createOrder = createServerFn({ method: "POST" })
       notes: data.notes ?? null,
       observation: data.observation ?? null,
       finishing: data.finishing ?? null,
+      laminate_code: data.laminate_code ?? null,
       ref_tec: data.ref_tec ?? null,
       fabric_ref_tec: data.fabric_ref_tec ?? null,
       customization: data.customization ?? null,
@@ -403,6 +406,7 @@ export const bulkCreateOrders = createServerFn({ method: "POST" })
         notes: r.notes ?? null,
         observation: r.observation ?? null,
         finishing: r.finishing ?? null,
+        laminate_code: r.laminate_code ?? null,
         gc_code: normGc(r.gc_code),
         barcode: normGc(r.gc_code) ?? ((r.barcode && r.barcode.trim()) || genBarcode(r.order_number)),
         created_by: userId,

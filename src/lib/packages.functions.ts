@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import { isLaminateCode } from "@/lib/laminates";
 import { buildBedCode, buildSofaCode, buildSommierCode, type SofaVariant } from "@/lib/productCodes";
 
 export type ModelPackage = {
@@ -120,7 +121,7 @@ export const getLabelsForOrders = createServerFn({ method: "POST" })
     const { data: orders, error } = await (supabase as any)
       .from("production_orders")
       .select(
-        "id, order_number, barcode, gc_code, product_description, measure, fabric_type, fabric_ref, fabric_ref_tec, color, structure_type, model_id, observation, finishing, models(name, code, structure_code, sofa_family_code, ref_categories(code))",
+        "id, order_number, barcode, gc_code, product_description, measure, fabric_type, fabric_ref, fabric_ref_tec, color, structure_type, model_id, observation, finishing, laminate_code, models(name, code, structure_code, sofa_family_code, ref_categories(code))",
       )
       .in("id", data.ids);
     if (error) throw new Error(error.message);
@@ -137,7 +138,7 @@ export const getLabelsForOrders = createServerFn({ method: "POST" })
 
     const { data: fabrics, error: fabricsError } = await (supabase as any)
       .from("fabric_catalog")
-      .select("ref_tec, name, supplier_ref")
+      .select("ref_tec, name, supplier_ref, fabric_code6")
       .eq("active", true);
     if (fabricsError) throw new Error(fabricsError.message);
 
@@ -233,7 +234,7 @@ function normalizeLookup(value: unknown): string {
 function buildProductCode(
   order: any,
   measures: Array<{ code: string; name: string }>,
-  fabrics: Array<{ ref_tec: string; name: string; supplier_ref: string | null }>,
+  fabrics: Array<{ ref_tec: string; name: string; supplier_ref: string | null; fabric_code6?: string | null }>,
 ): string | null {
   const model = order.models;
   const category = String(model?.ref_categories?.code ?? "").toUpperCase();
@@ -286,7 +287,8 @@ function buildProductCode(
       modelCode: model.code,
       structureCode: model.structure_code,
       measureCode: measure?.code,
-      refTec,
+      fabricCode6: fabrics.find((f) => f.ref_tec === refTec)?.fabric_code6 ?? null,
+      laminateCode: isLaminateCode(order.laminate_code) ? order.laminate_code : null,
       variant: order.finishing === "F" || /flutuante|mural/i.test(String(order.product_description ?? "")) ? "F" : "N",
     }) || null;
   }

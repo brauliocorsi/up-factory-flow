@@ -535,6 +535,7 @@ export type Database = {
           color: string | null
           color_code: string | null
           created_at: string
+          fabric_code6: string | null
           fabric_type: string
           location: string | null
           meters: number
@@ -553,6 +554,7 @@ export type Database = {
           color?: string | null
           color_code?: string | null
           created_at?: string
+          fabric_code6?: string | null
           fabric_type: string
           location?: string | null
           meters?: number
@@ -571,6 +573,7 @@ export type Database = {
           color?: string | null
           color_code?: string | null
           created_at?: string
+          fabric_code6?: string | null
           fabric_type?: string
           location?: string | null
           meters?: number
@@ -1031,8 +1034,10 @@ export type Database = {
           code: string
           created_at: string
           id: string
+          laminate_standard: boolean
           meters_per_unit: number | null
           name: string
+          retired: boolean
           sofa_family_code: string | null
           structure_code: string | null
           updated_at: string
@@ -1043,8 +1048,10 @@ export type Database = {
           code: string
           created_at?: string
           id?: string
+          laminate_standard?: boolean
           meters_per_unit?: number | null
           name: string
+          retired?: boolean
           sofa_family_code?: string | null
           structure_code?: string | null
           updated_at?: string
@@ -1055,8 +1062,10 @@ export type Database = {
           code?: string
           created_at?: string
           id?: string
+          laminate_standard?: boolean
           meters_per_unit?: number | null
           name?: string
+          retired?: boolean
           sofa_family_code?: string | null
           structure_code?: string | null
           updated_at?: string
@@ -1482,6 +1491,7 @@ export type Database = {
       production_orders: {
         Row: {
           barcode: string | null
+          code_status: string | null
           color: string | null
           created_at: string
           created_by: string | null
@@ -1498,6 +1508,7 @@ export type Database = {
           id: string
           is_stock_production: boolean
           is_test: boolean
+          laminate_code: string | null
           line_kind: string
           measure: string | null
           model_id: string | null
@@ -1521,6 +1532,7 @@ export type Database = {
         }
         Insert: {
           barcode?: string | null
+          code_status?: string | null
           color?: string | null
           created_at?: string
           created_by?: string | null
@@ -1537,6 +1549,7 @@ export type Database = {
           id?: string
           is_stock_production?: boolean
           is_test?: boolean
+          laminate_code?: string | null
           line_kind?: string
           measure?: string | null
           model_id?: string | null
@@ -1562,6 +1575,7 @@ export type Database = {
         }
         Update: {
           barcode?: string | null
+          code_status?: string | null
           color?: string | null
           created_at?: string
           created_by?: string | null
@@ -1578,6 +1592,7 @@ export type Database = {
           id?: string
           is_stock_production?: boolean
           is_test?: boolean
+          laminate_code?: string | null
           line_kind?: string
           measure?: string | null
           model_id?: string | null
@@ -1615,6 +1630,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "fabric_catalog"
             referencedColumns: ["ref_tec"]
+          },
+          {
+            foreignKeyName: "production_orders_laminate_code_fkey"
+            columns: ["laminate_code"]
+            isOneToOne: false
+            referencedRelation: "ref_laminates"
+            referencedColumns: ["code"]
           },
           {
             foreignKeyName: "production_orders_model_id_fkey"
@@ -1950,6 +1972,33 @@ export type Database = {
           id?: string
           name?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      ref_laminates: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          label: string
+          name: string
+          synonyms: string[]
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          label: string
+          name: string
+          synonyms?: string[]
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          label?: string
+          name?: string
+          synonyms?: string[]
         }
         Relationships: []
       }
@@ -2874,6 +2923,7 @@ export type Database = {
           collection: string | null
           color: string | null
           color_code: string | null
+          fabric_code6: string | null
           fabric_type: string | null
           location: string | null
           meters: number | null
@@ -2890,6 +2940,7 @@ export type Database = {
           collection?: string | null
           color?: string | null
           color_code?: string | null
+          fabric_code6?: string | null
           fabric_type?: string | null
           location?: string | null
           meters?: number | null
@@ -2906,6 +2957,7 @@ export type Database = {
           collection?: string | null
           color?: string | null
           color_code?: string | null
+          fabric_code6?: string | null
           fabric_type?: string | null
           location?: string | null
           meters?: number | null

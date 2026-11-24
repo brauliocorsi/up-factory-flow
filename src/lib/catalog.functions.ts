@@ -255,7 +255,7 @@ export const getCatalogs = createServerFn({ method: "GET" })
         s.from("ref_categories").select("id, code, name, active").eq("active", true).order("code"),
         s
           .from("models")
-          .select("id, code, name, active, category_id, meters_per_unit, structure_code, sofa_family_code")
+          .select("id, code, name, active, category_id, meters_per_unit, structure_code, sofa_family_code, laminate_standard")
           .eq("active", true)
           .order("code"),
         s.from("ref_structures").select("id, code, name, active").eq("active", true).order("code"),

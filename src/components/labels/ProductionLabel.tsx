@@ -1,3 +1,4 @@
+import { formatProductCode, needsNormalization } from "@/lib/laminates";
 import { useEffect, useRef } from "react";
 import JsBarcode from "jsbarcode";
 
@@ -83,6 +84,9 @@ export function ProductionLabel(props: LabelProps) {
           <div className="label-order">
             Nº {props.orderNumber}
             {props.gcMissing && <span className="label-gc-missing"> · sem código GC</span>}
+            {!props.gcMissing && needsNormalization(props.productCode) && (
+              <span className="label-gc-missing"> · sem código CAM — por normalizar</span>
+            )}
           </div>
         </div>
         <div className="label-right">
@@ -233,15 +237,4 @@ export function LabelPrintStyles() {
       }
     `}</style>
   );
-}
-
-function formatProductCode(code?: string | null): string {
-  const clean = (code ?? "").replace(/\s+/g, "").toUpperCase();
-  if (/^CAM[A-Z0-9]{15}$/.test(clean) || /^SOF[A-Z0-9]{15}$/.test(clean)) {
-    return [clean.slice(0, 3), clean.slice(3, 6), clean.slice(6, 8), clean.slice(8, 11), clean.slice(11, 17), clean.slice(17)].join(" ");
-  }
-  if (/^SOM[A-Z0-9]{14}$/.test(clean)) {
-    return [clean.slice(0, 3), clean.slice(3, 6), clean.slice(6, 7), clean.slice(7, 8), clean.slice(8, 11), clean.slice(11)].join(" ");
-  }
-  return clean;
 }
