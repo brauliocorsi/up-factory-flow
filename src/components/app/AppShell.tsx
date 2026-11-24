@@ -173,14 +173,14 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground">
       {/* Top bar */}
-      <header className="sticky top-0 z-30 border-b bg-card/80 backdrop-blur supports-[backdrop-filter]:bg-card/60">
-        <div className="flex h-14 items-center px-3 sm:px-4 gap-2 sm:gap-3">
+      <header className="sticky top-0 z-30 border-b bg-card/75 backdrop-blur-xl shadow-soft">
+        <div className="flex h-16 items-center px-3 sm:px-4 gap-2 sm:gap-3">
           <Link to={homeLink} className="flex items-center gap-2 shrink-0">
-            <div className="size-8 rounded-md bg-primary text-primary-foreground grid place-items-center shadow-sm">
+            <div className="size-9 rounded-xl bg-primary text-primary-foreground grid place-items-center shadow-elevated">
               <Factory className="size-5" />
             </div>
             <div className="leading-tight hidden xs:block sm:block">
-              <div className="text-sm font-bold">UP Produção</div>
+              <div className="text-sm font-extrabold tracking-tight">UP Fábrica</div>
               <div className="text-[10px] text-muted-foreground hidden sm:block">
                 {isOperator && operator ? operator.name : "UP Móveis"}
               </div>
@@ -188,15 +188,15 @@ export function AppShell({ children }: { children: ReactNode }) {
           </Link>
 
           {/* Desktop nav: item solto + dropdowns por grupo */}
-          <nav className="hidden md:flex items-center gap-1 ml-4">
+          <nav className="hidden md:flex items-center gap-0.5 ml-4 rounded-full border bg-muted/50 p-1">
             {visiblePrimary.map((n) => {
               const active = isActive(pathname, n.to);
               return (
                 <Link
                   key={n.to}
                   to={n.to}
-                  className={`px-3 py-2 rounded-md text-sm font-medium transition ${
-                    active ? "bg-primary text-primary-foreground shadow-sm" : "hover:bg-accent"
+                  className={`px-3.5 py-1.5 rounded-full text-sm font-semibold transition ${
+                    active ? "bg-card text-primary shadow-soft" : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   {n.label}
@@ -209,15 +209,15 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <DropdownMenu key={g.label}>
                   <DropdownMenuTrigger asChild>
                     <button
-                      className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition outline-none ${
-                        active ? "bg-primary text-primary-foreground shadow-sm" : "hover:bg-accent"
+                      className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-semibold transition outline-none data-[state=open]:bg-card data-[state=open]:text-foreground ${
+                        active ? "bg-card text-primary shadow-soft" : "text-muted-foreground hover:text-foreground"
                       }`}
                     >
                       {g.label}
                       <ChevronDown className="size-3.5 opacity-70" />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="min-w-[14rem]">
+                  <DropdownMenuContent align="start" sideOffset={10} className="min-w-[16rem] rounded-xl p-1.5 shadow-elevated">
                     <DropdownMenuLabel className="text-[11px] uppercase tracking-wide text-muted-foreground">
                       {g.label}
                     </DropdownMenuLabel>
@@ -229,11 +229,13 @@ export function AppShell({ children }: { children: ReactNode }) {
                         <DropdownMenuItem key={i.to} asChild>
                           <Link
                             to={i.to}
-                            className={`flex items-center gap-2 cursor-pointer ${
-                              itemActive ? "bg-accent text-accent-foreground font-medium" : ""
+                            className={`flex items-center gap-3 cursor-pointer rounded-lg px-2 py-2 ${
+                              itemActive ? "bg-accent text-accent-foreground font-semibold" : ""
                             }`}
                           >
-                            <Icon className="size-4 text-muted-foreground" />
+                            <span className={`grid size-8 place-items-center rounded-lg border ${itemActive ? "bg-primary text-primary-foreground border-transparent" : "bg-muted/60 text-muted-foreground"}`}>
+                              <Icon className="size-4" />
+                            </span>
                             <span>{i.label}</span>
                           </Link>
                         </DropdownMenuItem>
@@ -275,7 +277,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                       <Factory className="size-5" />
                     </div>
                     <div className="leading-tight">
-                      <div className="text-sm font-bold">UP Produção</div>
+                      <div className="text-sm font-extrabold tracking-tight">UP Fábrica</div>
                       <div className="text-[10px] text-muted-foreground font-normal">UP Móveis</div>
                     </div>
                   </SheetTitle>
@@ -329,7 +331,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <main className="flex-1 pb-20 md:pb-6">{children}</main>
 
       {/* Bottom nav (mobile) — 4 atalhos + Menu */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t bg-card/85 backdrop-blur-xl pb-[env(safe-area-inset-bottom)]">
         <div
           className="grid"
           style={{ gridTemplateColumns: `repeat(${Math.min(visibleMobileQuick.length + 1, 5)}, minmax(0, 1fr))` }}
@@ -341,11 +343,13 @@ export function AppShell({ children }: { children: ReactNode }) {
               <Link
                 key={n.to}
                 to={n.to}
-                className={`flex flex-col items-center justify-center gap-0.5 py-2.5 text-[11px] transition ${
-                  active ? "text-primary font-medium" : "text-muted-foreground"
+                className={`flex flex-col items-center justify-center gap-1 py-2 text-[11px] transition ${
+                  active ? "text-primary font-semibold" : "text-muted-foreground"
                 }`}
               >
-                <Icon className={`size-5 ${active ? "" : "opacity-80"}`} />
+                <span className={`grid h-7 w-12 place-items-center rounded-full transition ${active ? "bg-primary/12" : ""}`}>
+                  <Icon className="size-5" />
+                </span>
                 <span className="truncate max-w-full px-1">{n.label}</span>
               </Link>
             );
@@ -380,11 +384,13 @@ function MobileLink({
     <Link
       to={item.to}
       onClick={onNavigate}
-      className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm transition ${
-        active ? "bg-primary text-primary-foreground font-medium shadow-sm" : "hover:bg-accent text-foreground"
+      className={`flex items-center gap-3 px-2 py-2 rounded-xl text-sm transition ${
+        active ? "bg-accent text-accent-foreground font-semibold" : "hover:bg-muted text-foreground"
       }`}
     >
-      <Icon className={`size-4 ${active ? "" : "text-muted-foreground"}`} />
+      <span className={`grid size-8 place-items-center rounded-lg ${active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
+        <Icon className="size-4" />
+      </span>
       <span>{item.label}</span>
     </Link>
   );

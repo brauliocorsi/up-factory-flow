@@ -4,8 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Factory } from "lucide-react";
+import { Factory, HardHat, ShieldCheck, Layers, ScanLine, ArrowRight, Loader2 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { operatorEmailForCode, operatorPasswordFromPin } from "@/lib/operatorPin";
@@ -100,20 +99,46 @@ function AuthPage() {
   }
 
   return (
-    <div className="min-h-screen grid place-items-center bg-gradient-to-br from-background to-accent p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader className="text-center">
-          <div className="mx-auto size-12 rounded-lg bg-primary text-primary-foreground grid place-items-center mb-2">
+    <div className="min-h-screen grid lg:grid-cols-[1.1fr_1fr] bg-background">
+      <aside className="relative hidden lg:flex flex-col justify-between overflow-hidden bg-primary p-12 text-primary-foreground">
+        <div className="pointer-events-none absolute -right-32 -top-32 size-[28rem] rounded-full bg-primary-foreground/10 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-40 -left-20 size-[26rem] rounded-full bg-primary-foreground/10 blur-3xl" />
+        <div className="pointer-events-none absolute inset-0 opacity-[0.07] [background-image:linear-gradient(currentColor_1px,transparent_1px),linear-gradient(90deg,currentColor_1px,transparent_1px)] [background-size:40px_40px]" />
+        <div className="relative flex items-center gap-3">
+          <div className="grid size-11 place-items-center rounded-xl bg-primary-foreground/15 ring-1 ring-primary-foreground/25">
             <Factory className="size-6" />
           </div>
-          <CardTitle>UP Produção</CardTitle>
-          <CardDescription>Inicie sessão para aceder ao chão de fábrica</CardDescription>
-        </CardHeader>
-        <CardContent>
+          <div className="text-lg font-extrabold tracking-tight">UP Fábrica</div>
+        </div>
+        <div className="relative max-w-md space-y-5">
+          <h1 className="text-4xl font-extrabold leading-tight">O chão de fábrica, claro e ao vivo.</h1>
+          <p className="text-primary-foreground/75 text-lg">Encomendas, etapas, volumes e stock num só lugar — do corte à picagem.</p>
+          <ul className="space-y-3 pt-2 text-sm">
+            {[["Produção por volume", Layers], ["Qualidade por categoria", ShieldCheck], ["Picagem com código GestãoClick", ScanLine]].map(([t, I]: any) => (
+              <li key={t} className="flex items-center gap-3">
+                <span className="grid size-8 place-items-center rounded-lg bg-primary-foreground/15"><I className="size-4" /></span>
+                {t}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div className="relative text-xs text-primary-foreground/60">© UP Móveis</div>
+      </aside>
+
+      <main className="flex items-center justify-center p-5 sm:p-10">
+        <div className="w-full max-w-sm">
+          <div className="mb-8 flex flex-col items-center text-center lg:items-start lg:text-left">
+            <div className="mb-4 grid size-12 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-elevated lg:hidden">
+              <Factory className="size-6" />
+            </div>
+            <h2 className="text-2xl font-extrabold">Bem-vindo de volta</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Inicie sessão para aceder à produção.</p>
+          </div>
+          <div className="rounded-2xl border bg-card p-6 shadow-soft">
           <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
-            <TabsList className="grid w-full grid-cols-2 mb-4">
-              <TabsTrigger value="operador">Operador</TabsTrigger>
-              <TabsTrigger value="admin">Admin</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 mb-6 h-11 rounded-full p-1">
+              <TabsTrigger value="operador" className="rounded-full gap-2 font-semibold"><HardHat className="size-4" />Operador</TabsTrigger>
+              <TabsTrigger value="admin" className="rounded-full gap-2 font-semibold"><ShieldCheck className="size-4" />Gestão</TabsTrigger>
             </TabsList>
             <TabsContent value="operador">
               <form onSubmit={onOperatorSubmit} className="space-y-4">
@@ -126,7 +151,7 @@ function AuthPage() {
                     required
                     autoFocus
                     placeholder="Ex: 01"
-                    className="text-xl h-12 font-mono uppercase tracking-widest text-center"
+                    className="text-xl h-14 rounded-xl bg-muted/40 font-mono uppercase tracking-widest text-center"
                   />
                 </div>
                 <div className="space-y-2">
@@ -141,11 +166,11 @@ function AuthPage() {
                     onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
                     required
                     placeholder="••••••"
-                    className="text-2xl h-12 font-mono tracking-[0.5em] text-center"
+                    className="text-2xl h-14 rounded-xl bg-muted/40 font-mono tracking-[0.5em] text-center"
                   />
                 </div>
-                <Button type="submit" className="w-full h-11" disabled={opLoading}>
-                  {opLoading ? "A entrar…" : "Entrar"}
+                <Button type="submit" className="w-full h-12 rounded-xl text-base font-semibold shadow-elevated gap-2" disabled={opLoading}>
+                  {opLoading ? <Loader2 className="size-4 animate-spin" /> : <ArrowRight className="size-4" />}{opLoading ? "A entrar…" : "Entrar"}
                 </Button>
               </form>
             </TabsContent>
@@ -153,23 +178,24 @@ function AuthPage() {
               <form onSubmit={onSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" inputMode="email" />
+                  <Input id="email" type="email" className="h-12 rounded-xl bg-muted/40" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" inputMode="email" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="password">Palavra-passe</Label>
-                  <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
+                  <Input id="password" className="h-12 rounded-xl bg-muted/40" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required autoComplete="current-password" />
                 </div>
-                <Button type="submit" className="w-full h-11" disabled={loading}>
-                  {loading ? "A entrar…" : "Entrar"}
+                <Button type="submit" className="w-full h-12 rounded-xl text-base font-semibold shadow-elevated gap-2" disabled={loading}>
+                  {loading ? <Loader2 className="size-4 animate-spin" /> : <ArrowRight className="size-4" />}{loading ? "A entrar…" : "Entrar"}
                 </Button>
               </form>
             </TabsContent>
           </Tabs>
-          <p className="text-xs text-muted-foreground text-center mt-4">
+          </div>
+          <p className="text-xs text-muted-foreground text-center mt-6">
             Sem acesso? Contacte o administrador.
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </main>
     </div>
   );
 }
