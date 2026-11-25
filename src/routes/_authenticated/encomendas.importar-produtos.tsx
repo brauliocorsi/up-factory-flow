@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import * as XLSX from "xlsx";
 import { toast } from "sonner";
@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Upload, CheckCircle2, AlertTriangle, XCircle } from "lucide-react";
+import { ArrowLeft, Upload, CheckCircle2, AlertTriangle, XCircle, FileSpreadsheet, Search, ChevronDown, ChevronUp, SlidersHorizontal } from "lucide-react";
 import { getParseCatalog, confirmProductImport } from "@/lib/productImport.functions";
 import { parseProductRow, type ParsedRow, type ParseCatalog } from "@/lib/productParse";
 import {
@@ -29,6 +29,11 @@ import {
 } from "@/lib/productCodes";
 
 export const Route = createFileRoute("/_authenticated/encomendas/importar-produtos")({
+  head: () => ({ meta: [
+    { title: "Importar Excel | UP Fábrica" }, { name: "description", content: "Importação e revisão de encomendas Excel na UP Fábrica." },
+    { property: "og:title", content: "Importar Excel | UP Fábrica" }, { property: "og:description", content: "Reveja os produtos e as encomendas antes de confirmar a importação." },
+    { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+  ] }),
   component: ImportarProdutosPage,
 });
 
@@ -68,6 +73,12 @@ function excelDate(v: any): string {
 
 function ImportarProdutosPage() {
   const { data: catalog } = useQuery({ queryKey: ["parse-catalog"], queryFn: () => getParseCatalog() });
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [showColumns, setShowColumns] = useState(false);
+  const [fileName, setFileName] = useState("");
+  const [reviewFilter, setReviewFilter] = useState("all");
+  const [reviewSearch, setReviewSearch] = useState("");
+  const [expanded, setExpanded] = useState<Set<number>>(new Set());
   const [rawRows, setRawRows] = useState<any[]>([]);
   const [headers, setHeaders] = useState<string[]>([]);
   const [map, setMap] = useState({ product: "", quantity: "", order: "", due: "" });
@@ -76,6 +87,10 @@ function ImportarProdutosPage() {
   const [intentId] = useState(() => `prod-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`);
 
   async function onFile(file: File) {
+    setFileName(file.name);
+    setExpanded(new Set());
+    setReviewFilter("all");
+    setReviewSearch("");
     const buf = await file.arrayBuffer();
     const wb = XLSX.read(buf);
     const ws = wb.Sheets[wb.SheetNames[0]];
@@ -122,6 +137,7 @@ function ImportarProdutosPage() {
       })
       .filter((d) => d.raw.length > 0);
     setDrafts(list);
+    setShowColumns(false);
   }
 
   const counts = useMemo(() => {
@@ -267,22 +283,19 @@ function ImportarProdutosPage() {
   });
 
   return (
-    <div className="p-4 max-w-6xl mx-auto space-y-4">
+    <div className="min-w-0 p-4 sm:p-6 max-w-6xl mx-auto space-y-6">
       <Button asChild variant="ghost" size="sm" className="gap-1">
         <Link to="/encomendas"><ArrowLeft className="size-4" /> Voltar</Link>
       </Button>
-      <div>
-        <h1 className="text-2xl font-bold">Importar produtos por Excel</h1>
-        <p className="text-sm text-muted-foreground">
-          O sistema lê o nome do produto em texto livre e reconhece modelo, medida, tecido e variante.
-          Nada é importado sem passares pela pré-visualização.
-        </p>
-      </div>
-
+      <header className="flex items-center gap-3"><div className="flex size-11 shrink-0 items-center justify-center rounded-lg border bg-card text-primary"><FileSpreadsheet className="size-5" /></div><div><h1 className="text-2xl font-bold">Importar Excel</h1><p className="text-xs text-muted-foreground">Encomendas por produto</p></div></header>
+      <ol className="grid grid-cols-3 gap-2 border-b pb-5">{["Ficheiro", "Revisão", "Resultado"].map((label, i) => <li key={label} className={`flex items-center gap-2 text-xs sm:text-sm ${i === (report ? 2 : drafts ? 1 : 0) ? "font-semibold text-primary" : "text-muted-foreground"}`}><span className="flex size-7 shrink-0 items-center justify-center rounded-full border">{i + 1}</span>{label}</li>)}</ol>
       {/* 1. Ficheiro */}
-      <Card className="p-4 space-y-3">
-        <div className="font-semibold">1. Carregar ficheiro</div>
+      <section className="space-y-4 border-b pb-6">
+        <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-base font-semibold">{fileName || "Ficheiro de encomendas"}</h2><p className="mt-1 text-xs text-muted-foreground">{rawRows.length ? `${rawRows.length} linhas · Excel / CSV` : "Excel (.xlsx, .xls) ou CSV"}</p></div><Button variant="outline" className="gap-2" onClick={() => fileInput.current?.click()}><Upload className="size-4" />{fileName ? "Trocar ficheiro" : "Escolher ficheiro"}</Button></div>
         <Input
+          ref={fileInput}
+          className="hidden"
+          aria-label="Ficheiro Excel"
           type="file"
           accept=".xlsx,.xls,.csv"
           onChange={(e) => {
@@ -290,33 +303,35 @@ function ImportarProdutosPage() {
             if (f) void onFile(f);
           }}
         />
-        {headers.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        {drafts && <Button size="sm" variant="ghost" className="gap-2" aria-expanded={showColumns} onClick={() => setShowColumns(!showColumns)}><SlidersHorizontal className="size-4" /> Colunas do ficheiro</Button>}
+        {headers.length > 0 && (!drafts || showColumns) && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <MapPick label="Produto (texto)" value={map.product} headers={headers} onChange={(v) => setMap((m) => ({ ...m, product: v }))} />
             <MapPick label="Quantidade" value={map.quantity} headers={headers} onChange={(v) => setMap((m) => ({ ...m, quantity: v }))} />
             <MapPick label="Nº encomenda" value={map.order} headers={headers} onChange={(v) => setMap((m) => ({ ...m, order: v }))} />
             <MapPick label="Data de entrega" value={map.due} headers={headers} onChange={(v) => setMap((m) => ({ ...m, due: v }))} />
           </div>
         )}
-        {rawRows.length > 0 && (
+        {rawRows.length > 0 && (!drafts || showColumns) && (
           <Button onClick={buildPreview} className="gap-2"><Upload className="size-4" /> Pré-visualizar {rawRows.length} linhas</Button>
         )}
-      </Card>
+      </section>
 
       {/* 2. Pré-visualização */}
       {drafts && !report && catalog && (
-        <Card className="p-4 space-y-3">
+        <section className="space-y-4">
           <div className="flex flex-wrap items-center gap-2 justify-between">
-            <div className="font-semibold">2. Pré-visualização e correções</div>
-            <div className="flex gap-2 text-xs">
+            <h2 className="font-semibold">Revisão de produtos</h2>
+            <div className="flex flex-wrap gap-2 text-xs">
               <Badge className="gap-1"><CheckCircle2 className="size-3" /> {counts.reconhecida} reconhecidas</Badge>
               <Badge variant="outline" className="gap-1 border-warning text-warning"><AlertTriangle className="size-3" /> {counts.duvida} em dúvida</Badge>
               <Badge variant="outline" className="gap-1 border-destructive text-destructive"><XCircle className="size-3" /> {counts.nao_reconhecida} não reconhecidas</Badge>
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <Table>
+          <div className="flex flex-wrap items-center gap-2"><div className="relative min-w-0 flex-1 basis-60"><Search className="absolute left-3 top-3 size-4 text-muted-foreground" /><Input className="pl-9 bg-card" value={reviewSearch} onChange={(e) => setReviewSearch(e.target.value)} placeholder="Encomenda ou produto…" aria-label="Pesquisar linhas do Excel" /></div><Select value={reviewFilter} onValueChange={setReviewFilter}><SelectTrigger className="w-full sm:w-52 bg-card"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todas as linhas</SelectItem><SelectItem value="reconhecida">Reconhecidas</SelectItem><SelectItem value="duvida">Em dúvida</SelectItem><SelectItem value="nao_reconhecida">Não reconhecidas</SelectItem></SelectContent></Select></div>
+          <div className="min-w-0">
+            <Table className="excel-review-table">
               <TableHeader>
                 <TableRow>
                   <TableHead className="min-w-[220px]">Texto original</TableHead>
@@ -332,7 +347,7 @@ function ImportarProdutosPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {drafts.map((d, i) => {
+                {drafts.map((d, i) => ({ d, i })).filter(({d}) => (reviewFilter === "all" || d.status === reviewFilter) && `${d.raw} ${d.order_number} ${d.product_name ?? ""}`.toLocaleLowerCase("pt-PT").includes(reviewSearch.trim().toLocaleLowerCase("pt-PT"))).map(({d, i}) => {
                   const isSofa = d.category_code === "SOF";
                   const models = catalog.models.filter(
                     (m) => !d.category_code || m.category_code === d.category_code,
@@ -341,9 +356,9 @@ function ImportarProdutosPage() {
                     (f) => !d.collection_code || f.fabric_ref_code === d.collection_code,
                   );
                   return (
-                    <TableRow key={i} className={d.status === "nao_reconhecida" ? "bg-destructive/5" : d.status === "duvida" ? "bg-warning/5" : ""}>
-                      <TableCell className="text-xs">{d.raw}</TableCell>
-                      <TableCell>
+                    <TableRow key={i} data-expanded={expanded.has(i)} className={d.status === "nao_reconhecida" ? "bg-destructive/5" : d.status === "duvida" ? "bg-warning/5" : ""}>
+                      <TableCell data-label="Produto original" className="text-sm font-semibold"><div className="mb-1 font-mono text-xs text-muted-foreground">{d.order_number || `Linha ${i + 2}`} · {d.quantity} un.</div>{d.raw}</TableCell>
+                      <TableCell data-label="Modelo">
                         <Select value={d.model_id ?? ""} onValueChange={(v) => update(i, { model_id: v })}>
                           <SelectTrigger className="h-9"><SelectValue placeholder="Escolher…" /></SelectTrigger>
                           <SelectContent>
@@ -353,10 +368,10 @@ function ImportarProdutosPage() {
                           </SelectContent>
                         </Select>
                       </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
+                      <TableCell data-label="Estrutura / Família" className="text-xs text-muted-foreground">
                         {isSofa ? d.sofa_family_name ?? "—" : d.structure_name ?? "—"}
                       </TableCell>
-                      <TableCell>
+                      <TableCell data-label="Medida / Largura">
                         {isSofa ? (
                           <Input
                             type="number"
@@ -380,7 +395,7 @@ function ImportarProdutosPage() {
                           </Select>
                         )}
                       </TableCell>
-                      <TableCell className="space-y-1">
+                      <TableCell data-label="Tecido" className="space-y-1">
                         <Select
                           value={d.collection_code ?? ""}
                           onValueChange={(v) => update(i, { collection_code: v, ref_tec: null })}
@@ -401,7 +416,7 @@ function ImportarProdutosPage() {
                           </SelectContent>
                         </Select>
                       </TableCell>
-                      <TableCell>
+                      <TableCell data-label="Variante">
                         <Select
                           value={(d.variant as string) ?? "N"}
                           onValueChange={(v) => update(i, { variant: v as any })}
@@ -415,12 +430,12 @@ function ImportarProdutosPage() {
                         </Select>
                         {isSofa && <div className="text-[10px] text-muted-foreground mt-1">{ODF_LABEL}</div>}
                       </TableCell>
-                      <TableCell className="text-xs">{d.customizations.join(", ") || "—"}</TableCell>
-                      <TableCell>
+                      <TableCell data-label="Personalizações" className="text-xs">{d.customizations.join(", ") || "—"}</TableCell>
+                      <TableCell data-label="Código gerado">
                         <div className="font-mono text-xs">{d.product_code ?? "—"}</div>
                         <div className="text-[10px] text-muted-foreground">{d.product_name}</div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell data-label="Quantidade">
                         <Input
                           type="number"
                           min={1}
@@ -432,12 +447,13 @@ function ImportarProdutosPage() {
                           }
                         />
                       </TableCell>
-                      <TableCell>
+                      <TableCell data-label="Estado">
                         <StatusBadge status={d.status} />
                         {d.issues.length > 0 && (
                           <div className="text-[10px] text-muted-foreground mt-1 max-w-[180px]">{d.issues.join(" ")}</div>
                         )}
                       </TableCell>
+                      <TableCell data-label="Correções"><Button variant="ghost" size="icon" aria-label={`Corrigir linha ${i + 2}`} aria-expanded={expanded.has(i)} onClick={() => setExpanded((prev) => { const next = new Set(prev); if(next.has(i)) next.delete(i); else next.add(i); return next; })}>{expanded.has(i) ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}</Button></TableCell>
                     </TableRow>
                   );
                 })}
@@ -453,12 +469,12 @@ function ImportarProdutosPage() {
               {confirm.isPending ? "A importar…" : `3. Confirmar importação (${importable.length})`}
             </Button>
           </div>
-        </Card>
+        </section>
       )}
 
       {/* 4. Relatório */}
       {report && (
-        <Card className="p-4 space-y-2">
+        <section className="space-y-3 border-l-2 border-success pl-5">
           <div className="font-semibold">Relatório final</div>
           <div className="text-sm">{report.created} encomendas criadas{report.reused ? " (importação já tinha sido feita)" : ""}.</div>
           {report.created_measures?.length > 0 && (
@@ -474,7 +490,7 @@ function ImportarProdutosPage() {
           <div className="pt-2">
             <Button asChild><Link to="/encomendas">Ver encomendas</Link></Button>
           </div>
-        </Card>
+        </section>
       )}
     </div>
   );
@@ -502,7 +518,7 @@ function MapPick({
     <div className="space-y-1.5">
       <Label className="text-xs text-muted-foreground">{label}</Label>
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className="h-10"><SelectValue placeholder="—" /></SelectTrigger>
+        <SelectTrigger className="h-10 w-full bg-card"><SelectValue placeholder="—" /></SelectTrigger>
         <SelectContent>
           {headers.map((h) => (
             <SelectItem key={h} value={h}>{h}</SelectItem>

@@ -42,9 +42,9 @@ function mondayOf(base: Date, weeks: number) {
 }
 
 function tone(pct: number) {
-  if (pct > 100) return "border-red-300 bg-red-500/10";
-  if (pct >= 80) return "border-amber-300 bg-amber-500/10";
-  if (pct > 0) return "border-emerald-300 bg-emerald-500/10";
+  if (pct > 100) return "border-destructive/30 bg-card";
+  if (pct >= 80) return "border-warning/40 bg-card";
+  if (pct > 0) return "border-success/30 bg-card";
   return "border-border bg-muted/30";
 }
 
@@ -74,8 +74,8 @@ export function PlanningPanel({ canEdit }: { canEdit: boolean }) {
       }),
     [monday],
   );
-  const from = days[0]!;
-  const to = days[4]!;
+  const from = days[0] ?? isoDate(monday);
+  const to = days[4] ?? from;
 
   const { data: dailyMinutes = 450 } = useQuery({
     queryKey: ["daily-minutes"],
@@ -122,7 +122,7 @@ export function PlanningPanel({ canEdit }: { canEdit: boolean }) {
   const rowsByDay = days.map((_, i) => (dayQueries[i]?.data ?? []).filter(matches));
 
   const cells = days.map((d, i) => {
-    const rows = rowsByDay[i]!;
+    const rows = rowsByDay[i] ?? [];
     const capacity = capacityByDate.get(d) ?? 0;
     const load = rows.reduce((a, r) => a + (r.expected_minutes ?? 0), 0);
     const unknown = rows.filter((r) => r.expected_minutes == null).length;
@@ -140,8 +140,9 @@ export function PlanningPanel({ canEdit }: { canEdit: boolean }) {
   const todayStr = isoDate(new Date());
 
   return (
-    <div className="space-y-3">
-      <Card className="p-3 flex flex-wrap items-end gap-3">
+    <div className="space-y-5 min-w-0">
+      <h2 className="font-semibold">Carga semanal por posto</h2>
+      <div className="flex flex-wrap items-end gap-3 border-b pb-4">
         <div className="flex items-center gap-1">
           <Button variant="outline" size="sm" onClick={() => setWeekOffset((v) => v - 1)} aria-label="Semana anterior">
             <ChevronLeft className="size-4" />
@@ -191,7 +192,7 @@ export function PlanningPanel({ canEdit }: { canEdit: boolean }) {
           </Select>
         </div>
 
-        <div className="min-w-48 flex-1">
+        <div className="min-w-0 basis-60 flex-1">
           <Label className="text-xs">Pesquisar</Label>
           <Input
             value={search}
@@ -199,9 +200,9 @@ export function PlanningPanel({ canEdit }: { canEdit: boolean }) {
             placeholder="Nº, produto, modelo, medida…"
           />
         </div>
-      </Card>
+      </div>
 
-      <Card className="p-3 flex flex-wrap items-center gap-4 text-sm">
+      <div className="flex flex-wrap items-center gap-4 border-b pb-4 text-sm">
         <div className="flex items-center gap-2">
           <Users className="size-4 text-muted-foreground" />
           <span className="font-medium">{STAGE_LABELS[stage]}</span>
@@ -212,52 +213,52 @@ export function PlanningPanel({ canEdit }: { canEdit: boolean }) {
         <div className="tabular-nums">
           Semana: <strong>{totalLoad}</strong> min necessários de <strong>{totalCap}</strong> min disponíveis
           {" · "}
-          <span className={cn(totalPct > 100 ? "text-red-600 font-semibold" : totalPct >= 80 ? "text-amber-700 font-semibold" : "text-emerald-700 font-semibold")}>
+          <span className={cn(totalPct > 100 ? "text-destructive font-semibold" : totalPct >= 80 ? "text-warning-foreground font-semibold" : "text-success font-semibold")}>
             {totalPct}%
           </span>
           {" · "}{totalItems} peça(s)
         </div>
         <div className="ml-auto">
           {overDays > 0 ? (
-            <Badge className="bg-red-600 text-white">{overDays} dia(s) a exceder</Badge>
+            <Badge variant="danger">{overDays} dia(s) a exceder</Badge>
           ) : (
-            <Badge className="bg-emerald-600 text-white">Semana possível</Badge>
+            <Badge variant="success">Semana possível</Badge>
           )}
         </div>
-      </Card>
+      </div>
 
       {totalUnknown > 0 && (
-        <div className="rounded-md border border-amber-300 bg-amber-50 text-amber-900 px-3 py-2 text-sm">
+        <div className="rounded-md border border-warning/30 bg-warning/10 text-foreground px-3 py-2 text-sm">
           ⚠ {totalUnknown} produto(s) sem tempo definido no modelo — tempo desconhecido, carga subestimada.
           Define os tempos em SLA &gt; Tempo por modelo.
         </div>
       )}
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {cells.map((c, i) => {
           const diff = c.capacity - c.load;
           return (
-            <Card key={c.date} className={cn("p-3 space-y-2 border-2", tone(c.pct), c.date === todayStr && "ring-2 ring-primary/40")}>
+            <Card key={c.date} className={cn("p-4 space-y-3 rounded-lg shadow-none", tone(c.pct), c.date === todayStr && "ring-2 ring-primary/40")}>
               <div className="flex items-baseline justify-between">
                 <div className="font-semibold">{DAY_LABELS[i]}</div>
                 <div className="text-xs text-muted-foreground">{formatDatePT(c.date)}</div>
               </div>
 
               <div className="text-xs text-muted-foreground">
-                {c.people} pessoa(s) × {dailyMinutes} min = <strong>{c.capacity} min</strong>
+                {c.people} pessoas · {c.capacity} min disponíveis
               </div>
 
               <div className="text-sm tabular-nums">
-                Necessário: <strong>{c.load} min</strong> ({c.pct}%)
+                <strong className="text-2xl">{c.load}</strong> min · {c.pct}%
               </div>
               <div className="h-2 rounded bg-muted overflow-hidden">
                 <div
-                  className={cn("h-2", c.pct > 100 ? "bg-red-500" : c.pct >= 80 ? "bg-amber-500" : "bg-emerald-500")}
+                  className={cn("h-2", c.pct > 100 ? "bg-destructive" : c.pct >= 80 ? "bg-warning" : "bg-success")}
                   style={{ width: `${Math.min(100, c.pct)}%` }}
                 />
               </div>
 
-              <div className={cn("text-xs font-semibold", diff < 0 ? "text-red-600" : "text-emerald-700")}>
+              <div className={cn("text-xs font-semibold", diff < 0 ? "text-destructive" : "text-success")}>
                 {c.capacity === 0 && c.load > 0
                   ? "Sem pessoas atribuídas neste dia"
                   : diff < 0

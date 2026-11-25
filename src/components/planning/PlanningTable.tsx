@@ -9,10 +9,10 @@ import {
   type PlanningOrder,
 } from "@/lib/orders.functions";
 import { EditOrderDialog } from "@/components/orders/EditOrderDialog";
+import { OrderActions } from "@/components/orders/OrderActions";
 import { useServerFn } from "@tanstack/react-start";
 import { activateOrders } from "@/lib/planning.functions";
 import { getExpectedForOrders } from "@/lib/sla.functions";
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -28,7 +28,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { PriorityBadge, priorityRank } from "./PriorityBadge";
 import { PrioritySelect } from "./PrioritySelect";
 import { STAGE_LABELS, formatDatePT, ORDER_STATUS_LABELS } from "@/lib/format";
-import { Search, Zap, Power, PowerOff } from "lucide-react";
+import { Search, Zap, Power, PowerOff, CalendarDays } from "lucide-react";
 
 type StatusFilter = "all" | "planned" | "pending";
 
@@ -160,30 +160,21 @@ export function PlanningTable({ canEdit }: { canEdit: boolean }) {
   );
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4 min-w-0">
+      <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-semibold">Plano de produção</h2><p className="text-xs text-muted-foreground">{filtered.length} encomendas · {(orders ?? []).filter((o) => o.is_planned).length} planeadas</p></div><div className="flex flex-wrap gap-1">{([{value: "all", label: "Todas"}, {value: "planned", label: "Planeadas"}, {value: "pending", label: "Por planear"}] as const).map((item) => <Button key={item.value} size="sm" variant={statusFilter === item.value ? "secondary" : "ghost"} onClick={() => setStatusFilter(item.value)} aria-pressed={statusFilter === item.value}>{item.label}</Button>)}</div></div>
       {/* Filtros */}
       <div className="flex flex-wrap items-center gap-2">
-        <div className="relative flex-1 min-w-48">
+        <div className="relative flex-1 min-w-0 basis-60">
           <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
           <Input
             placeholder="Procurar encomenda, nota ou produto…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-8 h-9"
+            className="pl-8 h-10 bg-card"
           />
         </div>
-        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
-          <SelectTrigger className="h-9 w-36 text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            <SelectItem value="planned">Planeados (ativos)</SelectItem>
-            <SelectItem value="pending">Pendentes</SelectItem>
-          </SelectContent>
-        </Select>
         <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-          <SelectTrigger className="h-9 w-32 text-xs">
+          <SelectTrigger className="h-10 w-full sm:w-40 bg-card text-xs">
             <SelectValue placeholder="Prioridade" />
           </SelectTrigger>
           <SelectContent>
@@ -193,14 +184,7 @@ export function PlanningTable({ canEdit }: { canEdit: boolean }) {
             <SelectItem value="1">Baixa</SelectItem>
           </SelectContent>
         </Select>
-        <button
-          onClick={() => setTodayOnly((v) => !v)}
-          className={`text-xs font-medium px-2.5 py-1.5 rounded-md border transition ${
-            todayOnly ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-accent"
-          }`}
-        >
-          {todayOnly ? "✓ " : ""}Hoje (saída)
-        </button>
+        <Button variant={todayOnly ? "secondary" : "outline"} size="sm" onClick={() => setTodayOnly((v) => !v)} aria-pressed={todayOnly} className="h-10 gap-2"><CalendarDays className="size-4" /> Saída hoje</Button>
       </div>
 
       {/* Ações em lote */}
@@ -211,7 +195,7 @@ export function PlanningTable({ canEdit }: { canEdit: boolean }) {
           </span>
           <Button
             size="sm"
-            className="gap-1 h-8 bg-emerald-600 hover:bg-emerald-700"
+            className="gap-1 h-8"
             disabled={activateMut.isPending}
             onClick={() => activateMut.mutate(selectedIds)}
           >
@@ -242,9 +226,9 @@ export function PlanningTable({ canEdit }: { canEdit: boolean }) {
       )}
 
       {/* Tabela */}
-      <Card className="overflow-hidden">
+      <div className="overflow-hidden rounded-lg border bg-card">
         <div className="overflow-x-auto">
-          <Table>
+          <Table className="operation-table planning-table">
             <TableHeader>
               <TableRow>
                 <TableHead className="w-10">
@@ -256,10 +240,7 @@ export function PlanningTable({ canEdit }: { canEdit: boolean }) {
                 <TableHead>Produto</TableHead>
                 <TableHead>Prioridade</TableHead>
                 <TableHead>Estado</TableHead>
-                <TableHead>Entrada</TableHead>
                 <TableHead>Saída</TableHead>
-                <TableHead>Estofo (min)</TableHead>
-                <TableHead>Etapa atual</TableHead>
                 <TableHead></TableHead>
               </TableRow>
             </TableHeader>
@@ -282,7 +263,7 @@ export function PlanningTable({ canEdit }: { canEdit: boolean }) {
               ))}
               {filtered.length === 0 && !isLoading && (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                     Sem encomendas com estes filtros
                   </TableCell>
                 </TableRow>
@@ -290,7 +271,7 @@ export function PlanningTable({ canEdit }: { canEdit: boolean }) {
             </TableBody>
           </Table>
         </div>
-      </Card>
+      </div>
     </div>
   );
 }
@@ -330,12 +311,12 @@ function PlanningRow({
 
   return (
     <TableRow data-state={selected ? "selected" : undefined} className="text-xs">
-      <TableCell>
+      <TableCell data-label="Selecionar">
         {canEdit && (
           <Checkbox checked={selected} onCheckedChange={onToggle} aria-label={`Selecionar ${order.order_number}`} />
         )}
       </TableCell>
-      <TableCell className="font-mono">
+      <TableCell data-label="Encomenda" className="font-mono">
         {order.customer_order ? (
           <div>
             <div className="font-bold">{order.customer_order}</div>
@@ -345,15 +326,15 @@ function PlanningRow({
           order.order_number
         )}
       </TableCell>
-      <TableCell className="max-w-40">
-        <div className="truncate">{order.product_description}</div>
+      <TableCell data-label="Produto" className="min-w-52 max-w-md">
+        <div className="whitespace-normal break-words text-sm font-medium">{order.product_description}</div>
         {(order.measure || order.fabric_type) && (
           <div className="text-[10px] text-muted-foreground">
             {[order.measure, order.fabric_type].filter(Boolean).join(" · ")}
           </div>
         )}
       </TableCell>
-      <TableCell>
+      <TableCell data-label="Prioridade">
         {canEdit ? (
           <PrioritySelect
             value={order.priority}
@@ -364,14 +345,48 @@ function PlanningRow({
           <PriorityBadge priority={order.priority} />
         )}
       </TableCell>
-      <TableCell>
+      <TableCell data-label="Estado">
         {order.is_planned ? (
-          <Badge className="bg-emerald-600 text-white text-[10px]">Planeado</Badge>
+          <Badge variant="success" className="text-[10px]">Planeado</Badge>
         ) : (
           <Badge variant="secondary" className="text-[10px]">Pendente</Badge>
         )}
       </TableCell>
-      <TableCell>
+      <TableCell data-label="Saída prevista">
+        {canEdit ? (
+          <Input
+            type="date"
+            className={`h-7 w-32 text-xs ${isOverdue ? "border-destructive text-destructive font-semibold" : isToday ? "border-warning text-warning-foreground font-semibold" : ""}`}
+            defaultValue={order.due_date ?? ""}
+            disabled={savingDates}
+            onChange={(e) => {
+              if (e.target.value !== (order.due_date ?? "")) onDateChange("due_date", e.target.value);
+            }}
+          />
+        ) : order.due_date ? (
+          <span className={isOverdue ? "text-destructive font-semibold" : isToday ? "text-warning-foreground font-semibold" : ""}>
+            {formatDatePT(order.due_date)}
+          </span>
+        ) : (
+          "—"
+        )}
+      </TableCell>
+      <TableCell data-label="Ações">
+        {canEdit && (
+          <OrderActions number={order.order_number}>
+            <EditOrderDialog orderId={order.id} orderNumber={order.order_number} />
+            {!order.is_planned && (
+              <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs text-success hover:bg-success/10" onClick={onActivate} disabled={pending}>
+                <Power className="size-3" /> Planear
+              </Button>
+            )}
+            {order.is_planned && !order.has_started && (
+              <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs text-destructive hover:bg-destructive/10" onClick={onDeactivate} disabled={pending}>
+                <PowerOff className="size-3" /> Desativar
+              </Button>
+            )}
+            <div className="border-t px-2 py-2 text-xs text-muted-foreground">{order.has_started ? "Produção iniciada" : "Sem etapas iniciadas"}<div className="mt-1">Estofo: {estofoMinutes == null ? "sem tempo definido" : `${estofoMinutes} min`}</div></div>
+      <div className="border-t px-2 pt-3"><div className="mb-1.5 text-xs text-muted-foreground">Data de entrada</div>
         {canEdit ? (
           <Input
             type="date"
@@ -387,58 +402,8 @@ function PlanningRow({
         ) : (
           "—"
         )}
-      </TableCell>
-      <TableCell>
-        {canEdit ? (
-          <Input
-            type="date"
-            className={`h-7 w-32 text-xs ${isOverdue ? "border-red-400 text-red-600 font-semibold" : isToday ? "border-amber-400 text-amber-700 font-semibold" : ""}`}
-            defaultValue={order.due_date ?? ""}
-            disabled={savingDates}
-            onChange={(e) => {
-              if (e.target.value !== (order.due_date ?? "")) onDateChange("due_date", e.target.value);
-            }}
-          />
-        ) : order.due_date ? (
-          <span className={isOverdue ? "text-red-600 font-semibold" : isToday ? "text-amber-600 font-semibold" : ""}>
-            {formatDatePT(order.due_date)}
-          </span>
-        ) : (
-          "—"
-        )}
-      </TableCell>
-      <TableCell>
-        {estofoMinutes != null ? (
-          <span className="tabular-nums font-medium">{estofoMinutes} min</span>
-        ) : (
-          <span
-            className="text-[10px] text-amber-700"
-            title="Tempo desconhecido — a carga do dia fica subestimada. Define o tempo do modelo."
-          >
-            sem tempo
-          </span>
-        )}
-      </TableCell>
-      <TableCell>
-        <span className="text-[10px] text-muted-foreground">
-          {order.has_started ? "Produção iniciada" : "Sem etapas iniciadas"}
-        </span>
-      </TableCell>
-      <TableCell>
-        {canEdit && (
-          <div className="flex gap-1">
-            <EditOrderDialog orderId={order.id} orderNumber={order.order_number} />
-            {!order.is_planned && (
-              <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs bg-emerald-50 hover:bg-emerald-100" onClick={onActivate} disabled={pending}>
-                <Power className="size-3" /> Planear
-              </Button>
-            )}
-            {order.is_planned && !order.has_started && (
-              <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs text-destructive hover:bg-destructive/10" onClick={onDeactivate} disabled={pending}>
-                <PowerOff className="size-3" /> Desativar
-              </Button>
-            )}
-          </div>
+      </div>
+          </OrderActions>
         )}
       </TableCell>
     </TableRow>

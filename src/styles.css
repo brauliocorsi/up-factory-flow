@@ -173,3 +173,32 @@
 @utility shadow-elevated {
   box-shadow: var(--shadow-elevated);
 }
+
+/* Order workspace tables keep all controls readable on narrow screens. */
+@media (max-width: 1023px) {
+  .operation-table, .operation-table tbody { display: block; width: 100%; }
+  .operation-table thead { display: none; }
+  .operation-table tbody tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 16px; }
+  .operation-table td { display: block; min-width: 0; max-width: none; padding: 0; white-space: normal; overflow-wrap: anywhere; }
+  .operation-table td::before { content: attr(data-label); display: block; margin-bottom: 5px; font-size: 11px; color: var(--muted-foreground); }
+  .operation-table td[data-label="Produto"], .operation-table td[data-label="Descrição / Motivo"] { grid-column: 1 / -1; }
+  .operation-table input { max-width: 100%; }
+}
+.excel-review-table, .excel-review-table tbody { display: block; width: 100%; }
+.excel-review-table thead { display: none; }
+.excel-review-table tbody tr { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; margin-bottom: 12px; padding: 20px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); }
+.excel-review-table td { display: block; min-width: 0; padding: 0; white-space: normal; overflow-wrap: anywhere; }
+.excel-review-table td::before { content: attr(data-label); display: block; margin-bottom: 6px; font-size: 11px; font-weight: 400; color: var(--muted-foreground); }
+.excel-review-table td[data-label="Produto original"] { grid-column: 1 / -1; padding-right: 40px; }
+.excel-review-table td[data-label="Correções"] { position: absolute; top: 12px; right: 12px; }
+.excel-review-table td[data-label="Correções"]::before { display: none; }
+.excel-review-table tr[data-expanded="false"] td:not([data-label="Produto original"]):not([data-label="Código gerado"]):not([data-label="Estado"]):not([data-label="Correções"]) { display: none; }
+.excel-review-table tr[data-expanded="true"] td[data-label="Código gerado"] { grid-column: 1 / -1; }
+@media (max-width: 639px) {
+  .excel-review-table tbody tr { grid-template-columns: minmax(0, 1fr); padding: 16px; }
+}
+
+@media (min-width: 1024px) {
+  .planning-table td[data-label="Encomenda"] { min-width: 120px; max-width: 160px; overflow-wrap: anywhere; }
+  .planning-table td[data-label="Produto"] { width: 100%; }
+}

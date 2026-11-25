@@ -20,6 +20,14 @@ const dashboardQuery = queryOptions({
 });
 
 export const Route = createFileRoute("/_authenticated/")({
+  head: () => ({ meta: [
+    { title: "Painel de produção | UP Fábrica" },
+    { name: "description", content: "Estado da produção, equipa e encomendas da UP Fábrica." },
+    { property: "og:title", content: "Painel de produção | UP Fábrica" },
+    { property: "og:description", content: "Acompanhe as etapas e a equipa da fábrica." },
+    { property: "og:type", content: "website" },
+    { name: "twitter:card", content: "summary" },
+  ] }),
   component: DashboardPage,
   errorComponent: ({ error }) => <div className="p-6 text-sm text-destructive">{(error as Error).message}</div>,
 });

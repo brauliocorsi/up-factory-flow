@@ -13,6 +13,11 @@ import { Upload, FileSpreadsheet, Download, AlertCircle, CheckCircle2, ArrowLeft
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/encomendas/importar-simples")({
+  head: () => ({ meta: [
+    { title: "Importar por código | UP Fábrica" }, { name: "description", content: "Importação Excel de encomendas por código de produto." },
+    { property: "og:title", content: "Importar por código | UP Fábrica" }, { property: "og:description", content: "Validação e revisão de encomendas importadas por código." },
+    { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+  ] }),
   component: ImportarSimplesPage,
 });
 
@@ -307,9 +312,11 @@ function ImportarSimplesPage() {
   const totalUnits = useMemo(() => decoded.filter((r) => r.ok).reduce((a, r) => a + r.quantity, 0), [decoded]);
 
   return (
-    <div className="p-4 max-w-6xl mx-auto space-y-4">
+    <div className="min-w-0 p-4 sm:p-6 max-w-6xl mx-auto space-y-6">
+      <Button asChild variant="ghost" size="sm"><Link to="/encomendas"><ArrowLeft className="size-4 mr-2" /> Encomendas</Link></Button>
+      <ol className="grid grid-cols-3 gap-2 border-b pb-4">{["Ficheiro", "Colunas", "Validação"].map((label, i) => <li key={label} className={`flex items-center gap-2 text-xs sm:text-sm ${step === i + 1 ? "font-semibold text-primary" : "text-muted-foreground"}`}><span className="flex size-7 items-center justify-center rounded-full border">{i+1}</span>{label}</li>)}</ol>
       <div>
-        <h1 className="text-2xl font-bold">Importar encomendas (Excel simples)</h1>
+        <h1 className="text-2xl font-bold">Importar por código</h1>
         <p className="text-sm text-muted-foreground">
           4 colunas: Código (18), Quantidade, Nº Encomenda do cliente, Prazo de Entrega (opcional).
           As encomendas entram como <b>backlog (pendentes)</b> — o planeamento decide quando iniciar.
@@ -322,9 +329,9 @@ function ImportarSimplesPage() {
       </div>
 
       {lastHints.length > 0 && (
-        <Card className="p-3 border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700/60">
+        <Card className="p-3 border-warning/30 bg-warning/10">
           <div className="flex items-start gap-3">
-            <Zap className="size-5 text-amber-600 mt-0.5" />
+            <Zap className="size-5 text-warning-foreground mt-0.5" />
             <div className="flex-1 text-sm">
               <div className="font-semibold mb-1">
                 Detetámos {lastHints.length} lote(s) possíveis no backlog
@@ -351,7 +358,7 @@ function ImportarSimplesPage() {
       )}
 
       {step === 1 && (
-        <Card className="p-12 border-2 border-dashed">
+        <Card className="p-6 sm:p-12 rounded-lg border border-dashed shadow-none">
           <div className="flex flex-col items-center gap-3 text-center">
             <FileSpreadsheet className="size-12 text-muted-foreground" />
             <div>Carrega o ficheiro Excel/CSV</div>
@@ -399,9 +406,9 @@ function ImportarSimplesPage() {
       {step === 3 && (
         <div className="space-y-4">
           {previewQ.data && previewQ.data.existing_total > 0 && (
-            <Card className="p-3 border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700/60">
+            <Card className="p-3 border-warning/30 bg-warning/10">
               <div className="flex items-start gap-3 text-sm">
-                <AlertCircle className="size-5 text-amber-600 mt-0.5" />
+                <AlertCircle className="size-5 text-warning-foreground mt-0.5" />
                 <div>
                   <div className="font-semibold mb-1">
                     Já existem {previewQ.data.existing_total} encomenda(s) para estes números de cliente
@@ -414,7 +421,7 @@ function ImportarSimplesPage() {
                         <li key={p.customer_order}>
                           <b>{p.customer_order}</b>: {p.existing} já no sistema · +{p.to_create} a criar
                           {p.duplicate_signature > 0 && (
-                            <span className="text-amber-700 dark:text-amber-400">
+                            <span className="text-warning-foreground">
                               {" "}· {p.duplicate_signature} linha(s) com produto igual ao já existente
                             </span>
                           )}
@@ -432,7 +439,7 @@ function ImportarSimplesPage() {
             <div><span className="text-2xl font-bold">{decoded.length}</span> <span className="text-sm text-muted-foreground">linhas</span></div>
             <div><span className="text-2xl font-bold text-success">{validCount}</span> <span className="text-sm text-muted-foreground">válidas → {totalUnits} unidade(s)</span></div>
             <div><span className="text-2xl font-bold text-destructive">{errorCount}</span> <span className="text-sm text-muted-foreground">com erro</span></div>
-            <div className="ml-auto flex gap-2">
+            <div className="flex flex-wrap gap-2 sm:ml-auto">
               {errorCount > 0 && (
                 <Button size="sm" variant="outline" onClick={downloadErrors} className="gap-2">
                   <Download className="size-4" /> Descarregar erros
@@ -446,7 +453,7 @@ function ImportarSimplesPage() {
           </Card>
 
           <Card className="p-2 overflow-x-auto">
-            <Table>
+            <Table className="operation-table">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12">#</TableHead>
@@ -460,16 +467,16 @@ function ImportarSimplesPage() {
               </TableHeader>
               <TableBody>
                 {decoded.map((r) => (
-                  <TableRow key={r.excel_row} className={r.ok ? "bg-green-500/5" : "bg-red-500/5"}>
-                    <TableCell className="text-xs text-muted-foreground">L{r.excel_row}</TableCell>
-                    <TableCell>
+                  <TableRow key={r.excel_row} className={r.ok ? "bg-success/5" : "bg-destructive/5"}>
+                    <TableCell data-label="Linha" className="text-xs text-muted-foreground">L{r.excel_row}</TableCell>
+                    <TableCell data-label="Estado">
                       {r.ok ? <CheckCircle2 className="size-4 text-success" /> : <AlertCircle className="size-4 text-destructive" />}
                     </TableCell>
-                    <TableCell className="font-mono text-xs">{r.raw.code}</TableCell>
-                    <TableCell>{r.raw.qty as any}</TableCell>
-                    <TableCell>{r.raw.customer_order}</TableCell>
-                    <TableCell className="text-xs">{r.due_date ?? <span className="text-muted-foreground italic">auto (hoje+15)</span>}</TableCell>
-                    <TableCell className="text-xs">
+                    <TableCell data-label="Código" className="font-mono text-xs">{r.raw.code}</TableCell>
+                    <TableCell data-label="Quantidade">{r.raw.qty as any}</TableCell>
+                    <TableCell data-label="Encomenda">{r.raw.customer_order}</TableCell>
+                    <TableCell data-label="Prazo" className="text-xs">{r.due_date ?? <span className="text-muted-foreground italic">auto (hoje+15)</span>}</TableCell>
+                    <TableCell data-label="Descrição / Motivo" className="text-xs">
                       {r.ok ? r.product_description : <span className="text-destructive">{r.errors.join(" · ")}</span>}
                     </TableCell>
                   </TableRow>
