@@ -1,9 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Search, X } from "lucide-react";
+import { Search, X, SlidersHorizontal, ChevronDown } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { listRef } from "@/lib/catalog.functions";
 import { STAGE_LABELS, STAGES_ORDER } from "@/lib/format";
 
@@ -16,7 +24,14 @@ export type DashboardFilterState = {
   stage: string;
 };
 
-export const emptyFilters: DashboardFilterState = { q: "", modelId: "all", fabric: "all", measure: "all", structure: "all", stage: "all" };
+export const emptyFilters: DashboardFilterState = {
+  q: "",
+  modelId: "all",
+  fabric: "all",
+  measure: "all",
+  structure: "all",
+  stage: "all",
+};
 
 export function DashboardFilters({
   value,
@@ -27,14 +42,33 @@ export function DashboardFilters({
   onChange: (v: DashboardFilterState) => void;
   structureCounts?: Record<string, number>;
 }) {
-  const { data: models = [] } = useQuery({ queryKey: ["ref", "models"], queryFn: () => listRef({ data: { kind: "models" } }) });
-  const { data: fabrics = [] } = useQuery({ queryKey: ["ref", "fabric_types"], queryFn: () => listRef({ data: { kind: "fabric_types" } }) });
-  const { data: measures = [] } = useQuery({ queryKey: ["ref", "measures"], queryFn: () => listRef({ data: { kind: "measures" } }) });
-  const { data: structures = [] } = useQuery({ queryKey: ["ref", "structures"], queryFn: () => listRef({ data: { kind: "structures" } }) });
+  const [expanded, setExpanded] = useState(false);
+  const { data: models = [] } = useQuery({
+    queryKey: ["ref", "models"],
+    queryFn: () => listRef({ data: { kind: "models" } }),
+  });
+  const { data: fabrics = [] } = useQuery({
+    queryKey: ["ref", "fabric_types"],
+    queryFn: () => listRef({ data: { kind: "fabric_types" } }),
+  });
+  const { data: measures = [] } = useQuery({
+    queryKey: ["ref", "measures"],
+    queryFn: () => listRef({ data: { kind: "measures" } }),
+  });
+  const { data: structures = [] } = useQuery({
+    queryKey: ["ref", "structures"],
+    queryFn: () => listRef({ data: { kind: "structures" } }),
+  });
 
-  const set = <K extends keyof DashboardFilterState>(k: K, v: DashboardFilterState[K]) => onChange({ ...value, [k]: v });
+  const set = <K extends keyof DashboardFilterState>(k: K, v: DashboardFilterState[K]) =>
+    onChange({ ...value, [k]: v });
   const hasFilters =
-    value.q.trim() !== "" || value.modelId !== "all" || value.fabric !== "all" || value.measure !== "all" || value.structure !== "all" || value.stage !== "all";
+    value.q.trim() !== "" ||
+    value.modelId !== "all" ||
+    value.fabric !== "all" ||
+    value.measure !== "all" ||
+    value.structure !== "all" ||
+    value.stage !== "all";
 
   // If a model is selected, restrict structures to the ones linked to that model.
   const filteredStructures = useMemo(() => {
@@ -42,68 +76,171 @@ export function DashboardFilters({
     return structures.filter((s) => s.active && (s.model_ids ?? []).includes(value.modelId));
   }, [structures, value.modelId]);
 
+  const count = [value.modelId, value.fabric, value.measure, value.structure, value.stage].filter(
+    (v) => v !== "all",
+  ).length;
+  const chips = [
+    { key: "modelId" as const, label: models.find((m) => m.id === value.modelId)?.name },
+    { key: "fabric" as const, label: fabrics.find((f) => f.id === value.fabric)?.name },
+    { key: "measure" as const, label: value.measure !== "all" ? value.measure : null },
+    { key: "structure" as const, label: structures.find((s) => s.id === value.structure)?.name },
+    { key: "stage" as const, label: value.stage !== "all" ? STAGE_LABELS[value.stage] : null },
+  ];
   return (
-    <div className="grid grid-cols-2 md:grid-cols-7 gap-2 mt-3">
-      <div className="relative col-span-2">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-        <Input
-          placeholder="Nº encomenda ou produto…"
-          value={value.q}
-          onChange={(e) => set("q", e.target.value)}
-          className="pl-9 h-10"
-        />
-      </div>
-      <Select value={value.modelId} onValueChange={(v) => set("modelId", v)}>
-        <SelectTrigger className="h-10"><SelectValue placeholder="Modelo" /></SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todos os modelos</SelectItem>
-          {models.filter((m) => m.active).map((m) => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
-        </SelectContent>
-      </Select>
-      <Select value={value.fabric} onValueChange={(v) => set("fabric", v)}>
-        <SelectTrigger className="h-10"><SelectValue placeholder="Tecido" /></SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todos os tecidos</SelectItem>
-          {fabrics.filter((f) => f.active).map((f) => <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>)}
-        </SelectContent>
-      </Select>
-      <Select value={value.measure} onValueChange={(v) => set("measure", v)}>
-        <SelectTrigger className="h-10"><SelectValue placeholder="Medida" /></SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todas as medidas</SelectItem>
-          {measures.filter((m) => m.active).map((m) => <SelectItem key={m.id} value={m.name}>{m.name}</SelectItem>)}
-        </SelectContent>
-      </Select>
-      <Select value={value.structure} onValueChange={(v) => set("structure", v)}>
-        <SelectTrigger className="h-10"><SelectValue placeholder="Estrutura" /></SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todas as estruturas</SelectItem>
-          {filteredStructures.map((s) => {
-            const n = structureCounts?.[s.id];
-            return (
-              <SelectItem key={s.id} value={s.id}>
-                {s.code} · {s.name}
-                {typeof n === "number" ? ` (${n})` : ""}
-              </SelectItem>
-            );
-          })}
-        </SelectContent>
-      </Select>
-      <div className="flex gap-2">
-        <Select value={value.stage} onValueChange={(v) => set("stage", v)}>
-          <SelectTrigger className="h-10"><SelectValue placeholder="Etapa" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas as etapas</SelectItem>
-            {STAGES_ORDER.map((s) => <SelectItem key={s} value={s}>{STAGE_LABELS[s] ?? s}</SelectItem>)}
-          </SelectContent>
-        </Select>
+    <section className="space-y-3" aria-label="Pesquisa e filtros da produção">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative min-w-0 flex-1 basis-64">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+          <Input
+            aria-label="Pesquisar produção"
+            placeholder="Pesquisar encomenda ou produto…"
+            value={value.q}
+            onChange={(e) => set("q", e.target.value)}
+            className="h-11 rounded-lg bg-card pl-10"
+          />
+        </div>
+        <Button
+          variant={expanded || count ? "secondary" : "outline"}
+          onClick={() => setExpanded((v) => !v)}
+          aria-expanded={expanded}
+          aria-controls="dashboard-advanced"
+          className="h-11 gap-2 rounded-lg"
+        >
+          <SlidersHorizontal className="size-4" />
+          <span>Busca avançada</span>
+          {count > 0 && <Badge variant="outline">{count}</Badge>}
+          <ChevronDown
+            className={`size-3.5 transition-transform ${expanded ? "rotate-180" : ""}`}
+          />
+        </Button>
         {hasFilters && (
-          <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0" onClick={() => onChange(emptyFilters)} aria-label="Limpar filtros">
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Limpar filtros"
+            title="Limpar filtros"
+            onClick={() => onChange(emptyFilters)}
+          >
             <X className="size-4" />
           </Button>
         )}
       </div>
-    </div>
+      {count > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {chips
+            .filter((c) => c.label)
+            .map((c) => (
+              <Button
+                key={c.key}
+                variant="ghost"
+                size="sm"
+                className="h-7 gap-2 rounded-md border text-xs"
+                onClick={() => set(c.key, "all")}
+                aria-label={`Remover filtro ${c.label}`}
+              >
+                {c.label}
+                <X className="size-3" />
+              </Button>
+            ))}
+        </div>
+      )}
+      {expanded && (
+        <div
+          id="dashboard-advanced"
+          className="grid gap-4 border-y py-5 sm:grid-cols-2 xl:grid-cols-5"
+        >
+          <div className="space-y-2">
+            <Label>Modelo</Label>
+            <Select value={value.modelId} onValueChange={(v) => set("modelId", v)}>
+              <SelectTrigger aria-label="Filtrar por modelo" className="w-full bg-card">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os modelos</SelectItem>
+                {models
+                  .filter((m) => m.active)
+                  .map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.name}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Tecido</Label>
+            <Select value={value.fabric} onValueChange={(v) => set("fabric", v)}>
+              <SelectTrigger aria-label="Filtrar por tecido" className="w-full bg-card">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os tecidos</SelectItem>
+                {fabrics
+                  .filter((f) => f.active)
+                  .map((f) => (
+                    <SelectItem key={f.id} value={f.id}>
+                      {f.name}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Medida</Label>
+            <Select value={value.measure} onValueChange={(v) => set("measure", v)}>
+              <SelectTrigger aria-label="Filtrar por medida" className="w-full bg-card">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as medidas</SelectItem>
+                {measures
+                  .filter((m) => m.active)
+                  .map((m) => (
+                    <SelectItem key={m.id} value={m.name}>
+                      {m.name}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Estrutura</Label>
+            <Select value={value.structure} onValueChange={(v) => set("structure", v)}>
+              <SelectTrigger aria-label="Filtrar por estrutura" className="w-full bg-card">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as estruturas</SelectItem>
+                {filteredStructures.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.code} · {s.name}
+                    {typeof structureCounts?.[s.id] === "number"
+                      ? ` (${structureCounts[s.id]})`
+                      : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Etapa</Label>
+            <Select value={value.stage} onValueChange={(v) => set("stage", v)}>
+              <SelectTrigger aria-label="Filtrar por etapa" className="w-full bg-card">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as etapas</SelectItem>
+                {STAGES_ORDER.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {STAGE_LABELS[s]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -113,8 +250,14 @@ export type FabricMatchContext = {
 };
 
 export function useFabricMatchContext(filters: DashboardFilterState): FabricMatchContext {
-  const { data: fabrics = [] } = useQuery({ queryKey: ["ref", "fabric_types"], queryFn: () => listRef({ data: { kind: "fabric_types" } }) });
-  const { data: refs = [] } = useQuery({ queryKey: ["ref", "fabric_refs"], queryFn: () => listRef({ data: { kind: "fabric_refs" } }) });
+  const { data: fabrics = [] } = useQuery({
+    queryKey: ["ref", "fabric_types"],
+    queryFn: () => listRef({ data: { kind: "fabric_types" } }),
+  });
+  const { data: refs = [] } = useQuery({
+    queryKey: ["ref", "fabric_refs"],
+    queryFn: () => listRef({ data: { kind: "fabric_refs" } }),
+  });
   return useMemo(() => {
     if (filters.fabric === "all") return { allowedNames: null };
     const type = fabrics.find((f) => f.id === filters.fabric);
@@ -133,7 +276,10 @@ export type StructureMatchContext = {
 };
 
 export function useStructureMatchContext(filters: DashboardFilterState): StructureMatchContext {
-  const { data: structures = [] } = useQuery({ queryKey: ["ref", "structures"], queryFn: () => listRef({ data: { kind: "structures" } }) });
+  const { data: structures = [] } = useQuery({
+    queryKey: ["ref", "structures"],
+    queryFn: () => listRef({ data: { kind: "structures" } }),
+  });
   return useMemo(() => {
     if (filters.structure === "all") return { allowedTokens: null };
     const s = structures.find((x) => x.id === filters.structure);
@@ -143,24 +289,35 @@ export function useStructureMatchContext(filters: DashboardFilterState): Structu
   }, [filters.structure, structures]);
 }
 
-export function applyDashboardFilters<T extends {
-  order_number: string;
-  product_description: string;
-  customer_order: string | null;
-  model_id: string | null;
-  fabric_type: string | null;
-  fabric_ref?: string | null;
-  measure: string | null;
-  structure_type?: string | null;
-  current_stage: string;
-}>(byStage: Record<string, T[]>, filters: DashboardFilterState, fabricCtx?: FabricMatchContext, structureCtx?: StructureMatchContext): Record<string, T[]> {
+export function applyDashboardFilters<
+  T extends {
+    order_number: string;
+    product_description: string;
+    customer_order: string | null;
+    model_id: string | null;
+    fabric_type: string | null;
+    fabric_ref?: string | null;
+    measure: string | null;
+    structure_type?: string | null;
+    current_stage: string;
+  },
+>(
+  byStage: Record<string, T[]>,
+  filters: DashboardFilterState,
+  fabricCtx?: FabricMatchContext,
+  structureCtx?: StructureMatchContext,
+): Record<string, T[]> {
   const q = filters.q.trim().toLowerCase();
   const out: Record<string, T[]> = {};
   for (const stage of Object.keys(byStage)) {
-    if (filters.stage !== "all" && stage !== filters.stage) { out[stage] = []; continue; }
+    if (filters.stage !== "all" && stage !== filters.stage) {
+      out[stage] = [];
+      continue;
+    }
     out[stage] = byStage[stage].filter((o) => {
       if (q) {
-        const hay = `${o.order_number} ${o.customer_order ?? ""} ${o.product_description}`.toLowerCase();
+        const hay =
+          `${o.order_number} ${o.customer_order ?? ""} ${o.product_description}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       if (filters.modelId !== "all" && o.model_id !== filters.modelId) return false;

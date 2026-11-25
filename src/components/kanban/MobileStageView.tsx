@@ -1,34 +1,43 @@
 import { useState } from "react";
 import type { DashboardData } from "@/lib/orders.functions";
 import { STAGES_ORDER, STAGE_LABELS } from "@/lib/format";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { OrderCard } from "./OrderCard";
 
 export function MobileStageView({ data }: { data: DashboardData }) {
-  const [active, setActive] = useState<string>(STAGES_ORDER[0]);
+  const [active, setActive] = useState<string>(STAGES_ORDER[0] ?? "estrutura");
   const items = data.byStage[active] ?? [];
   return (
-    <div>
-      <div className="overflow-x-auto sticky top-14 bg-background z-10 border-b">
-        <div className="flex">
-          {STAGES_ORDER.map((s) => {
-            const count = data.byStage[s]?.length ?? 0;
-            const isActive = active === s;
-            return (
-              <button
-                key={s}
-                onClick={() => setActive(s)}
-                className={`shrink-0 px-4 py-3 text-xs font-medium border-b-2 transition ${isActive ? "border-primary text-primary" : "border-transparent text-muted-foreground"}`}
-              >
-                {STAGE_LABELS[s]} <span className="ml-1 bg-muted rounded-full px-1.5 py-0.5 text-[10px]">{count}</span>
-              </button>
-            );
-          })}
-        </div>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-4">
+        <Select value={active} onValueChange={setActive}>
+          <SelectTrigger aria-label="Etapa do quadro" className="w-52 bg-card">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {STAGES_ORDER.map((s) => (
+              <SelectItem key={s} value={s}>
+                {STAGE_LABELS[s]} · {data.byStage[s]?.length ?? 0}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <span className="text-xs text-muted-foreground">{items.length} encomendas</span>
       </div>
-      <div className="p-4 space-y-2">
+      <div className="grid gap-3 sm:grid-cols-2">
         {items.length === 0 ? (
-          <div className="text-sm text-muted-foreground text-center py-12">Sem encomendas nesta etapa</div>
-        ) : items.map((o) => <OrderCard key={o.id} order={o} />)}
+          <div className="col-span-full py-12 text-center text-sm text-muted-foreground">
+            Sem encomendas nesta etapa
+          </div>
+        ) : (
+          items.map((o) => <OrderCard key={o.id} order={o} />)
+        )}
       </div>
     </div>
   );
