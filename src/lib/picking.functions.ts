@@ -476,7 +476,14 @@ export const sendPickingBatchToStock = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
 
     const dispatchedAt = new Date().toISOString();
-    const items = (orders ?? []).map(o => pickingStockItem(o, dispatchedAt));
+    const { data: colisRows, error: colisCountErr } = await supabase
+      .from("order_colis")
+      .select("order_id")
+      .in("order_id", eligibleIds);
+    if (colisCountErr) throw new Error(colisCountErr.message);
+    const colisTotals = new Map<string, number>();
+    for (const c of (colisRows ?? []) as any[]) colisTotals.set(c.order_id, (colisTotals.get(c.order_id) ?? 0) + 1);
+    const items = (orders ?? []).map(o => pickingStockItem({ ...o, total_colis: colisTotals.get(o.id) ?? 0 }, dispatchedAt));
 
     try {
       const response = await fetch(url, {

@@ -7,6 +7,7 @@ type PickingDispatchOrder = {
   fabric_type: string | null;
   fabric_ref: string | null;
   color: string | null;
+  total_colis?: number;
 };
 
 /** Preserve the supplied product identity; never generate a code from the model. */
@@ -25,6 +26,7 @@ export function pickingStockItem(order: PickingDispatchOrder, dispatchedAt: stri
     fabric_ref: order.fabric_ref ?? "",
     color: order.color ?? "",
     quantity: 1,
+    total_colis: Math.max(1, Math.floor(order.total_colis ?? 1)),
     dispatched_at: dispatchedAt,
   };
 }

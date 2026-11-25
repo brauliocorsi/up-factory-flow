@@ -42,4 +42,11 @@ describe("Picking stock product identity", () => {
       fabric_type: "", fabric_ref: "", color: "", dispatched_at: date,
     });
   });
+  it("sends the factory colis count (2) so Contagem can create the product", () => {
+    expect(pickingStockItem({ ...order, total_colis: 2 }, date).total_colis).toBe(2);
+  });
+
+  it("never sends fewer than 1 coli", () => {
+    expect(pickingStockItem({ ...order, total_colis: 0 }, date).total_colis).toBe(1);
+  });
 });
