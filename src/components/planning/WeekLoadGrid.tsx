@@ -1,184 +1,245 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ChevronLeft, ChevronRight, AlertTriangle, Clock, CalendarDays } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { STAGE_LABELS } from "@/lib/format";
+import { STAGE_LABELS, formatDatePT } from "@/lib/format";
 import { getWeekCapacityPlan, type Stage, type WeekLoadCell } from "@/lib/planning.functions";
+import { hoursLabel, loadSummary } from "@/lib/productionCalculations";
 import { DayLoadDialog } from "./DayLoadDialog";
+import { StageQueuePanel } from "./StageQueuePanel";
 
 const GRID_STAGES: Stage[] = [
-  "estrutura", "corte", "costura", "branco", "estofagem", "qualidade", "embalagem",
+  "estrutura",
+  "corte",
+  "costura",
+  "branco",
+  "estofagem",
+  "qualidade",
+  "embalagem",
 ];
-
 const DAY_LABELS = ["Seg", "Ter", "Qua", "Qui", "Sex"];
-
+const STATE_LABEL = {
+  unknown: "Tempo por definir",
+  no_team: "Sem equipa",
+  over: "Carga excedida",
+  available: "Dentro da capacidade",
+};
+const STATE_CLASS = {
+  unknown: "border-warning/40 bg-warning/10",
+  no_team: "border-border bg-muted/30",
+  over: "border-destructive/30 bg-destructive/5",
+  available: "border-success/30 bg-success/5",
+};
 function isoDate(d: Date) {
-  const off = d.getTimezoneOffset();
-  return new Date(d.getTime() - off * 60_000).toISOString().slice(0, 10);
+  return d.toLocaleDateString("sv-SE");
 }
 
-/** Segunda-feira da semana de `base`, deslocada `weeks` semanas. */
-function mondayOf(base: Date, weeks: number) {
-  const d = new Date(base);
-  const dow = (d.getDay() + 6) % 7; // 0 = segunda
-  d.setDate(d.getDate() - dow + weeks * 7);
-  d.setHours(12, 0, 0, 0);
-  return d;
-}
-
-function tone(pct: number) {
-  if (pct > 100) return "bg-red-500/15 text-red-700 border-red-300";
-  if (pct >= 80) return "bg-amber-500/15 text-amber-800 border-amber-300";
-  if (pct > 0) return "bg-emerald-500/15 text-emerald-700 border-emerald-300";
-  return "bg-muted/40 text-muted-foreground border-border";
-}
-
-/**
- * Semana de planeamento: tempo necessário (soma dos tempos por modelo) contra
- * o tempo útil disponível (jornada × pessoas presentes) por operação e dia.
- */
 export function WeekLoadGrid({ canEdit }: { canEdit: boolean }) {
+  const navigate = useNavigate();
   const [weekOffset, setWeekOffset] = useState(0);
-  const [detail, setDetail] = useState<{ stage: Stage; date: string; capacity: number } | null>(null);
-  const fetchWeek = useServerFn(getWeekCapacityPlan);
-
-  const monday = useMemo(() => mondayOf(new Date(), weekOffset), [weekOffset]);
-  const days = useMemo(
-    () =>
-      Array.from({ length: 5 }, (_, i) => {
-        const d = new Date(monday);
-        d.setDate(d.getDate() + i);
-        return isoDate(d);
-      }),
-    [monday],
+  const [queueStage, setQueueStage] = useState<Stage>("estrutura");
+  const [detail, setDetail] = useState<{ stage: Stage; date: string; capacity: number } | null>(
+    null,
   );
-  const from = days[0]!;
-  const to = days[4]!;
-
-  const { data = [], isLoading } = useQuery({
+  const fetchWeek = useServerFn(getWeekCapacityPlan);
+  const days = useMemo(() => {
+    const monday = new Date();
+    monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7) + weekOffset * 7);
+    return Array.from({ length: 5 }, (_, i) => {
+      const d = new Date(monday);
+      d.setDate(d.getDate() + i);
+      return isoDate(d);
+    });
+  }, [weekOffset]);
+  const from = days[0] ?? "";
+  const to = days[4] ?? from;
+  const {
+    data = [],
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: ["week-capload", from, to],
     queryFn: () => fetchWeek({ data: { from, to } }),
-    refetchInterval: 60_000,
+    refetchInterval: 30_000,
   });
-
-  const byKey = useMemo(() => {
-    const m = new Map<string, WeekLoadCell>();
-    for (const c of data) m.set(`${c.stage}|${String(c.date).slice(0, 10)}`, c);
-    return m;
-  }, [data]);
-
-  const todayStr = isoDate(new Date());
-  const hasUnknown = data.some((c) => c.has_unknown);
-  const overDays = data.filter((c) => c.over_minutes > 0).length;
-
+  const byKey = new Map<string, WeekLoadCell>(
+    data.map((c) => [`${c.stage}|${String(c.date).slice(0, 10)}`, c]),
+  );
+  const relevant = data.filter((c) => GRID_STAGES.includes(c.stage));
+  const load = relevant.reduce((sum, c) => sum + c.load_minutes, 0);
+  const unknown = relevant.filter((c) => c.has_unknown).length;
+  const over = relevant.filter((c) => c.load_minutes > c.capacity_minutes).length;
+  const today = isoDate(new Date());
   return (
-    <div className="space-y-3">
-      <Card className="p-3 flex flex-wrap items-center gap-3">
-        <Button variant="outline" size="sm" onClick={() => setWeekOffset((v) => v - 1)} aria-label="Semana anterior">
-          <ChevronLeft className="size-4" />
-        </Button>
-        <div className="text-sm font-semibold">
-          Semana de {days[0]!.split("-").reverse().join("/")} a {days[4]!.split("-").reverse().join("/")}
+    <div className="min-w-0 space-y-5">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b pb-4">
+        <div>
+          <h2 className="font-semibold">Plano semanal</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Datas-alvo por etapa · {formatDatePT(from)} — {formatDatePT(to)}
+          </p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => setWeekOffset((v) => v + 1)} aria-label="Semana seguinte">
-          <ChevronRight className="size-4" />
-        </Button>
-        {weekOffset !== 0 && (
-          <Button variant="ghost" size="sm" onClick={() => setWeekOffset(0)}>Esta semana</Button>
-        )}
-        <div className="ml-auto flex items-center gap-2 text-xs">
-          {overDays > 0 ? (
-            <Badge className="bg-red-600 text-white">{overDays} dia(s) a exceder</Badge>
-          ) : (
-            <Badge className="bg-emerald-600 text-white">Semana dentro do tempo</Badge>
-          )}
+        <div className="flex items-center gap-1">
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label="Semana anterior"
+            onClick={() => setWeekOffset((v) => v - 1)}
+          >
+            <ChevronLeft className="size-4" />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setWeekOffset(0)}>
+            Esta semana
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label="Semana seguinte"
+            onClick={() => setWeekOffset((v) => v + 1)}
+          >
+            <ChevronRight className="size-4" />
+          </Button>
         </div>
-      </Card>
-
-      {hasUnknown && (
-        <div className="rounded-md border border-amber-300 bg-amber-50 text-amber-900 px-3 py-2 text-sm">
-          ⚠ Há produtos sem tempo definido no modelo — os totais estão subestimados. Define os tempos em SLA &gt; Tempo por modelo.
+      </header>
+      <div className="grid grid-cols-1 gap-4 border-b pb-5 sm:grid-cols-3">
+        {[
+          { label: "Trabalho necessário", value: hoursLabel(load), icon: Clock },
+          { label: "Dias/postos em excesso", value: String(over), icon: CalendarDays },
+          { label: "Dias/postos sem tempos", value: String(unknown), icon: AlertTriangle },
+        ].map(({ label, value, icon: Icon }) => (
+          <div key={label}>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Icon className="size-4" />
+              {label}
+            </div>
+            <div className="mt-2 text-2xl font-semibold tabular-nums">
+              {isLoading ? "—" : value}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Badge variant={unknown ? "warning" : over ? "danger" : "secondary"}>
+          {isLoading
+            ? "A carregar"
+            : isError
+              ? "Dados indisponíveis"
+              : unknown
+                ? "Estimativa incompleta"
+                : over
+                  ? "Rever distribuição"
+                  : "Estimativa por posto"}
+        </Badge>
+        <span className="text-xs text-muted-foreground">
+          Capacidades não somadas entre postos: um colaborador pode pertencer a vários.
+        </span>
+      </div>
+      {isLoading ? (
+        <div className="py-10 text-center text-muted-foreground">A carregar o plano…</div>
+      ) : isError ? (
+        <div role="alert" className="py-8 text-destructive">
+          Não foi possível carregar o plano.
+        </div>
+      ) : (
+        <div className="space-y-5">
+          <div className="hidden grid-cols-[110px_repeat(5,minmax(0,1fr))] gap-2 lg:grid">
+            <span className="text-xs text-muted-foreground">Posto</span>
+            {days.map((d, i) => (
+              <div key={d} className="text-center text-xs font-medium">
+                {DAY_LABELS[i]} · {d.slice(8)}/{d.slice(5, 7)}
+              </div>
+            ))}
+          </div>
+          {GRID_STAGES.map((s) => (
+            <section
+              key={s}
+              className="grid gap-2 border-b pb-5 lg:grid-cols-[110px_repeat(5,minmax(0,1fr))] lg:border-0 lg:pb-0"
+            >
+              <h3 className="text-sm font-semibold lg:self-center">{STAGE_LABELS[s]}</h3>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:contents">
+                {days.map((d, i) => {
+                  const c = byKey.get(`${s}|${d}`);
+                  const cap = c?.capacity_minutes ?? 0;
+                  const min = c?.load_minutes ?? 0;
+                  const summary = loadSummary(min, cap, c?.has_unknown ?? false);
+                  return (
+                    <Button
+                      key={d}
+                      variant="outline"
+                      onClick={() => setDetail({ stage: s, date: d, capacity: cap })}
+                      aria-label={`${STAGE_LABELS[s]}, ${formatDatePT(d)}, ver encomendas`}
+                      className={cn(
+                        "h-auto min-h-28 w-full flex-col items-stretch gap-1 whitespace-normal p-3 text-left font-normal",
+                        STATE_CLASS[summary.state],
+                        d === today && "ring-1 ring-primary/40",
+                      )}
+                    >
+                      <span className="flex justify-between text-xs lg:hidden">
+                        <strong>{DAY_LABELS[i]}</strong>
+                        {formatDatePT(d)}
+                      </span>
+                      <span className="text-lg font-semibold tabular-nums">
+                        {hoursLabel(min)}
+                        <span className="ml-1 text-xs font-normal text-muted-foreground">
+                          / {hoursLabel(cap)}
+                        </span>
+                      </span>
+                      <span className="text-[11px]">
+                        {STATE_LABEL[summary.state]}
+                        {summary.percent === null ? "" : ` · ${summary.percent}%`}
+                      </span>
+                      <span className="text-[11px] text-muted-foreground">
+                        {c?.items_count ?? 0} encomendas
+                        {c?.includes_overdue ? " · inclui atraso" : ""}
+                      </span>
+                      {summary.balance < 0 && (
+                        <span className="text-[11px] font-medium text-destructive">
+                          Excesso {hoursLabel(-summary.balance)}
+                        </span>
+                      )}
+                    </Button>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
         </div>
       )}
-
-      <Card className="p-0 overflow-x-auto">
-        {isLoading ? (
-          <div className="p-6 text-center text-sm text-muted-foreground">A calcular…</div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50 text-xs uppercase">
-              <tr>
-                <th className="text-left p-2 min-w-28">Operação</th>
-                {days.map((d, i) => (
-                  <th key={d} className={cn("p-2 text-center min-w-32", d === todayStr && "text-primary")}>
-                    {DAY_LABELS[i]} {d.slice(8, 10)}/{d.slice(5, 7)}
-                  </th>
-                ))}
-                <th className="p-2 text-center min-w-28">Semana</th>
-              </tr>
-            </thead>
-            <tbody>
-              {GRID_STAGES.map((s) => {
-                const cells = days.map((d) => byKey.get(`${s}|${d}`));
-                const cap = cells.reduce((a, c) => a + (c?.capacity_minutes ?? 0), 0);
-                const load = cells.reduce((a, c) => a + (c?.load_minutes ?? 0), 0);
-                const weekPct = cap > 0 ? Math.round((load / cap) * 100) : load > 0 ? 999 : 0;
-                return (
-                  <tr key={s} className="border-t">
-                    <td className="p-2 font-medium">{STAGE_LABELS[s]}</td>
-                    {days.map((d, i) => {
-                      const c = cells[i];
-                      const capacity = c?.capacity_minutes ?? 0;
-                      const loadMin = c?.load_minutes ?? 0;
-                      const pct = capacity > 0 ? Math.round((loadMin / capacity) * 100) : loadMin > 0 ? 999 : 0;
-                      return (
-                        <td key={d} className="p-1 align-top">
-                          <button
-                            type="button"
-                            onClick={() => setDetail({ stage: s, date: d, capacity })}
-                            className={cn(
-                              "w-full rounded-md border px-2 py-1.5 text-left transition hover:brightness-95",
-                              tone(pct),
-                            )}
-                            title={`${loadMin} min necessários de ${capacity} min disponíveis`}
-                          >
-                            <div className="text-xs font-semibold tabular-nums">
-                              {loadMin}/{capacity} min
-                            </div>
-                            <div className="text-[10px] tabular-nums">
-                              {pct}% · {c?.items_count ?? 0} pç
-                              {c?.has_unknown ? " ⚠" : ""}
-                            </div>
-                            {c && c.over_minutes > 0 && (
-                              <div className="text-[10px] font-semibold">excede {c.over_minutes} min</div>
-                            )}
-                          </button>
-                        </td>
-                      );
-                    })}
-                    <td className="p-2 text-center">
-                      <div className="text-xs font-semibold tabular-nums">{load}/{cap}</div>
-                      <div className={cn("text-[10px] tabular-nums", weekPct > 100 && "text-red-600 font-semibold")}>
-                        {weekPct}%
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
-      </Card>
-
-      <p className="text-xs text-muted-foreground">
-        Tempo disponível = jornada diária × pessoas presentes na operação. Tempo necessário = tempo do modelo
-        de cada produto com data-alvo nesse dia. O dia de hoje inclui o trabalho atrasado.
-      </p>
-
+      <section className="border-t pt-5">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <h2 className="font-semibold">Ordem de trabalho · fila atual</h2>
+          <Select value={queueStage} onValueChange={(v) => setQueueStage(v as Stage)}>
+            <SelectTrigger className="w-44" aria-label="Posto da fila">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {GRID_STAGES.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {STAGE_LABELS[s]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <StageQueuePanel
+          stage={queueStage}
+          variant="sidebar"
+          onItemClick={(item) => {
+            navigate({ to: "/producao", search: { q: item.order_number, stage: queueStage } });
+          }}
+        />
+      </section>
       {detail && (
         <DayLoadDialog
           stage={detail.stage}
@@ -186,7 +247,9 @@ export function WeekLoadGrid({ canEdit }: { canEdit: boolean }) {
           capacityMinutes={detail.capacity}
           canEdit={canEdit}
           open
-          onOpenChange={(v) => { if (!v) setDetail(null); }}
+          onOpenChange={(v) => {
+            if (!v) setDetail(null);
+          }}
         />
       )}
     </div>

@@ -2,7 +2,7 @@ import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, ArrowLeft } from "lucide-react";
-import { PlanningPanel } from "@/components/planning/PlanningPanel";
+import { PlanningWorkspace } from "@/components/planning/PlanningWorkspace";
 
 export const Route = createFileRoute("/_authenticated/admin/planeamento/painel")({
   beforeLoad: async () => {
@@ -57,7 +57,7 @@ function PainelPage() {
         </Link>
         <h1 className="text-2xl font-bold">Painel de planeamento</h1>
       </div>
-      <PlanningPanel canEdit />
+      <PlanningWorkspace canEdit />
     </div>
   );
 }

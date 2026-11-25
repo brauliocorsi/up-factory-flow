@@ -12,6 +12,13 @@ import { listFinishedGoods, transferToExternalSystem } from "@/lib/finishedGoods
 import { useRealtimeOrders } from "@/hooks/useRealtimeOrders";
 
 export const Route = createFileRoute("/_authenticated/stock/produto-final")({
+  head: () => ({ meta: [
+    { title: "Stock de produto final | UP Fábrica" },
+    { name: "description", content: "Produtos acabados e transferências da UP Fábrica." },
+    { property: "og:title", content: "Stock de produto final | UP Fábrica" },
+    { property: "og:description", content: "Produtos acabados e transferências da UP Fábrica." },
+    { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+  ] }),
   component: ProdutoFinalPage,
 });
 

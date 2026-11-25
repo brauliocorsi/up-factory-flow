@@ -19,6 +19,13 @@ import { FabricsTable } from "@/components/catalog/FabricsTable";
 
 
 export const Route = createFileRoute("/_authenticated/admin/catalogo")({
+  head: () => ({ meta: [
+    { title: "Catálogo | UP Fábrica" },
+    { name: "description", content: "Modelos e referências de produtos da UP Fábrica." },
+    { property: "og:title", content: "Catálogo | UP Fábrica" },
+    { property: "og:description", content: "Modelos e referências de produtos da UP Fábrica." },
+    { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+  ] }),
   component: CatalogoPage,
 });
 

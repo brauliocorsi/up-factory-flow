@@ -5,6 +5,7 @@
 - [x] Verificar as vistas com sessão iniciada em computador e telemóvel.
 
 # Plano de produção e cálculo por hora
-- [ ] Definir a renovação do planeamento com carga por posto, prioridades e alertas.
-- [ ] Clarificar se o cálculo por hora é de custo, capacidade ou ambos (aguarda resposta).
-- [ ] Implementar e verificar as alterações após definição do cálculo.
+- [x] Renovar o planeamento com quadro semanal, carga por posto, prioridades e alertas.
+- [x] Definir o cálculo por hora: capacidade de produção, sem custos.
+- [x] Implementar a simulação de horas disponíveis por colaborador e tempos por produto.
+- [x] Verificar o plano e a simulação com sessão iniciada, em computador e telemóvel; 13 testes passam.

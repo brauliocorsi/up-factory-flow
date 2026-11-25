@@ -27,6 +27,13 @@ async function landingPathForUser(userId: string): Promise<string> {
 }
 
 export const Route = createFileRoute("/auth")({
+  head: () => ({ meta: [
+    { title: "Entrar | UP Fábrica" },
+    { name: "description", content: "Acesso de colaboradores e administração ao UP Fábrica." },
+    { property: "og:title", content: "Entrar | UP Fábrica" },
+    { property: "og:description", content: "Acesso de colaboradores e administração ao UP Fábrica." },
+    { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+  ] }),
   ssr: false,
   validateSearch: (s: Record<string, unknown>): { next?: string } =>
     typeof s.next === "string" && s.next ? { next: s.next } : {},

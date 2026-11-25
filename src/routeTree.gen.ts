@@ -41,6 +41,7 @@ import { Route as AuthenticatedEncomendasNovaRouteImport } from './routes/_authe
 import { Route as AuthenticatedEtiquetasImprimirRouteImport } from './routes/_authenticated/etiquetas.imprimir'
 import { Route as AuthenticatedPicagemConsultaRouteImport } from './routes/_authenticated/picagem.consulta'
 import { Route as AuthenticatedPicagemHistoricoRouteImport } from './routes/_authenticated/picagem.historico'
+import { Route as AuthenticatedPlaneamentoCalculoRouteImport } from './routes/_authenticated/planeamento.calculo'
 import { Route as AuthenticatedProducaoIndexRouteImport } from './routes/_authenticated/producao.index'
 import { Route as AuthenticatedProducaoCascosRouteImport } from './routes/_authenticated/producao.cascos'
 import { Route as AuthenticatedProdutosReceitasRouteImport } from './routes/_authenticated/produtos.receitas'
@@ -236,6 +237,12 @@ const AuthenticatedPicagemHistoricoRoute =
     path: '/historico',
     getParentRoute: () => AuthenticatedPicagemRoute,
   } as any)
+const AuthenticatedPlaneamentoCalculoRoute =
+  AuthenticatedPlaneamentoCalculoRouteImport.update({
+    id: '/planeamento/calculo',
+    path: '/planeamento/calculo',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedProducaoIndexRoute =
   AuthenticatedProducaoIndexRouteImport.update({
     id: '/producao/',
@@ -362,6 +369,7 @@ export interface FileRoutesByFullPath {
   '/etiquetas/imprimir': typeof AuthenticatedEtiquetasImprimirRoute
   '/picagem/consulta': typeof AuthenticatedPicagemConsultaRoute
   '/picagem/historico': typeof AuthenticatedPicagemHistoricoRoute
+  '/planeamento/calculo': typeof AuthenticatedPlaneamentoCalculoRoute
   '/producao/cascos': typeof AuthenticatedProducaoCascosRoute
   '/produtos/receitas': typeof AuthenticatedProdutosReceitasRoute
   '/stock/capas': typeof AuthenticatedStockCapasRoute
@@ -411,6 +419,7 @@ export interface FileRoutesByTo {
   '/etiquetas/imprimir': typeof AuthenticatedEtiquetasImprimirRoute
   '/picagem/consulta': typeof AuthenticatedPicagemConsultaRoute
   '/picagem/historico': typeof AuthenticatedPicagemHistoricoRoute
+  '/planeamento/calculo': typeof AuthenticatedPlaneamentoCalculoRoute
   '/producao/cascos': typeof AuthenticatedProducaoCascosRoute
   '/produtos/receitas': typeof AuthenticatedProdutosReceitasRoute
   '/stock/capas': typeof AuthenticatedStockCapasRoute
@@ -462,6 +471,7 @@ export interface FileRoutesById {
   '/_authenticated/etiquetas/imprimir': typeof AuthenticatedEtiquetasImprimirRoute
   '/_authenticated/picagem/consulta': typeof AuthenticatedPicagemConsultaRoute
   '/_authenticated/picagem/historico': typeof AuthenticatedPicagemHistoricoRoute
+  '/_authenticated/planeamento/calculo': typeof AuthenticatedPlaneamentoCalculoRoute
   '/_authenticated/producao/cascos': typeof AuthenticatedProducaoCascosRoute
   '/_authenticated/produtos/receitas': typeof AuthenticatedProdutosReceitasRoute
   '/_authenticated/stock/capas': typeof AuthenticatedStockCapasRoute
@@ -513,6 +523,7 @@ export interface FileRouteTypes {
     | '/etiquetas/imprimir'
     | '/picagem/consulta'
     | '/picagem/historico'
+    | '/planeamento/calculo'
     | '/producao/cascos'
     | '/produtos/receitas'
     | '/stock/capas'
@@ -562,6 +573,7 @@ export interface FileRouteTypes {
     | '/etiquetas/imprimir'
     | '/picagem/consulta'
     | '/picagem/historico'
+    | '/planeamento/calculo'
     | '/producao/cascos'
     | '/produtos/receitas'
     | '/stock/capas'
@@ -612,6 +624,7 @@ export interface FileRouteTypes {
     | '/_authenticated/etiquetas/imprimir'
     | '/_authenticated/picagem/consulta'
     | '/_authenticated/picagem/historico'
+    | '/_authenticated/planeamento/calculo'
     | '/_authenticated/producao/cascos'
     | '/_authenticated/produtos/receitas'
     | '/_authenticated/stock/capas'
@@ -873,6 +886,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPicagemHistoricoRouteImport
       parentRoute: typeof AuthenticatedPicagemRoute
     }
+    '/_authenticated/planeamento/calculo': {
+      id: '/_authenticated/planeamento/calculo'
+      path: '/planeamento/calculo'
+      fullPath: '/planeamento/calculo'
+      preLoaderRoute: typeof AuthenticatedPlaneamentoCalculoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/producao/': {
       id: '/_authenticated/producao/'
       path: '/producao'
@@ -1021,6 +1041,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedEncomendasImportarSimplesRoute: typeof AuthenticatedEncomendasImportarSimplesRoute
   AuthenticatedEncomendasNovaRoute: typeof AuthenticatedEncomendasNovaRoute
   AuthenticatedEtiquetasImprimirRoute: typeof AuthenticatedEtiquetasImprimirRoute
+  AuthenticatedPlaneamentoCalculoRoute: typeof AuthenticatedPlaneamentoCalculoRoute
   AuthenticatedProducaoCascosRoute: typeof AuthenticatedProducaoCascosRoute
   AuthenticatedProdutosReceitasRoute: typeof AuthenticatedProdutosReceitasRoute
   AuthenticatedStockCapasRoute: typeof AuthenticatedStockCapasRoute
@@ -1059,6 +1080,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
     AuthenticatedEncomendasImportarSimplesRoute,
   AuthenticatedEncomendasNovaRoute: AuthenticatedEncomendasNovaRoute,
   AuthenticatedEtiquetasImprimirRoute: AuthenticatedEtiquetasImprimirRoute,
+  AuthenticatedPlaneamentoCalculoRoute: AuthenticatedPlaneamentoCalculoRoute,
   AuthenticatedProducaoCascosRoute: AuthenticatedProducaoCascosRoute,
   AuthenticatedProdutosReceitasRoute: AuthenticatedProdutosReceitasRoute,
   AuthenticatedStockCapasRoute: AuthenticatedStockCapasRoute,

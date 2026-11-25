@@ -40,6 +40,13 @@ import { cancelOrderStageStart } from "@/lib/production.functions";
 import { Undo2, CalendarClock } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/producao/")({
+  head: () => ({ meta: [
+    { title: "Área do colaborador | UP Fábrica" },
+    { name: "description", content: "Etapas e fila de trabalho dos colaboradores da UP Fábrica." },
+    { property: "og:title", content: "Área do colaborador | UP Fábrica" },
+    { property: "og:description", content: "Etapas e fila de trabalho dos colaboradores da UP Fábrica." },
+    { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+  ] }),
   validateSearch: (search: Record<string, unknown>): { q?: string; stage?: string } => {
     const out: { q?: string; stage?: string } = {};
     if (typeof search.q === "string" && search.q) out.q = search.q;

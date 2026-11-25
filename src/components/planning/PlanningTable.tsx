@@ -24,11 +24,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { PriorityBadge, priorityRank } from "./PriorityBadge";
 import { PrioritySelect } from "./PrioritySelect";
 import { STAGE_LABELS, formatDatePT, ORDER_STATUS_LABELS } from "@/lib/format";
-import { Search, Zap, Power, PowerOff, CalendarDays } from "lucide-react";
+import { Search, Zap, Power, PowerOff, SlidersHorizontal, X } from "lucide-react";
 
 type StatusFilter = "all" | "planned" | "pending";
 
@@ -44,26 +51,34 @@ export function PlanningTable({ canEdit }: { canEdit: boolean }) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
-  const [todayOnly, setTodayOnly] = useState(false);
+  const [dateFilter, setDateFilter] = useState("all");
+  const [showFilters, setShowFilters] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkPriority, setBulkPriority] = useState<number>(2);
 
-  const { data: orders, isLoading } = useQuery({
+  const {
+    data: orders,
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: ["planning-orders"],
     queryFn: () => fetchPlanning(),
+    refetchInterval: 30_000,
   });
 
   // Tempo de estofagem por encomenda (tempo do modelo) para o planeamento.
   const orderIds = useMemo(() => (orders ?? []).map((o: PlanningOrder) => o.id), [orders]);
   const { data: expected } = useQuery({
-    queryKey: ["planning-estofo-minutes", orderIds.length, orderIds[0] ?? ""],
+    queryKey: ["planning-estofo-minutes", orderIds],
     queryFn: () =>
-      fetchExpected({ data: { orders: orderIds.map((id) => ({ order_id: id, stage: "estofagem" as const })) } }),
+      fetchExpected({
+        data: { orders: orderIds.map((id) => ({ order_id: id, stage: "estofagem" as const })) },
+      }),
     enabled: orderIds.length > 0,
   });
   const estofoMinutes = (id: string) => (expected?.[id]?.estofagem ?? null) as number | null;
 
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = new Date().toLocaleDateString("sv-SE");
 
   const filtered = useMemo(() => {
     let list = (orders ?? []) as PlanningOrder[];
@@ -81,11 +96,12 @@ export function PlanningTable({ canEdit }: { canEdit: boolean }) {
     if (priorityFilter !== "all") {
       list = list.filter((o) => String(priorityRank(o.priority)) === priorityFilter);
     }
-    if (todayOnly) {
-      list = list.filter((o) => o.due_date === todayStr);
-    }
+    if (dateFilter === "today") list = list.filter((o) => o.due_date === todayStr);
+    if (dateFilter === "overdue")
+      list = list.filter((o) => o.due_date !== null && o.due_date < todayStr);
+    if (dateFilter === "none") list = list.filter((o) => !o.due_date);
     return list;
-  }, [orders, search, statusFilter, priorityFilter, todayOnly, todayStr]);
+  }, [orders, search, statusFilter, priorityFilter, dateFilter, todayStr]);
 
   const allIds = filtered.map((o) => o.id);
   const allSelected = allIds.length > 0 && allIds.every((id) => selected.has(id));
@@ -108,9 +124,9 @@ export function PlanningTable({ canEdit }: { canEdit: boolean }) {
     qc.invalidateQueries({ queryKey: ["dashboard"] });
     qc.invalidateQueries({ queryKey: ["production"] });
     qc.invalidateQueries({ queryKey: ["urgent-active"] });
-    VISIBLE_STAGES_FOR_INV.forEach((s) =>
-      qc.invalidateQueries({ queryKey: ["stage-queue", s] }),
-    );
+    qc.invalidateQueries({ queryKey: ["week-capload"] });
+    qc.invalidateQueries({ queryKey: ["day-stage-orders"] });
+    VISIBLE_STAGES_FOR_INV.forEach((s) => qc.invalidateQueries({ queryKey: ["stage-queue", s] }));
   }
 
   const activateMut = useMutation({
@@ -155,38 +171,129 @@ export function PlanningTable({ canEdit }: { canEdit: boolean }) {
     onError: (e: any) => toast.error(e.message),
   });
 
-  const selectedIds = Array.from(selected).filter((id) =>
-    allIds.includes(id),
-  );
+  const selectedIds = Array.from(selected).filter((id) => allIds.includes(id));
 
   return (
     <div className="space-y-4 min-w-0">
-      <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-semibold">Plano de produção</h2><p className="text-xs text-muted-foreground">{filtered.length} encomendas · {(orders ?? []).filter((o) => o.is_planned).length} planeadas</p></div><div className="flex flex-wrap gap-1">{([{value: "all", label: "Todas"}, {value: "planned", label: "Planeadas"}, {value: "pending", label: "Por planear"}] as const).map((item) => <Button key={item.value} size="sm" variant={statusFilter === item.value ? "secondary" : "ghost"} onClick={() => setStatusFilter(item.value)} aria-pressed={statusFilter === item.value}>{item.label}</Button>)}</div></div>
-      {/* Filtros */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="font-semibold">Plano de produção</h2>
+          <p className="text-xs text-muted-foreground">
+            {filtered.length} encomendas · {(orders ?? []).filter((o) => o.is_planned).length}{" "}
+            planeadas
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-1">
+          {(
+            [
+              { value: "all", label: "Todas" },
+              { value: "planned", label: "Planeadas" },
+              { value: "pending", label: "Por planear" },
+            ] as const
+          ).map((item) => (
+            <Button
+              key={item.value}
+              size="sm"
+              variant={statusFilter === item.value ? "secondary" : "ghost"}
+              onClick={() => setStatusFilter(item.value)}
+              aria-pressed={statusFilter === item.value}
+            >
+              {item.label}
+            </Button>
+          ))}
+        </div>
+      </div>
+      <div className="grid grid-cols-1 gap-4 border-y py-4 sm:grid-cols-3">
+        {[
+          { label: "No plano", value: (orders ?? []).filter((o) => o.is_planned).length },
+          {
+            label: "Saídas em atraso",
+            value: (orders ?? []).filter((o) => o.due_date && o.due_date < todayStr).length,
+          },
+          { label: "Sem data de saída", value: (orders ?? []).filter((o) => !o.due_date).length },
+        ].map((item) => (
+          <div key={item.label}>
+            <div className="text-xs text-muted-foreground">{item.label}</div>
+            <strong className="mt-1 block text-2xl tabular-nums">
+              {isLoading ? "—" : item.value}
+            </strong>
+          </div>
+        ))}
+      </div>
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-0 basis-60">
-          <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+          <Search className="absolute left-2.5 top-3 size-4 text-muted-foreground" />
           <Input
-            placeholder="Procurar encomenda, nota ou produto…"
+            aria-label="Pesquisar plano"
+            placeholder="Nº de encomenda ou produto…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-8 h-10 bg-card"
           />
         </div>
-        <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-          <SelectTrigger className="h-10 w-full sm:w-40 bg-card text-xs">
-            <SelectValue placeholder="Prioridade" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Toda prioridade</SelectItem>
-            <SelectItem value="3">Urgente</SelectItem>
-            <SelectItem value="2">Média</SelectItem>
-            <SelectItem value="1">Baixa</SelectItem>
-          </SelectContent>
-        </Select>
-        <Button variant={todayOnly ? "secondary" : "outline"} size="sm" onClick={() => setTodayOnly((v) => !v)} aria-pressed={todayOnly} className="h-10 gap-2"><CalendarDays className="size-4" /> Saída hoje</Button>
+        <Button
+          variant={
+            showFilters || priorityFilter !== "all" || dateFilter !== "all"
+              ? "secondary"
+              : "outline"
+          }
+          onClick={() => setShowFilters((v) => !v)}
+          aria-expanded={showFilters}
+          className="gap-2"
+        >
+          <SlidersHorizontal className="size-4" /> Filtros
+          {Number(priorityFilter !== "all") + Number(dateFilter !== "all") > 0 && (
+            <Badge variant="secondary">
+              {Number(priorityFilter !== "all") + Number(dateFilter !== "all")}
+            </Badge>
+          )}
+        </Button>
+        {(search || priorityFilter !== "all" || dateFilter !== "all") && (
+          <Button
+            size="icon"
+            variant="ghost"
+            aria-label="Limpar filtros do plano"
+            onClick={() => {
+              setSearch("");
+              setPriorityFilter("all");
+              setDateFilter("all");
+            }}
+          >
+            <X className="size-4" />
+          </Button>
+        )}
       </div>
-
+      {showFilters && (
+        <div className="grid gap-3 border-y py-4 sm:grid-cols-2">
+          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+            <SelectTrigger className="w-full" aria-label="Prioridade do plano">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as prioridades</SelectItem>
+              <SelectItem value="3">Urgente</SelectItem>
+              <SelectItem value="2">Média</SelectItem>
+              <SelectItem value="1">Baixa</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={dateFilter} onValueChange={setDateFilter}>
+            <SelectTrigger className="w-full" aria-label="Saída prevista do plano">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as datas</SelectItem>
+              <SelectItem value="today">Saída hoje</SelectItem>
+              <SelectItem value="overdue">Saída em atraso</SelectItem>
+              <SelectItem value="none">Sem data de saída</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+      {isError && (
+        <p role="alert" className="text-sm text-destructive">
+          Não foi possível carregar as encomendas do plano.
+        </p>
+      )}
       {/* Ações em lote */}
       {canEdit && selectedIds.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-card p-2">
@@ -233,7 +340,11 @@ export function PlanningTable({ canEdit }: { canEdit: boolean }) {
               <TableRow>
                 <TableHead className="w-10">
                   {canEdit && (
-                    <Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="Selecionar tudo" />
+                    <Checkbox
+                      checked={allSelected}
+                      onCheckedChange={toggleAll}
+                      aria-label="Selecionar tudo"
+                    />
                   )}
                 </TableHead>
                 <TableHead>Nº</TableHead>
@@ -258,13 +369,15 @@ export function PlanningTable({ canEdit }: { canEdit: boolean }) {
                   onDeactivate={() => deactivateMut.mutate([o.id])}
                   onDateChange={(field, value) => datesMut.mutate({ id: o.id, [field]: value })}
                   savingDates={datesMut.isPending}
-                  pending={priorityMut.isPending || activateMut.isPending || deactivateMut.isPending}
+                  pending={
+                    priorityMut.isPending || activateMut.isPending || deactivateMut.isPending
+                  }
                 />
               ))}
-              {filtered.length === 0 && !isLoading && (
+              {filtered.length === 0 && !isError && (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                    Sem encomendas com estes filtros
+                    {isLoading ? "A carregar o plano…" : "Sem encomendas com estes filtros"}
                   </TableCell>
                 </TableRow>
               )}
@@ -277,7 +390,13 @@ export function PlanningTable({ canEdit }: { canEdit: boolean }) {
 }
 
 const VISIBLE_STAGES_FOR_INV = [
-  "estrutura", "corte", "costura", "branco", "estofagem", "qualidade", "embalagem",
+  "estrutura",
+  "corte",
+  "costura",
+  "branco",
+  "estofagem",
+  "qualidade",
+  "embalagem",
 ] as const;
 
 function PlanningRow({
@@ -305,7 +424,7 @@ function PlanningRow({
   savingDates: boolean;
   pending: boolean;
 }) {
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = new Date().toLocaleDateString("sv-SE");
   const isOverdue = order.due_date && order.due_date < todayStr && order.is_planned;
   const isToday = order.due_date === todayStr;
 
@@ -313,7 +432,11 @@ function PlanningRow({
     <TableRow data-state={selected ? "selected" : undefined} className="text-xs">
       <TableCell data-label="Selecionar">
         {canEdit && (
-          <Checkbox checked={selected} onCheckedChange={onToggle} aria-label={`Selecionar ${order.order_number}`} />
+          <Checkbox
+            checked={selected}
+            onCheckedChange={onToggle}
+            aria-label={`Selecionar ${order.order_number}`}
+          />
         )}
       </TableCell>
       <TableCell data-label="Encomenda" className="font-mono">
@@ -327,7 +450,9 @@ function PlanningRow({
         )}
       </TableCell>
       <TableCell data-label="Produto" className="min-w-52 max-w-md">
-        <div className="whitespace-normal break-words text-sm font-medium">{order.product_description}</div>
+        <div className="whitespace-normal break-words text-sm font-medium">
+          {order.product_description}
+        </div>
         {(order.measure || order.fabric_type) && (
           <div className="text-[10px] text-muted-foreground">
             {[order.measure, order.fabric_type].filter(Boolean).join(" · ")}
@@ -336,35 +461,45 @@ function PlanningRow({
       </TableCell>
       <TableCell data-label="Prioridade">
         {canEdit ? (
-          <PrioritySelect
-            value={order.priority}
-            onChange={onPriorityChange}
-            disabled={pending}
-          />
+          <PrioritySelect value={order.priority} onChange={onPriorityChange} disabled={pending} />
         ) : (
           <PriorityBadge priority={order.priority} />
         )}
       </TableCell>
       <TableCell data-label="Estado">
         {order.is_planned ? (
-          <Badge variant="success" className="text-[10px]">Planeado</Badge>
+          <Badge variant={order.has_started ? "secondary" : "success"} className="text-[10px]">
+            {order.has_started ? "Em produção" : "Planeado"}
+          </Badge>
         ) : (
-          <Badge variant="secondary" className="text-[10px]">Pendente</Badge>
+          <Badge variant="secondary" className="text-[10px]">
+            Pendente
+          </Badge>
         )}
       </TableCell>
       <TableCell data-label="Saída prevista">
         {canEdit ? (
           <Input
             type="date"
-            className={`h-7 w-32 text-xs ${isOverdue ? "border-destructive text-destructive font-semibold" : isToday ? "border-warning text-warning-foreground font-semibold" : ""}`}
+            aria-label={`Saída prevista de ${order.order_number}`}
+            className={`h-8 w-36 text-xs ${isOverdue ? "border-destructive text-destructive font-semibold" : isToday ? "border-warning text-warning-foreground font-semibold" : ""}`}
             defaultValue={order.due_date ?? ""}
             disabled={savingDates}
             onChange={(e) => {
-              if (e.target.value !== (order.due_date ?? "")) onDateChange("due_date", e.target.value);
+              if (e.target.value !== (order.due_date ?? ""))
+                onDateChange("due_date", e.target.value);
             }}
           />
         ) : order.due_date ? (
-          <span className={isOverdue ? "text-destructive font-semibold" : isToday ? "text-warning-foreground font-semibold" : ""}>
+          <span
+            className={
+              isOverdue
+                ? "text-destructive font-semibold"
+                : isToday
+                  ? "text-warning-foreground font-semibold"
+                  : ""
+            }
+          >
             {formatDatePT(order.due_date)}
           </span>
         ) : (
@@ -376,33 +511,52 @@ function PlanningRow({
           <OrderActions number={order.order_number}>
             <EditOrderDialog orderId={order.id} orderNumber={order.order_number} />
             {!order.is_planned && (
-              <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs text-success hover:bg-success/10" onClick={onActivate} disabled={pending}>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 gap-1 text-xs text-success hover:bg-success/10"
+                onClick={onActivate}
+                disabled={pending}
+              >
                 <Power className="size-3" /> Planear
               </Button>
             )}
             {order.is_planned && !order.has_started && (
-              <Button size="sm" variant="ghost" className="h-7 gap-1 text-xs text-destructive hover:bg-destructive/10" onClick={onDeactivate} disabled={pending}>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 gap-1 text-xs text-destructive hover:bg-destructive/10"
+                onClick={onDeactivate}
+                disabled={pending}
+              >
                 <PowerOff className="size-3" /> Desativar
               </Button>
             )}
-            <div className="border-t px-2 py-2 text-xs text-muted-foreground">{order.has_started ? "Produção iniciada" : "Sem etapas iniciadas"}<div className="mt-1">Estofo: {estofoMinutes == null ? "sem tempo definido" : `${estofoMinutes} min`}</div></div>
-      <div className="border-t px-2 pt-3"><div className="mb-1.5 text-xs text-muted-foreground">Data de entrada</div>
-        {canEdit ? (
-          <Input
-            type="date"
-            className="h-7 w-32 text-xs"
-            defaultValue={order.entry_date ?? ""}
-            disabled={savingDates}
-            onChange={(e) => {
-              if (e.target.value !== (order.entry_date ?? "")) onDateChange("entry_date", e.target.value);
-            }}
-          />
-        ) : order.entry_date ? (
-          formatDatePT(order.entry_date)
-        ) : (
-          "—"
-        )}
-      </div>
+            <div className="border-t px-2 py-2 text-xs text-muted-foreground">
+              {order.has_started ? "Produção iniciada" : "Sem etapas iniciadas"}
+              <div className="mt-1">
+                Estofo: {estofoMinutes == null ? "sem tempo definido" : `${estofoMinutes} min`}
+              </div>
+            </div>
+            <div className="border-t px-2 pt-3">
+              <div className="mb-1.5 text-xs text-muted-foreground">Data de entrada</div>
+              {canEdit ? (
+                <Input
+                  type="date"
+                  className="h-7 w-32 text-xs"
+                  defaultValue={order.entry_date ?? ""}
+                  disabled={savingDates}
+                  onChange={(e) => {
+                    if (e.target.value !== (order.entry_date ?? ""))
+                      onDateChange("entry_date", e.target.value);
+                  }}
+                />
+              ) : order.entry_date ? (
+                formatDatePT(order.entry_date)
+              ) : (
+                "—"
+              )}
+            </div>
           </OrderActions>
         )}
       </TableCell>

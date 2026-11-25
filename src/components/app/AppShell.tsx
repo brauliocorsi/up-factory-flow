@@ -3,7 +3,7 @@ import {
   LayoutGrid, ListOrdered, LogOut, Factory, Upload, Library, Boxes, HardHat,
   Settings, Wrench, PackageCheck, ClipboardCheck, Clock, Barcode, ChevronDown,
   Menu, Shield, Package, Truck, BarChart3, CalendarClock, Layers, Scissors,
-  Moon, Sun,
+  Moon, Sun, Calculator,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -45,6 +45,7 @@ const groups: NavGroup[] = [
     items: [
       { to: "/encomendas", label: "Encomendas", icon: ListOrdered },
       { to: "/admin/planeamento/painel", label: "Planeamento por data", icon: CalendarClock },
+      { to: "/planeamento/calculo", label: "Cálculo de produção", icon: Calculator },
       { to: "/encomendas/importar-simples", label: "Importar (simples)", icon: Upload },
       { to: "/importar", label: "Importar", icon: Upload },
     ],

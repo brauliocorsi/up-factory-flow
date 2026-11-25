@@ -19,6 +19,13 @@ const searchSchema = z.object({
 });
 
 export const Route = createFileRoute("/_authenticated/etiquetas/imprimir")({
+  head: () => ({ meta: [
+    { title: "Imprimir etiquetas | UP Fábrica" },
+    { name: "description", content: "Impressão de etiquetas de produtos e volumes da UP Fábrica." },
+    { property: "og:title", content: "Imprimir etiquetas | UP Fábrica" },
+    { property: "og:description", content: "Impressão de etiquetas de produtos e volumes da UP Fábrica." },
+    { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+  ] }),
   validateSearch: (s: Record<string, unknown>) => searchSchema.parse(s),
   component: ImprimirPage,
 });

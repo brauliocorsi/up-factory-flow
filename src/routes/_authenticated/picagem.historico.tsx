@@ -7,6 +7,13 @@ import { Loader2, History, PackageCheck } from "lucide-react";
 import { useMySession } from "@/hooks/useMySession";
 
 export const Route = createFileRoute("/_authenticated/picagem/historico")({
+  head: () => ({ meta: [
+    { title: "Histórico de picagem | UP Fábrica" },
+    { name: "description", content: "Encomendas e volumes picados na UP Fábrica." },
+    { property: "og:title", content: "Histórico de picagem | UP Fábrica" },
+    { property: "og:description", content: "Encomendas e volumes picados na UP Fábrica." },
+    { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+  ] }),
   component: HistoricoPage,
 });
 

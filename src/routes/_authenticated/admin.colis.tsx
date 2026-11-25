@@ -24,6 +24,13 @@ import { Plus, Trash2, Package } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/admin/colis")({
+  head: () => ({ meta: [
+    { title: "Volumes por modelo | UP Fábrica" },
+    { name: "description", content: "Definição dos volumes dos produtos da UP Fábrica." },
+    { property: "og:title", content: "Volumes por modelo | UP Fábrica" },
+    { property: "og:description", content: "Definição dos volumes dos produtos da UP Fábrica." },
+    { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+  ] }),
   component: ColisAdminPage,
 });
 

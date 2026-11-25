@@ -6,7 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ChevronLeft, ChevronRight, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { STAGE_LABELS, formatDatePT } from "@/lib/format";
@@ -18,9 +24,16 @@ import {
   type DayStageOrder,
 } from "@/lib/planning.functions";
 import { DayLoadDialog } from "./DayLoadDialog";
+import { hoursLabel, loadSummary } from "@/lib/productionCalculations";
 
 const PANEL_STAGES: Stage[] = [
-  "estofagem", "estrutura", "corte", "costura", "branco", "qualidade", "embalagem",
+  "estofagem",
+  "estrutura",
+  "corte",
+  "costura",
+  "branco",
+  "qualidade",
+  "embalagem",
 ];
 
 const DAY_LABELS = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta"];
@@ -83,7 +96,11 @@ export function PlanningPanel({ canEdit }: { canEdit: boolean }) {
     staleTime: 300_000,
   });
 
-  const { data: week = [] } = useQuery({
+  const {
+    data: week = [],
+    isLoading: weekLoading,
+    isError: weekError,
+  } = useQuery({
     queryKey: ["week-capload", from, to],
     queryFn: () => fetchWeek({ data: { from, to } }),
     refetchInterval: 60_000,
@@ -105,7 +122,8 @@ export function PlanningPanel({ canEdit }: { canEdit: boolean }) {
     })),
   });
 
-  const loading = dayQueries.some((q) => q.isLoading);
+  const loading = weekLoading || dayQueries.some((q) => q.isLoading);
+  const failed = weekError || dayQueries.some((q) => q.isError);
   const term = search.trim().toLowerCase();
 
   function matches(r: DayStageOrder) {
@@ -135,35 +153,54 @@ export function PlanningPanel({ canEdit }: { canEdit: boolean }) {
   const totalLoad = cells.reduce((a, c) => a + c.load, 0);
   const totalItems = cells.reduce((a, c) => a + c.rows.length, 0);
   const totalUnknown = cells.reduce((a, c) => a + c.unknown, 0);
-  const totalPct = totalCap > 0 ? Math.round((totalLoad / totalCap) * 100) : totalLoad > 0 ? 999 : 0;
+  const totalPct =
+    totalCap > 0 ? Math.round((totalLoad / totalCap) * 100) : totalLoad > 0 ? 999 : 0;
   const overDays = cells.filter((c) => c.load > c.capacity).length;
   const todayStr = isoDate(new Date());
 
   return (
     <div className="space-y-5 min-w-0">
-      <h2 className="font-semibold">Carga semanal por posto</h2>
+      <h2 className="font-semibold">Carga por posto</h2>
       <div className="flex flex-wrap items-end gap-3 border-b pb-4">
         <div className="flex items-center gap-1">
-          <Button variant="outline" size="sm" onClick={() => setWeekOffset((v) => v - 1)} aria-label="Semana anterior">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setWeekOffset((v) => v - 1)}
+            aria-label="Semana anterior"
+          >
             <ChevronLeft className="size-4" />
           </Button>
           <div className="px-2 text-sm font-semibold whitespace-nowrap">
             {formatDatePT(from)} — {formatDatePT(to)}
           </div>
-          <Button variant="outline" size="sm" onClick={() => setWeekOffset((v) => v + 1)} aria-label="Semana seguinte">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setWeekOffset((v) => v + 1)}
+            aria-label="Semana seguinte"
+          >
             <ChevronRight className="size-4" />
           </Button>
           {weekOffset !== 0 && (
-            <Button variant="ghost" size="sm" onClick={() => setWeekOffset(0)}>Esta semana</Button>
+            <Button variant="ghost" size="sm" onClick={() => setWeekOffset(0)}>
+              Esta semana
+            </Button>
           )}
         </div>
 
         <div>
           <Label className="text-xs">Posto</Label>
           <Select value={stage} onValueChange={(v) => setStage(v as Stage)}>
-            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-40">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
-              {PANEL_STAGES.map((s) => (<SelectItem key={s} value={s}>{STAGE_LABELS[s]}</SelectItem>))}
+              {PANEL_STAGES.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {STAGE_LABELS[s]}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -171,7 +208,9 @@ export function PlanningPanel({ canEdit }: { canEdit: boolean }) {
         <div>
           <Label className="text-xs">Estado</Label>
           <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
-            <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-36">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="todas">Todas</SelectItem>
               <SelectItem value="ativas">Só ativas</SelectItem>
@@ -183,7 +222,9 @@ export function PlanningPanel({ canEdit }: { canEdit: boolean }) {
         <div>
           <Label className="text-xs">Tempo</Label>
           <Select value={timeFilter} onValueChange={(v) => setTimeFilter(v as TimeFilter)}>
-            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-40">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos</SelectItem>
               <SelectItem value="com_tempo">Com tempo definido</SelectItem>
@@ -206,31 +247,45 @@ export function PlanningPanel({ canEdit }: { canEdit: boolean }) {
         <div className="flex items-center gap-2">
           <Users className="size-4 text-muted-foreground" />
           <span className="font-medium">{STAGE_LABELS[stage]}</span>
-          <span className="text-muted-foreground">
-            {dailyMinutes} min por pessoa/dia
-          </span>
+          <span className="text-muted-foreground">{dailyMinutes} min por pessoa/dia</span>
         </div>
         <div className="tabular-nums">
-          Semana: <strong>{totalLoad}</strong> min necessários de <strong>{totalCap}</strong> min disponíveis
+          Semana: <strong>{hoursLabel(totalLoad)}</strong> necessárias de{" "}
+          <strong>{hoursLabel(totalCap)}</strong> disponíveis
           {" · "}
-          <span className={cn(totalPct > 100 ? "text-destructive font-semibold" : totalPct >= 80 ? "text-warning-foreground font-semibold" : "text-success font-semibold")}>
-            {totalPct}%
+          <span
+            className={cn(
+              totalPct > 100
+                ? "text-destructive font-semibold"
+                : totalPct >= 80
+                  ? "text-warning-foreground font-semibold"
+                  : "text-success font-semibold",
+            )}
+          >
+            {totalCap > 0 ? `${totalPct}%` : "Sem equipa"}
           </span>
-          {" · "}{totalItems} peça(s)
+          {" · "}
+          {totalItems} peça(s)
         </div>
         <div className="ml-auto">
-          {overDays > 0 ? (
+          {loading || failed ? (
+            <Badge variant="secondary">{failed ? "Dados indisponíveis" : "A carregar"}</Badge>
+          ) : totalUnknown > 0 ? (
+            <Badge variant="warning">Estimativa incompleta</Badge>
+          ) : totalCap === 0 ? (
+            <Badge variant="secondary">Sem equipa atribuída</Badge>
+          ) : overDays > 0 ? (
             <Badge variant="danger">{overDays} dia(s) a exceder</Badge>
           ) : (
-            <Badge variant="success">Semana possível</Badge>
+            <Badge variant="success">Dentro da capacidade do posto</Badge>
           )}
         </div>
       </div>
 
       {totalUnknown > 0 && (
         <div className="rounded-md border border-warning/30 bg-warning/10 text-foreground px-3 py-2 text-sm">
-          ⚠ {totalUnknown} produto(s) sem tempo definido no modelo — tempo desconhecido, carga subestimada.
-          Define os tempos em SLA &gt; Tempo por modelo.
+          ⚠ {totalUnknown} produto(s) sem tempo definido no modelo — tempo desconhecido, carga
+          subestimada. Define os tempos em SLA &gt; Tempo por modelo.
         </div>
       )}
 
@@ -238,32 +293,50 @@ export function PlanningPanel({ canEdit }: { canEdit: boolean }) {
         {cells.map((c, i) => {
           const diff = c.capacity - c.load;
           return (
-            <Card key={c.date} className={cn("p-4 space-y-3 rounded-lg shadow-none", tone(c.pct), c.date === todayStr && "ring-2 ring-primary/40")}>
+            <Card
+              key={c.date}
+              className={cn(
+                "p-4 space-y-3 rounded-lg shadow-none",
+                tone(c.pct),
+                c.date === todayStr && "ring-2 ring-primary/40",
+              )}
+            >
               <div className="flex items-baseline justify-between">
                 <div className="font-semibold">{DAY_LABELS[i]}</div>
                 <div className="text-xs text-muted-foreground">{formatDatePT(c.date)}</div>
               </div>
 
               <div className="text-xs text-muted-foreground">
-                {c.people} pessoas · {c.capacity} min disponíveis
+                {c.people} pessoas · {hoursLabel(c.capacity)} disponíveis
               </div>
 
               <div className="text-sm tabular-nums">
-                <strong className="text-2xl">{c.load}</strong> min · {c.pct}%
+                <strong className="text-2xl">{hoursLabel(c.load)}</strong> ·{" "}
+                {loadSummary(c.load, c.capacity, c.unknown > 0).percent ?? "—"}%
               </div>
               <div className="h-2 rounded bg-muted overflow-hidden">
                 <div
-                  className={cn("h-2", c.pct > 100 ? "bg-destructive" : c.pct >= 80 ? "bg-warning" : "bg-success")}
+                  className={cn(
+                    "h-2",
+                    c.pct > 100 ? "bg-destructive" : c.pct >= 80 ? "bg-warning" : "bg-success",
+                  )}
                   style={{ width: `${Math.min(100, c.pct)}%` }}
                 />
               </div>
 
-              <div className={cn("text-xs font-semibold", diff < 0 ? "text-destructive" : "text-success")}>
-                {c.capacity === 0 && c.load > 0
-                  ? "Sem pessoas atribuídas neste dia"
-                  : diff < 0
-                    ? `Excede ${Math.abs(diff)} min`
-                    : `Sobram ${diff} min`}
+              <div
+                className={cn(
+                  "text-xs font-semibold",
+                  diff < 0 ? "text-destructive" : "text-success",
+                )}
+              >
+                {c.unknown > 0
+                  ? "Estimativa incompleta"
+                  : c.capacity === 0
+                    ? "Sem pessoas atribuídas neste dia"
+                    : diff < 0
+                      ? `Excede ${hoursLabel(Math.abs(diff))}`
+                      : `Sobram ${hoursLabel(diff)}`}
               </div>
 
               <div className="text-xs text-muted-foreground">
@@ -284,10 +357,16 @@ export function PlanningPanel({ canEdit }: { canEdit: boolean }) {
       </div>
 
       {loading && <p className="text-xs text-muted-foreground">A calcular…</p>}
+      {failed && (
+        <p role="alert" className="text-sm text-destructive">
+          Não foi possível carregar todas as encomendas do período.
+        </p>
+      )}
 
       <p className="text-xs text-muted-foreground">
-        Tempo disponível = jornada diária × pessoas ligadas ao posto (presenças do dia). Tempo necessário = tempo do
-        modelo de cada produto com data-alvo nesse dia. O dia de hoje inclui trabalho atrasado.
+        Tempo disponível = jornada diária × pessoas ligadas ao posto (presenças do dia). Tempo
+        necessário = tempo do modelo de cada produto com data-alvo nesse dia. O dia de hoje inclui
+        trabalho atrasado.
       </p>
 
       {detail && (
@@ -297,7 +376,9 @@ export function PlanningPanel({ canEdit }: { canEdit: boolean }) {
           capacityMinutes={detail.capacity}
           canEdit={canEdit}
           open
-          onOpenChange={(v) => { if (!v) setDetail(null); }}
+          onOpenChange={(v) => {
+            if (!v) setDetail(null);
+          }}
         />
       )}
     </div>

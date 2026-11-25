@@ -16,6 +16,13 @@ import {
 } from "@/lib/quality.functions";
 
 export const Route = createFileRoute("/_authenticated/admin/qualidade")({
+  head: () => ({ meta: [
+    { title: "Templates de qualidade | UP Fábrica" },
+    { name: "description", content: "Verificações de qualidade por categoria na UP Fábrica." },
+    { property: "og:title", content: "Templates de qualidade | UP Fábrica" },
+    { property: "og:description", content: "Verificações de qualidade por categoria na UP Fábrica." },
+    { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+  ] }),
   component: AdminQualidadePage,
 });
 

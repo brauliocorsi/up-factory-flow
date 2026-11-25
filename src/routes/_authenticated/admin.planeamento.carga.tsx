@@ -16,6 +16,13 @@ import { STAGES, getStageCapacityLoad, type Stage } from "@/lib/planning.functio
 import { WeekLoadGrid } from "@/components/planning/WeekLoadGrid";
 
 export const Route = createFileRoute("/_authenticated/admin/planeamento/carga")({
+  head: () => ({ meta: [
+    { title: "Carga e capacidade | UP Fábrica" },
+    { name: "description", content: "Carga de trabalho e capacidade por posto na UP Fábrica." },
+    { property: "og:title", content: "Carga e capacidade | UP Fábrica" },
+    { property: "og:description", content: "Carga de trabalho e capacidade por posto na UP Fábrica." },
+    { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+  ] }),
   validateSearch: z.object({ stage: z.enum(STAGES).optional() }),
   beforeLoad: async () => {
     const { data } = await supabase.auth.getUser();

@@ -14,6 +14,13 @@ import { listShells, upsertShell, deleteShell, adjustStock, createStockProductio
 type StockStage = (typeof STOCK_STAGE_ORDER)[number];
 
 export const Route = createFileRoute("/_authenticated/stock/cascos")({
+  head: () => ({ meta: [
+    { title: "Stock de cascos | UP Fábrica" },
+    { name: "description", content: "Disponibilidade de estruturas e cascos na UP Fábrica." },
+    { property: "og:title", content: "Stock de cascos | UP Fábrica" },
+    { property: "og:description", content: "Disponibilidade de estruturas e cascos na UP Fábrica." },
+    { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+  ] }),
   component: CascosPage,
 });
 

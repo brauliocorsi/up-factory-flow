@@ -19,6 +19,13 @@ import { Download, BarChart3, AlarmClock, PauseCircle } from "lucide-react";
 import { STAGE_LABELS } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/admin/relatorios")({
+  head: () => ({ meta: [
+    { title: "Relatórios de produção | UP Fábrica" },
+    { name: "description", content: "Relatórios de trabalho e desempenho da equipa da UP Fábrica." },
+    { property: "og:title", content: "Relatórios de produção | UP Fábrica" },
+    { property: "og:description", content: "Relatórios de trabalho e desempenho da equipa da UP Fábrica." },
+    { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+  ] }),
   component: RelatoriosPage,
 });
 

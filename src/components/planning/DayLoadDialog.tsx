@@ -11,6 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { hoursLabel } from "@/lib/productionCalculations";
 import { PowerOff } from "lucide-react";
 import { STAGE_LABELS, formatDatePT } from "@/lib/format";
 import { getDayStageOrders, type Stage } from "@/lib/planning.functions";
@@ -53,6 +54,7 @@ export function DayLoadDialog({
     qc.invalidateQueries({ queryKey: ["stage-capload"] });
     qc.invalidateQueries({ queryKey: ["planning-orders"] });
     qc.invalidateQueries({ queryKey: ["orders"] });
+    qc.invalidateQueries({ queryKey: ["stage-queue"] });
   }
 
   const dueMut = useMutation({
@@ -79,20 +81,22 @@ export function DayLoadDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {STAGE_LABELS[stage]} — {formatDatePT(date)}
           </DialogTitle>
           <DialogDescription>
-            {total} min necessários de {capacityMinutes} min disponíveis
+            {hoursLabel(total)} necessárias de {hoursLabel(capacityMinutes)} disponíveis
             {capacityMinutes > 0 && (
               <>
                 {" · "}
                 {over > 0 ? (
-                  <span className="text-red-600 font-semibold">excede {over} min</span>
+                  <span className="text-destructive font-semibold">excede {hoursLabel(over)}</span>
                 ) : (
-                  <span className="text-emerald-600 font-semibold">sobram {Math.abs(over)} min</span>
+                  <span className="text-success font-semibold">
+                    sobram {hoursLabel(Math.abs(over))}
+                  </span>
                 )}
               </>
             )}
@@ -100,35 +104,46 @@ export function DayLoadDialog({
         </DialogHeader>
 
         {unknown > 0 && (
-          <div className="rounded-md border border-amber-300 bg-amber-50 text-amber-900 px-3 py-2 text-xs">
+          <div className="rounded-md border border-warning/30 bg-warning/10 text-foreground px-3 py-2 text-xs">
             ⚠ {unknown} produto(s) sem tempo definido no modelo — o total está subestimado.
           </div>
         )}
 
         <div className="max-h-[55vh] overflow-y-auto divide-y">
-          {isLoading && <p className="py-6 text-center text-sm text-muted-foreground">A carregar…</p>}
+          {isLoading && (
+            <p className="py-6 text-center text-sm text-muted-foreground">A carregar…</p>
+          )}
           {!isLoading && rows.length === 0 && (
-            <p className="py-6 text-center text-sm text-muted-foreground">Nada previsto neste dia.</p>
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              Nada previsto neste dia.
+            </p>
           )}
           {rows.map((r) => (
             <div key={r.order_id} className="py-2 flex flex-wrap items-center gap-2 text-xs">
               <div className="min-w-40 flex-1">
                 <div className="font-mono font-semibold">{r.customer_order ?? r.order_number}</div>
-                <div className="text-muted-foreground truncate">
+                <div className="text-muted-foreground break-words">
                   {[r.product_description, r.measure].filter(Boolean).join(" · ")}
                 </div>
               </div>
               {r.expected_minutes != null ? (
-                <Badge variant="secondary" className="tabular-nums">{r.expected_minutes} min</Badge>
+                <Badge variant="secondary" className="tabular-nums">
+                  {hoursLabel(r.expected_minutes)}
+                </Badge>
               ) : (
-                <Badge variant="outline" className="text-amber-700 border-amber-300">sem tempo</Badge>
+                <Badge variant="outline" className="text-warning-foreground border-warning/30">
+                  sem tempo
+                </Badge>
               )}
-              {r.overdue && <Badge className="bg-red-600 text-white">atrasada</Badge>}
-              <Badge variant="outline">{r.order_status === "pendente" ? "Pendente" : "Ativa"}</Badge>
+              {r.overdue && <Badge variant="danger">atrasada</Badge>}
+              <Badge variant="outline">
+                {r.order_status === "pendente" ? "Pendente" : "Ativa"}
+              </Badge>
               {canEdit ? (
                 <Input
                   type="date"
-                  className="h-7 w-32 text-xs"
+                  aria-label={`Saída da encomenda ${r.order_number}`}
+                  className="h-8 w-36 text-xs"
                   defaultValue={r.due_date ?? ""}
                   disabled={dueMut.isPending}
                   onChange={(e) => {

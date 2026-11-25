@@ -17,6 +17,13 @@ import {
 } from "@/lib/coliRoutes.functions";
 
 export const Route = createFileRoute("/_authenticated/admin/rotas-colis")({
+  head: () => ({ meta: [
+    { title: "Etapas dos volumes | UP Fábrica" },
+    { name: "description", content: "Percursos de produção dos volumes na UP Fábrica." },
+    { property: "og:title", content: "Etapas dos volumes | UP Fábrica" },
+    { property: "og:description", content: "Percursos de produção dos volumes na UP Fábrica." },
+    { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+  ] }),
   component: ColiRoutesAdmin,
 });
 

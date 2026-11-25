@@ -13,6 +13,13 @@ import { listReworkEvents, getReworkMetrics } from "@/lib/rework.functions";
 import { useRealtimeOrders } from "@/hooks/useRealtimeOrders";
 
 export const Route = createFileRoute("/_authenticated/retrabalho")({
+  head: () => ({ meta: [
+    { title: "Retrabalho | UP Fábrica" },
+    { name: "description", content: "Acompanhamento de correções de qualidade da UP Fábrica." },
+    { property: "og:title", content: "Retrabalho | UP Fábrica" },
+    { property: "og:description", content: "Acompanhamento de correções de qualidade da UP Fábrica." },
+    { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+  ] }),
   component: ReworkPage,
 });
 

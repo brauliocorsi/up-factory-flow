@@ -25,6 +25,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { useMySession } from "@/hooks/useMySession";
 
 export const Route = createFileRoute("/_authenticated/picagem")({
+  head: () => ({ meta: [
+    { title: "Picagem de volumes | UP Fábrica" },
+    { name: "description", content: "Conferência e envio de volumes prontos na UP Fábrica." },
+    { property: "og:title", content: "Picagem de volumes | UP Fábrica" },
+    { property: "og:description", content: "Conferência e envio de volumes prontos na UP Fábrica." },
+    { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+  ] }),
   component: PicagemPage,
 });
 

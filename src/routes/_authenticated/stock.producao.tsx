@@ -22,6 +22,13 @@ const listStockProductions = createServerFn({ method: "GET" })
   });
 
 export const Route = createFileRoute("/_authenticated/stock/producao")({
+  head: () => ({ meta: [
+    { title: "Produção para stock | UP Fábrica" },
+    { name: "description", content: "Ordens de produção para stock da UP Fábrica." },
+    { property: "og:title", content: "Produção para stock | UP Fábrica" },
+    { property: "og:description", content: "Ordens de produção para stock da UP Fábrica." },
+    { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+  ] }),
   component: StockProductionPage,
 });
 

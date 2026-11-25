@@ -17,6 +17,13 @@ import { listRecipes, upsertRecipe, deleteRecipe, listShells } from "@/lib/stock
 import { getCatalogs } from "@/lib/catalog.functions";
 
 export const Route = createFileRoute("/_authenticated/produtos/receitas")({
+  head: () => ({ meta: [
+    { title: "Receitas de produtos | UP Fábrica" },
+    { name: "description", content: "Cascos e capas associados aos produtos da UP Fábrica." },
+    { property: "og:title", content: "Receitas de produtos | UP Fábrica" },
+    { property: "og:description", content: "Cascos e capas associados aos produtos da UP Fábrica." },
+    { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+  ] }),
   component: RecipesPage,
 });
 

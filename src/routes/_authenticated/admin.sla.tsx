@@ -20,6 +20,13 @@ import {
 } from "@/lib/sla.functions";
 
 export const Route = createFileRoute("/_authenticated/admin/sla")({
+  head: () => ({ meta: [
+    { title: "Tempos previstos | UP Fábrica" },
+    { name: "description", content: "Tempos de referência por modelo e produto da UP Fábrica." },
+    { property: "og:title", content: "Tempos previstos | UP Fábrica" },
+    { property: "og:description", content: "Tempos de referência por modelo e produto da UP Fábrica." },
+    { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+  ] }),
   component: SlaPage,
   errorComponent: ({ error, reset }) => (
     <div className="max-w-xl mx-auto p-6 text-center space-y-3">

@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { listOrders, listModels, previewCancelOrder, cancelOrder, type OrderListItem, type CancelPreview } from "@/lib/orders.functions";
-import { PlanningTable } from "@/components/planning/PlanningTable";
+import { PlanningWorkspace } from "@/components/planning/PlanningWorkspace";
 import { PlanningPanel } from "@/components/planning/PlanningPanel";
 import { useMySession } from "@/hooks/useMySession";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { STAGE_LABELS, ORDER_STATUS_LABELS, formatDatePT } from "@/lib/format";
-import { Search, Plus, Upload, Printer, XCircle, List, CalendarDays, History, SlidersHorizontal, ChevronDown, Eye, Package, X } from "lucide-react";
+import { Search, Plus, Upload, Printer, XCircle, List, CalendarDays, History, SlidersHorizontal, ChevronDown, Eye, Package, X, Calculator } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
 import { useRealtimeOrders } from "@/hooks/useRealtimeOrders";
@@ -138,6 +138,7 @@ function EncomendasPage() {
           <div><h1 className="text-2xl font-bold">Encomendas</h1><p className="text-xs text-muted-foreground">Produção · Planeamento · Armazém</p></div>
         </div>
         <div className="flex items-center gap-2">
+          {canEditPlanning && <Button asChild variant="outline" size="icon" aria-label="Cálculo de produção" title="Cálculo de produção"><Link to="/planeamento/calculo"><Calculator className="size-4" /></Link></Button>}
           <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" className="gap-2"><Upload className="size-4" /><span>Importar</span><ChevronDown className="size-3" /></Button></DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-60">
               <DropdownMenuItem asChild><Link to="/encomendas/importar-produtos"><Upload /> Excel por produto</Link></DropdownMenuItem>
@@ -184,7 +185,7 @@ function EncomendasPage() {
             {(isLoading || isError || orderList.length === 0) && <div className="py-14 text-center text-sm text-muted-foreground">{isLoading ? "A carregar encomendas…" : isError ? "Não foi possível carregar as encomendas." : "Sem encomendas com estes filtros"}</div>}
           </div>
         </TabsContent>
-        <TabsContent value="planeamento" className="mt-6">{canEditPlanning ? <PlanningTable canEdit /> : <div className="border-y py-12 text-center text-sm text-muted-foreground">O planeamento está disponível para admin e escritório.</div>}</TabsContent>
+        <TabsContent value="planeamento" className="mt-6">{canEditPlanning ? <PlanningWorkspace canEdit /> : <div className="border-y py-12 text-center text-sm text-muted-foreground">O planeamento está disponível para admin e escritório.</div>}</TabsContent>
         <TabsContent value="por-data" className="mt-6">{canEditPlanning ? <PlanningPanel canEdit /> : <div className="border-y py-12 text-center text-sm text-muted-foreground">A vista por data está disponível para admin e escritório.</div>}</TabsContent>
         <TabsContent value="historico" className="mt-6 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-base font-semibold">Recebidas no armazém</h2><div className="text-xs text-muted-foreground">{historyList.length} encomendas</div></div><div className="relative w-full sm:w-80"><Search className="absolute left-3 top-3 size-4 text-muted-foreground" /><Input aria-label="Pesquisar histórico" placeholder="Nº de encomenda ou produto…" value={histSearch} onChange={(e) => setHistSearch(e.target.value)} className="h-10 bg-card pl-9" /></div></div>

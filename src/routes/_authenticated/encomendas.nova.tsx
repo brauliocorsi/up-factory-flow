@@ -36,6 +36,13 @@ import { toast } from "sonner";
 import { ArrowLeft, Tag, AlertTriangle, ScanLine, ChevronDown, Plus, Lock, Info, Wrench } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/encomendas/nova")({
+  head: () => ({ meta: [
+    { title: "Nova encomenda | UP Fábrica" },
+    { name: "description", content: "Registo de uma nova encomenda de produção na UP Fábrica." },
+    { property: "og:title", content: "Nova encomenda | UP Fábrica" },
+    { property: "og:description", content: "Registo de uma nova encomenda de produção na UP Fábrica." },
+    { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+  ] }),
   component: NovaEncomendaPage,
 });
 

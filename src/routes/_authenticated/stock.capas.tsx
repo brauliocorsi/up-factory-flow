@@ -15,6 +15,13 @@ import { getCatalogs } from "@/lib/catalog.functions";
 import { AdjustDialog, ProduceDialog } from "./stock.cascos";
 
 export const Route = createFileRoute("/_authenticated/stock/capas")({
+  head: () => ({ meta: [
+    { title: "Stock de capas | UP Fábrica" },
+    { name: "description", content: "Disponibilidade de capas de produtos na UP Fábrica." },
+    { property: "og:title", content: "Stock de capas | UP Fábrica" },
+    { property: "og:description", content: "Disponibilidade de capas de produtos na UP Fábrica." },
+    { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+  ] }),
   component: CapasPage,
 });
 

@@ -26,6 +26,13 @@ import { LoadCell } from "@/components/planning/LoadCell";
 import { formatDatePT } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/admin/planeamento/")({
+  head: () => ({ meta: [
+    { title: "Configuração do planeamento | UP Fábrica" },
+    { name: "description", content: "Jornada, presenças e folgas do plano de produção da UP Fábrica." },
+    { property: "og:title", content: "Configuração do planeamento | UP Fábrica" },
+    { property: "og:description", content: "Jornada, presenças e folgas do plano de produção da UP Fábrica." },
+    { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+  ] }),
   beforeLoad: async () => {
     const { data } = await supabase.auth.getUser();
     if (!data.user) throw redirect({ to: "/auth" });

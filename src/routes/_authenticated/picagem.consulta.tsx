@@ -9,6 +9,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Search, Loader2, CheckCircle2, Circle, PlayCircle, PauseCircle } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/picagem/consulta")({
+  head: () => ({ meta: [
+    { title: "Consultar encomenda | UP Fábrica" },
+    { name: "description", content: "Consulta do progresso de encomendas na UP Fábrica." },
+    { property: "og:title", content: "Consultar encomenda | UP Fábrica" },
+    { property: "og:description", content: "Consulta do progresso de encomendas na UP Fábrica." },
+    { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+  ] }),
   component: ConsultaPage,
 });
 

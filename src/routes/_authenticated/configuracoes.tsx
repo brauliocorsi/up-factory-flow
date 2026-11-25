@@ -34,6 +34,13 @@ import { LeadersCard } from "@/components/app/LeadersCard";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export const Route = createFileRoute("/_authenticated/configuracoes")({
+  head: () => ({ meta: [
+    { title: "Configurações | UP Fábrica" },
+    { name: "description", content: "Configurações da operação e colaboradores da UP Fábrica." },
+    { property: "og:title", content: "Configurações | UP Fábrica" },
+    { property: "og:description", content: "Configurações da operação e colaboradores da UP Fábrica." },
+    { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+  ] }),
   component: ConfigPage,
 });
 

@@ -6,6 +6,13 @@ import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, Boxes, Layers, Scissors } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/stock/")({
+  head: () => ({ meta: [
+    { title: "Stock de semi-acabados | UP Fábrica" },
+    { name: "description", content: "Disponibilidade de cascos, capas e tecidos na UP Fábrica." },
+    { property: "og:title", content: "Stock de semi-acabados | UP Fábrica" },
+    { property: "og:description", content: "Disponibilidade de cascos, capas e tecidos na UP Fábrica." },
+    { property: "og:type", content: "website" }, { name: "twitter:card", content: "summary" },
+  ] }),
   component: StockDashboard,
 });
 
