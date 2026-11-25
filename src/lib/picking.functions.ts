@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { hasAnyRole } from "@/lib/roleGuards";
+import { pickingStockItem } from "@/lib/pickingPayload";
 import { z } from "zod";
 
 export type PickingColi = {
@@ -470,22 +471,12 @@ export const sendPickingBatchToStock = createServerFn({ method: "POST" })
     // 2. Detalhes das encomendas elegíveis
     const { data: orders, error } = await supabase
       .from("production_orders")
-      .select("id, order_number, barcode, product_description, measure, fabric_type, fabric_ref, color, models(code)")
+      .select("id, order_number, gc_code, barcode, product_description, measure, fabric_type, fabric_ref, color")
       .in("id", eligibleIds);
     if (error) throw new Error(error.message);
 
-    const items = (orders ?? []).map(o => ({
-      order_number: o.order_number,
-      product_code: (o as any).models?.code ?? o.product_description,
-      barcode: o.barcode || o.order_number || "",
-      product_description: o.product_description,
-      measure: o.measure,
-      fabric_type: o.fabric_type,
-      fabric_ref: o.fabric_ref,
-      color: o.color,
-      quantity: 1,
-      dispatched_at: new Date().toISOString()
-    }));
+    const dispatchedAt = new Date().toISOString();
+    const items = (orders ?? []).map(o => pickingStockItem(o, dispatchedAt));
 
     try {
       const response = await fetch(url, {
