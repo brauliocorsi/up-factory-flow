@@ -64,6 +64,13 @@
       "when": 1795530788951,
       "tag": "0008_fabric_availability_code6",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1795569582267,
+      "tag": "0009_fix_picking_dispatch_status_check",
+      "breakpoints": true
     }
   ]
 }
